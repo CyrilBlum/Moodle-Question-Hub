@@ -1,0 +1,112 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace qbank_questionhub;
+
+/**
+ * Unit tests for Pre-flight Validator and XXE defense.
+ *
+ * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class preflight_validator_test extends \advanced_testcase {
+
+    public function test_empty_payload_rejected(): void {
+        $report = preflight_validator::validate('');
+        $this->assertFalse($report->is_valid());
+        $this->assertEquals('ERR_EMPTY_PAYLOAD', $report->get_errors()[0]['code']);
+    }
+
+    public function test_xxe_doctype_blocked(): void {
+        $xml = '<?xml version="1.0"?><!DOCTYPE quiz [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><quiz></quiz>';
+        $report = preflight_validator::validate($xml);
+        $this->assertFalse($report->is_valid());
+        $this->assertEquals('ERR_XXE_DOCTYPE_FORBIDDEN', $report->get_errors()[0]['code']);
+    }
+
+    public function test_xxe_entity_blocked(): void {
+        $xml = '<?xml version="1.0"?><!ENTITY xxe "attack"><quiz></quiz>';
+        $report = preflight_validator::validate($xml);
+        $this->assertFalse($report->is_valid());
+        $this->assertEquals('ERR_XXE_ENTITY_FORBIDDEN', $report->get_errors()[0]['code']);
+    }
+
+    public function test_valid_single_choice(): void {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="multichoice">
+    <name><text>Question 1</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Capital of Switzerland?</p>]]></text></questiontext>
+    <single>true</single>
+    <answer fraction="100"><text>Bern</text></answer>
+    <answer fraction="0"><text>Zurich</text></answer>
+  </question>
+</quiz>';
+        $report = preflight_validator::validate($xml);
+        $this->assertTrue($report->is_valid());
+        $this->assertEquals(1, $report->get_summary()['totalQuestions']);
+    }
+
+    public function test_single_choice_missing_100(): void {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="multichoice">
+    <name><text>Faulty MC</text></name>
+    <questiontext format="html"><text>Prompt</text></questiontext>
+    <single>true</single>
+    <answer fraction="50"><text>A</text></answer>
+    <answer fraction="50"><text>B</text></answer>
+  </question>
+</quiz>';
+        $report = preflight_validator::validate($xml);
+        $this->assertFalse($report->is_valid());
+        $this->assertEquals('ERR_SINGLE_CHOICE_NO_100', $report->get_errors()[0]['code']);
+    }
+
+    public function test_single_choice_multiple_100(): void {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="multichoice">
+    <name><text>Faulty MC</text></name>
+    <questiontext format="html"><text>Prompt</text></questiontext>
+    <single>true</single>
+    <answer fraction="100"><text>A</text></answer>
+    <answer fraction="100"><text>B</text></answer>
+  </question>
+</quiz>';
+        $report = preflight_validator::validate($xml);
+        $this->assertFalse($report->is_valid());
+        $this->assertEquals('ERR_SINGLE_CHOICE_MULTIPLE_100', $report->get_errors()[0]['code']);
+    }
+
+    public function test_svg_malicious_script_blocked(): void {
+        $malicioussvg = base64_encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="essay">
+    <name><text>Malicious SVG</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Look at image</p>]]></text>
+      <file name="image.svg" encoding="base64">' . $malicioussvg . '</file>
+    </questiontext>
+  </question>
+</quiz>';
+        $report = preflight_validator::validate($xml);
+        $this->assertFalse($report->is_valid());
+        $this->assertEquals('ERR_SVG_MALICIOUS_SCRIPT', $report->get_errors()[0]['code']);
+    }
+}

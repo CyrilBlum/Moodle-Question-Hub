@@ -1,0 +1,37 @@
+name: Subplugin CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-validate:
+    name: PHP ${{ matrix.php-version }} Syntax & Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.1', '8.2']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up PHP ${{ matrix.php-version }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, xml, curl, zip, intl
+
+    - name: Syntax Check (php -l)
+      run: |
+        find . -name "*.php" -not -path "./vendor/*" -exec php -l {} +
+
+    - name: Swiss German Spelling Compliance (Zero "ß")
+      run: |
+        if grep -rn "ß" lang/de/; then
+          echo "ERROR: German 'ß' character detected in lang/de/! Swiss Standard German requires 'ss'."
+          exit 1
+        fi
+        echo "PASS: Zero 'ß' found in lang/de/."

@@ -1,0 +1,260 @@
+<div class="qbank_questionhub_browser mb-5">
+
+    {{#has_account}}
+    <div class="alert alert-info d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <i class="fa fa-link mr-2" aria-hidden="true"></i>
+            {{#str}} account_linked_as, qbank_questionhub, {{account_name}} {{/str}}
+        </div>
+        <a href="{{disconnect_url}}" class="btn btn-sm btn-outline-danger">
+            {{#str}} disconnect_account_button, qbank_questionhub {{/str}}
+        </a>
+    </div>
+    {{/has_account}}
+    {{^has_account}}
+    <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4 flex-wrap">
+        <div class="mb-2 mb-md-0">
+            <i class="fa fa-info-circle mr-2 text-primary" aria-hidden="true"></i>
+            {{#str}} account_not_linked, qbank_questionhub {{/str}}
+        </div>
+        <div class="d-flex align-items-center">
+            <a href="{{connect_url}}" class="btn btn-sm btn-outline-primary mr-2">
+                <i class="fa fa-sign-in mr-1" aria-hidden="true"></i>
+                {{#str}} link_account_button, qbank_questionhub {{/str}}
+            </a>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#patEntryForm">
+                PAT
+            </button>
+        </div>
+    </div>
+    <div class="collapse mb-4" id="patEntryForm">
+        <div class="card card-body bg-light">
+            <form method="post" action="{{action_url}}" class="form-inline">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="save_pat">
+                <label for="pat_token" class="mr-2">{{#str}} pat_token_label, qbank_questionhub {{/str}}</label>
+                <input type="password" id="pat_token" name="pat_token" class="form-control mr-2 mb-2 mb-md-0" placeholder="mqh_pat_..." style="min-width: 300px;">
+                <button type="submit" class="btn btn-primary">{{#str}} save_token, qbank_questionhub {{/str}}</button>
+            </form>
+        </div>
+    </div>
+    {{/has_account}}
+
+    <!-- Search & Filter Form -->
+    <div class="card bg-light border-0 mb-4 p-3 shadow-sm">
+        <form method="get" action="{{browser_url}}" class="row g-2 align-items-center">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+            {{#categoryid}}<input type="hidden" name="cat" value="{{categoryid}}">{{/categoryid}}
+
+            <div class="col-md-4 mb-2">
+                <input type="text" name="q" class="form-control" placeholder="{{#str}} search_placeholder, qbank_questionhub {{/str}}" value="{{query}}">
+            </div>
+
+            <div class="col-md-2 mb-2">
+                <select name="subject" class="custom-select form-control">
+                    <option value="">{{#str}} all_subjects, qbank_questionhub {{/str}}</option>
+                    {{#subjects}}
+                    <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name_de}}</option>
+                    {{/subjects}}
+                </select>
+            </div>
+
+            <div class="col-md-2 mb-2">
+                <select name="level" class="custom-select form-control">
+                    <option value="">{{#str}} all_levels, qbank_questionhub {{/str}}</option>
+                    <option value="GF" {{#level_gf_selected}}selected{{/level_gf_selected}}>GF (Grundlagenfach)</option>
+                    <option value="SF" {{#level_sf_selected}}selected{{/level_sf_selected}}>SF (Schwerpunktfach)</option>
+                    <option value="EF" {{#level_ef_selected}}selected{{/level_ef_selected}}>EF (Ergänzungsfach)</option>
+                    <option value="FF" {{#level_ff_selected}}selected{{/level_ff_selected}}>FF (Freifach)</option>
+                </select>
+            </div>
+
+            <div class="col-md-2 mb-2">
+                <select name="canton" class="custom-select form-control">
+                    <option value="">{{#str}} all_cantons, qbank_questionhub {{/str}}</option>
+                    {{#cantons}}
+                    <option value="{{code}}" {{#selected}}selected{{/selected}}>{{code}}</option>
+                    {{/cantons}}
+                </select>
+            </div>
+
+            <div class="col-md-2 mb-2 d-flex">
+                <button type="submit" class="btn btn-primary mr-2 flex-grow-1">
+                    <i class="fa fa-search mr-1" aria-hidden="true"></i>{{#str}} search_button, qbank_questionhub {{/str}}
+                </button>
+                <a href="{{reset_url}}" class="btn btn-outline-secondary" title="{{#str}} reset_filters, qbank_questionhub {{/str}}">
+                    <i class="fa fa-times" aria-hidden="true"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Package Cards Grid -->
+    <div class="row">
+        {{#packages}}
+            {{> qbank_questionhub/package_card }}
+        {{/packages}}
+        {{^packages}}
+        <div class="col-12 py-5 text-center text-muted">
+            <i class="fa fa-folder-open-o fa-3x mb-3 text-secondary" aria-hidden="true"></i>
+            <h5>{{#str}} no_packages_found, qbank_questionhub {{/str}}</h5>
+        </div>
+        {{/packages}}
+    </div>
+
+    <!-- Pagination Controls -->
+    {{#pagination.total_pages}}
+    <nav class="mt-4" aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {{^has_prev}}disabled{{/has_prev}}">
+                <a class="page-link" href="{{prev_url}}">&laquo;</a>
+            </li>
+            <li class="page-item active">
+                <span class="page-link">{{pagination.page}} / {{pagination.total_pages}}</span>
+            </li>
+            <li class="page-item {{^has_next}}disabled{{/has_next}}">
+                <a class="page-link" href="{{next_url}}">&raquo;</a>
+            </li>
+        </ul>
+    </nav>
+    {{/pagination.total_pages}}
+
+</div>
+
+<!-- Modal: Preview Collection Questions -->
+<div class="modal fade" id="previewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">Fragensammlung-Vorschau</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Schliessen">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="previewModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Laden...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schliessen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirm Import Package -->
+<div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <form method="post" action="{{action_url}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="import_package">
+                <input type="hidden" name="courseid" value="{{courseid}}">
+                {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+                <input type="hidden" name="packageid" id="importModalPackageId" value="">
+                <input type="hidden" name="version" id="importModalVersion" value="">
+                <input type="hidden" name="title" id="importModalTitle" value="">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">{{#str}} import_confirm_title, qbank_questionhub {{/str}}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Schliessen">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchten Sie das Paket <strong id="importModalTitleText"></strong> in diesen Kurs importieren?</p>
+
+                    <div class="form-group mb-3">
+                        <label for="importTargetCat">{{#str}} target_category, qbank_questionhub {{/str}}:</label>
+                        <select name="targetcategoryid" id="importTargetCat" class="custom-select form-control">
+                            {{#course_categories}}
+                            <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                            {{/course_categories}}
+                        </select>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="preservehierarchy" id="preserveHierarchy" value="1" checked>
+                        <label class="form-check-label" for="preserveHierarchy">
+                            {{#str}} import_preserve_hierarchy, qbank_questionhub {{/str}}
+                        </label>
+                    </div>
+
+                    <div id="importDiagnosticsBox" class="alert alert-secondary mt-3 d-none">
+                        <small id="importDiagnosticsText"></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="importSubmitBtn">
+                        <i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} import_button, qbank_questionhub {{/str}}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Attach preview button handler
+    document.querySelectorAll('.qh-preview-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var pkgId = this.getAttribute('data-packageid');
+            var version = this.getAttribute('data-version');
+            var title = this.getAttribute('data-title');
+
+            var modalTitle = document.getElementById('previewModalLabel');
+            var modalBody = document.getElementById('previewModalBody');
+            modalTitle.innerText = 'Vorschau: ' + title;
+            modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Lade Vorschau vom Hub...</p></div>';
+
+            $('#previewModal').modal('show');
+
+            fetch('{{hub_url}}/api/v1/packages/' + encodeURIComponent(pkgId) + '/preview?version=' + encodeURIComponent(version))
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (!data.questions || data.questions.length === 0) {
+                        modalBody.innerHTML = '<div class="alert alert-warning">Keine Fragen zur Vorschau verfügbar.</div>';
+                        return;
+                    }
+                    var html = '<div class="list-group">';
+                    data.questions.forEach(function(q, i) {
+                        html += '<div class="list-group-item">';
+                        html += '<div class="d-flex w-100 justify-content-between">';
+                        html += '<h6 class="mb-1">' + (i + 1) + '. ' + (q.name || 'Unbenannt') + '</h6>';
+                        html += '<span class="badge badge-secondary">' + (q.type || 'Standard') + '</span>';
+                        html += '</div>';
+                        html += '<div class="text-muted mt-2 small">' + (q.questiontext || '') + '</div>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    modalBody.innerHTML = html;
+                })
+                .catch(function(err) {
+                    modalBody.innerHTML = '<div class="alert alert-danger">Fehler beim Laden der Vorschau: ' + err.message + '</div>';
+                });
+        });
+    });
+
+    // Attach import button handler
+    document.querySelectorAll('.qh-import-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var pkgId = this.getAttribute('data-packageid');
+            var version = this.getAttribute('data-version');
+            var title = this.getAttribute('data-title');
+
+            document.getElementById('importModalPackageId').value = pkgId;
+            document.getElementById('importModalVersion').value = version;
+            document.getElementById('importModalTitle').value = title;
+            document.getElementById('importModalTitleText').innerText = title + ' (' + version + ')';
+
+            $('#importModal').modal('show');
+        });
+    });
+});
+</script>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="question/bank/questionhub/db" VERSION="2026101300" COMMENT="XMLDB file for qbank_questionhub"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="qbank_questionhub_tokens" COMMENT="OAuth2 access tokens and Personal Access Tokens for linked Question Hub accounts">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Moodle user ID"/>
+        <FIELD NAME="access_token" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="OAuth or Personal Access Token"/>
+        <FIELD NAME="token_type" TYPE="char" LENGTH="50" NOTNULL="false" DEFAULT="Bearer" SEQUENCE="false" COMMENT="Token type"/>
+        <FIELD NAME="expires_at" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" SEQUENCE="false" COMMENT="Unix expiration timestamp"/>
+        <FIELD NAME="hub_user_id" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="Question Hub marketplace user UUID"/>
+        <FIELD NAME="hub_email" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Question Hub user email"/>
+        <FIELD NAME="hub_name" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Question Hub user display name"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Created timestamp"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Modified timestamp"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid_uniq" TYPE="unique" FIELDS="userid"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="qbank_questionhub_history" COMMENT="Audit log of imports and exports via Question Hub">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Moodle user ID"/>
+        <FIELD NAME="action" TYPE="char" LENGTH="50" NOTNULL="true" DEFAULT="import" SEQUENCE="false" COMMENT="Action type (import or publish)"/>
+        <FIELD NAME="package_id" TYPE="char" LENGTH="150" NOTNULL="false" SEQUENCE="false" COMMENT="Package identifier"/>
+        <FIELD NAME="package_version" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false" COMMENT="Package SemVer"/>
+        <FIELD NAME="package_title" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Package title"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Course ID"/>
+        <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Question category ID"/>
+        <FIELD NAME="question_count" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Number of questions"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of activity"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_ix" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="courseid_ix" UNIQUE="false" FIELDS="courseid"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>

@@ -1,0 +1,110 @@
+<div class="qbank_questionhub_publish mb-5">
+    <div class="card shadow-sm border-light p-4">
+        <h4 class="card-title mb-4">
+            <i class="fa fa-cloud-upload text-primary mr-2" aria-hidden="true"></i>
+            {{#str}} publish_title, qbank_questionhub {{/str}}
+        </h4>
+
+        <form method="post" action="{{action_url}}">
+            <input type="hidden" name="sesskey" value="{{sesskey}}">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+            {{#questionid}}<input type="hidden" name="questionid" value="{{questionid}}">{{/questionid}}
+
+            <!-- Source Category Selection -->
+            <div class="form-group mb-3">
+                <label for="categoryid" class="font-weight-bold">{{#str}} target_category, qbank_questionhub {{/str}}:</label>
+                <select name="categoryid" id="categoryid" class="custom-select form-control" {{#questionid}}disabled{{/questionid}}>
+                    {{#categories}}
+                    <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}} ({{questioncount}} Fragen)</option>
+                    {{/categories}}
+                </select>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="package_id" class="font-weight-bold">{{#str}} package_id, qbank_questionhub {{/str}}:</label>
+                    <input type="text" id="package_id" name="package_id" class="form-control" value="{{default_package_id}}" required>
+                    <small class="form-text text-muted">Eindeutige ID im Format ch.gym.[fach].[thema] (z.B. ch.gym.inf.datenstrukturen)</small>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="package_title" class="font-weight-bold">{{#str}} package_title_label, qbank_questionhub {{/str}}:</label>
+                    <input type="text" id="package_title" name="package_title" class="form-control" value="{{default_title}}" required>
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="package_summary" class="font-weight-bold">{{#str}} package_summary_label, qbank_questionhub {{/str}}:</label>
+                <textarea id="package_summary" name="package_summary" class="form-control" rows="3" required>{{default_summary}}</textarea>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="package_subject" class="font-weight-bold">{{#str}} package_subject_label, qbank_questionhub {{/str}}:</label>
+                    <select id="package_subject" name="package_subject" class="custom-select form-control" required>
+                        {{#subjects}}
+                        <option value="{{name_de}}" {{#selected}}selected{{/selected}}>{{name_de}}</option>
+                        {{/subjects}}
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label for="package_level" class="font-weight-bold">{{#str}} package_level_label, qbank_questionhub {{/str}}:</label>
+                    <select id="package_level" name="package_level" class="custom-select form-control" required>
+                        <option value="GF">GF (Grundlagenfach)</option>
+                        <option value="SF" selected>SF (Schwerpunktfach)</option>
+                        <option value="EF">EF (Ergänzungsfach)</option>
+                        <option value="FF">FF (Freifach)</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label for="package_canton" class="font-weight-bold">{{#str}} package_canton_label, qbank_questionhub {{/str}}:</label>
+                    <select id="package_canton" name="package_canton" class="custom-select form-control" required>
+                        {{#cantons}}
+                        <option value="{{code}}" {{#selected}}selected{{/selected}}>{{code}}</option>
+                        {{/cantons}}
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label for="package_grades" class="font-weight-bold">{{#str}} package_grades_label, qbank_questionhub {{/str}}:</label>
+                    <input type="text" id="package_grades" name="package_grades" class="form-control" value="GYM2, GYM3" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="package_version" class="font-weight-bold">{{#str}} package_version_label, qbank_questionhub {{/str}}:</label>
+                    <input type="text" id="package_version" name="package_version" class="form-control" value="1.0.0" pattern="^\d+\.\d+\.\d+$" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="package_license" class="font-weight-bold">{{#str}} package_license_label, qbank_questionhub {{/str}}:</label>
+                    <select id="package_license" name="package_license" class="custom-select form-control" required>
+                        <option value="CC-BY-4.0" selected>CC-BY-4.0 (Namensnennung)</option>
+                        <option value="CC-BY-SA-4.0">CC-BY-SA-4.0 (Weitergabe unter gleichen Bedingungen)</option>
+                        <option value="CC0-1.0">CC0-1.0 (Gemeinfrei / Public Domain)</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <a href="{{cancel_url}}" class="btn btn-outline-secondary mb-2 mb-md-0">
+                    Abbrechen
+                </a>
+                <div>
+                    <button type="submit" name="action" value="download_xml" class="btn btn-outline-primary mr-2 mb-2 mb-md-0">
+                        <i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} download_xml_button, qbank_questionhub {{/str}}
+                    </button>
+                    <button type="submit" name="action" value="publish_hub" class="btn btn-primary mb-2 mb-md-0">
+                        <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} publish_button, qbank_questionhub {{/str}}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
