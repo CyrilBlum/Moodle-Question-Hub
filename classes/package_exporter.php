@@ -113,39 +113,37 @@ class package_exporter {
         global $CFG, $DB;
         require_once($CFG->dirroot . '/question/editlib.php');
         require_once($CFG->dirroot . '/question/format/xml/format.php');
+        require_once($CFG->libdir . '/questionlib.php');
 
         if (empty($questionids)) {
             throw new moodle_exception('error_empty_category', 'qbank_questionhub');
         }
 
-        list($insql, $params) = $DB->get_in_or_equal($questionids);
-        $questions = $DB->get_records_select('question', "id $insql", $params);
-
-        if (empty($questions)) {
-            throw new moodle_exception('error_empty_category', 'qbank_questionhub');
-        }
-
-        // Ensure category property is set on all questions across Moodle 4.x and 5.x.
-        foreach ($questions as $q) {
-            if (!isset($q->category)) {
-                $sql = "SELECT qbe.questioncategoryid
-                          FROM {question_bank_entries} qbe
-                          JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
-                         WHERE qv.questionid = ?";
-                $q->category = (int)$DB->get_field_sql($sql, [$q->id]);
+        // Hydrate full question data (options, answers, category) using core question_bank API.
+        $hydratedquestions = [];
+        foreach ($questionids as $qid) {
+            $qdata = \question_bank::load_question_data((int)$qid);
+            if ($qdata) {
+                $hydratedquestions[] = $qdata;
             }
         }
 
-        // Determine primary category.
-        $firstq = reset($questions);
+        if (empty($hydratedquestions)) {
+            throw new moodle_exception('error_empty_category', 'qbank_questionhub');
+        }
+
+        // Determine primary category for context resolution.
+        $firstq = reset($hydratedquestions);
         $category = $DB->get_record('question_categories', ['id' => $firstq->category], '*', MUST_EXIST);
+        $catcontext = \context::instance_by_id($category->contextid);
 
         $qformat = new \qformat_xml();
-        $contexts = new \core_question\local\bank\question_edit_contexts($this->context);
+        $contexts = new \core_question\local\bank\question_edit_contexts($catcontext);
         $qformat->setContexts($contexts->all());
         $qformat->setCourse($this->course);
-        $qformat->setCategory(null);
-        $qformat->questions = array_values($questions);
+        // In Moodle core qformat_default, setQuestions() is the canonical API for question lists.
+        // setCategory must remain null so exportprocess() does not overwrite questions with the whole category.
+        $qformat->setQuestions($hydratedquestions);
         $qformat->setCattofile(true);
         $qformat->setContexttofile(true);
 
@@ -164,9 +162,9 @@ class package_exporter {
      * @return string Normalized XML string.
      */
     public static function normalize_xml(string $rawxml): string {
-        // 1. Normalize $module$, $system$, or $cat123$ to $course$
+        // 1. Normalize $module$, $system$, $cat123$, or empty $$ to canonical $course$
         $normalized = preg_replace(
-            '/<category>\s*<text>\$(?:module|cat\d+|system)\$/i',
+            '/<category>\s*<text>\$(?:module|cat\d+|system|)\$/i',
             '<category><text>$course$',
             $rawxml
         );

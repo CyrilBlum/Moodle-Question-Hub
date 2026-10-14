@@ -65,6 +65,11 @@ class preflight_validator {
     public static function validate(string $xmlcontent): diagnostic_report {
         $report = new diagnostic_report();
 
+        // Normalize multi-byte encodings (e.g. UTF-16 BOM) to UTF-8 to prevent regex evasion.
+        if (str_starts_with($xmlcontent, "\xFF\xFE") || str_starts_with($xmlcontent, "\xFE\xFF")) {
+            $xmlcontent = mb_convert_encoding($xmlcontent, 'UTF-8', 'UTF-16');
+        }
+
         // 1. Empty payload check.
         $trimmed = trim($xmlcontent);
         if ($trimmed === '') {
@@ -446,6 +451,17 @@ class preflight_validator {
             $filename = (string)($file['name'] ?? 'unnamed');
             $encoding = (string)($file['encoding'] ?? 'base64');
             $rawcontent = (string)$file;
+
+            // 1. Directory traversal and illegal path character defense-in-depth.
+            if ($filename === '' || preg_match('/(?:\.\.|\/|\\\\|\x00)/', $filename)) {
+                $report->add_error(
+                    'ERR_FILE_PATH_TRAVERSAL',
+                    "Illegal path characters or directory traversal detected in file name '{$filename}' (question '{$qname}').",
+                    $qindex,
+                    $qname
+                );
+                continue;
+            }
 
             // Check extension.
             $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));

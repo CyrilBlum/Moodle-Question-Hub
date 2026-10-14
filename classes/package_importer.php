@@ -127,11 +127,7 @@ class package_importer {
             \core\session\manager::set_user(get_admin());
         }
 
-        // 5. Capture existing question IDs to identify new imports.
-        $existingids = $DB->get_fieldset_select('question', 'id', 'id > 0');
-        $existingset = array_flip($existingids);
-
-        // 5. Configure and execute qformat_xml.
+        // 5. Configure and execute qformat_xml within an isolated transaction.
         $qformat = new \qformat_xml();
         $contexts = new \core_question\local\bank\question_edit_contexts($this->context);
         $qformat->setCourse($this->course);
@@ -145,6 +141,7 @@ class package_importer {
         $qformat->setRealfilename('package.xml');
         $qformat->displayprogress = false;
 
+        $transaction = $DB->start_delegated_transaction();
         ob_start();
         $importok = false;
         try {
@@ -154,31 +151,16 @@ class package_importer {
                     $qformat->importpostprocess();
                 }
             }
-        } catch (\Throwable $t) {
-            $output = ob_get_clean();
-            @unlink($tempfile);
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', $t->getMessage() . "\n" . $output);
-        }
-        $output = ob_get_clean();
-
-        // 6. Cleanup temporary staged file.
-        @unlink($tempfile);
-
-        if (!$importok) {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', $output);
-        }
-
-        // 7. Determine newly imported question IDs.
-        $allids = $DB->get_fieldset_select('question', 'id', 'id > 0');
-        $newids = [];
-        foreach ($allids as $qid) {
-            if (!isset($existingset[$qid])) {
-                $newids[] = (int)$qid;
+            if (!$importok) {
+                $output = ob_get_clean();
+                throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', $output ?: '');
             }
-        }
 
-        // 8. Audit log history record.
-        try {
+            // 6. Determine newly imported question IDs directly from format instance.
+            // Completely eliminates cross-process race conditions and full-table scans.
+            $newids = array_map('intval', $qformat->questionids ?? []);
+
+            // 7. Audit log history record within the transaction.
             $history = new stdClass();
             $history->userid = !empty($USER->id) ? (int)$USER->id : 0;
             $history->action = 'import';
@@ -190,8 +172,25 @@ class package_importer {
             $history->question_count = count($newids);
             $history->timecreated = time();
             $DB->insert_record('qbank_questionhub_history', $history);
-        } catch (\Throwable $e) {
-            // Non-fatal if audit logging encounters an issue.
+
+            $transaction->allow_commit();
+            ob_end_clean();
+        } catch (\Throwable $t) {
+            $output = ob_get_clean();
+            if (!$transaction->is_disposed()) {
+                try {
+                    $transaction->rollback($t);
+                } catch (\Throwable $ignore) {
+                    // Moodle's rollback_delegated_transaction re-throws $t.
+                }
+            }
+            if ($t instanceof moodle_exception) {
+                throw $t;
+            }
+            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', $t->getMessage() . "\n" . ($output ?: ''));
+        } finally {
+            // 8. Cleanup temporary staged file.
+            @unlink($tempfile);
         }
 
         return new import_result(true, $newids, $report->get_warnings());

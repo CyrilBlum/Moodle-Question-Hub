@@ -28,11 +28,32 @@ require_once($CFG->dirroot . '/question/editlib.php');
 require_login();
 \core_question\local\bank\helper::require_plugin_enabled('qbank_questionhub');
 
+// Resolve cmid / courseid fallback before question_edit_setup().
+// In Moodle 5.0, question_edit_setup() unconditionally requires cmid.
+// When navigating with courseid only (e.g. from tertiary menu or direct link),
+// resolve the default mod_qbank cmid for that course.
+if (empty($_GET['cmid']) && empty($_POST['cmid'])) {
+    $courseid = optional_param('courseid', 0, PARAM_INT);
+    if ($courseid <= 0 && !empty($COURSE->id)) {
+        $courseid = (int)$COURSE->id;
+        $_GET['courseid'] = $courseid;
+    }
+    if ($courseid > 0 && class_exists('\core_question\local\bank\question_bank_helper')) {
+        $course = $DB->get_record('course', ['id' => $courseid]);
+        if ($course) {
+            $qbank = \core_question\local\bank\question_bank_helper::get_default_open_instance_system_type($course, true);
+            if ($qbank) {
+                $_GET['cmid'] = (int)$qbank->id;
+            }
+        }
+    }
+}
+
 list($thispageurl, $contexts, $cmid, $cm, $module, $pagevars) =
-        question_edit_setup('questionhub', '/question/bank/questionhub/view.php');
+        question_edit_setup('questions', '/question/bank/questionhub/view.php');
 
 $coursecontext = $contexts->lowest();
-require_capability('qbank_questionhub:view', $coursecontext);
+require_capability('qbank/questionhub:view', $coursecontext);
 
 $PAGE->set_url($thispageurl);
 $PAGE->set_title(get_string('pluginname', 'qbank_questionhub'));
@@ -55,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         redirect($thispageurl);
     } else if ($action === 'import_package') {
-        require_capability('qbank_questionhub:import', $coursecontext);
+        require_capability('qbank/questionhub:import', $coursecontext);
         $packageid = required_param('packageid', PARAM_RAW_TRIMMED);
         $version = required_param('version', PARAM_RAW_TRIMMED);
         $title = optional_param('title', 'Imported Package', PARAM_TEXT);

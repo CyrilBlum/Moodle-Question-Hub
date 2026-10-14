@@ -33,14 +33,27 @@ $cmid = optional_param('cmid', 0, PARAM_INT);
 $categoryid = optional_param('categoryid', 0, PARAM_INT);
 $questionid = optional_param('questionid', 0, PARAM_INT);
 
+// Resolve course and cmid bidirectionally across Moodle 4.5 and 5.0.
+if ($courseid <= 0 && $cmid > 0) {
+    list($module, $cm) = get_module_from_cmid($cmid);
+    $courseid = (int)$cm->course;
+}
+
 if ($courseid > 0) {
     $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 } else {
     $course = $COURSE;
 }
 
+if ($cmid <= 0 && class_exists('\core_question\local\bank\question_bank_helper')) {
+    $qbank = \core_question\local\bank\question_bank_helper::get_default_open_instance_system_type($course, true);
+    if ($qbank) {
+        $cmid = (int)$qbank->id;
+    }
+}
+
 $context = \qbank_questionhub\package_exporter::resolve_course_question_context($course);
-require_capability('qbank_questionhub:publish', $context);
+require_capability('qbank/questionhub:publish', $context);
 
 $pageparams = ['courseid' => $course->id];
 if ($cmid > 0) {
@@ -57,6 +70,7 @@ $thispageurl = new moodle_url('/question/bank/questionhub/publish.php', $pagepar
 $PAGE->set_url($thispageurl);
 $PAGE->set_title(get_string('publishtohub', 'qbank_questionhub'));
 $PAGE->set_heading($course->fullname);
+$PAGE->set_context($context);
 
 // Resolve selected category or question
 if ($questionid > 0) {

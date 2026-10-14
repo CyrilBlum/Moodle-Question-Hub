@@ -62,6 +62,28 @@ try {
     assert_test('API Client: Taxonomy Retrieval', false, $t->getMessage());
 }
 
+// 2b. Test Capability String Format & Authorization Resolution
+try {
+    $course = $DB->get_record('course', ['id' => 2]);
+    if ($course) {
+        $context = \qbank_questionhub\package_exporter::resolve_course_question_context($course);
+        \core\session\manager::set_user(get_admin());
+
+        $canview = has_capability('qbank/questionhub:view', $context);
+        $canpublish = has_capability('qbank/questionhub:publish', $context);
+        $canimport = has_capability('qbank/questionhub:import', $context);
+        $badview = has_capability('qbank_questionhub:view', $context);
+
+        assert_test(
+            'Capabilities: Canonical Slash Format Registered & Resolvable',
+            $canview && $canpublish && $canimport && !$badview,
+            "view={$canview}, publish={$canpublish}, import={$canimport}, underscore_format={$badview}"
+        );
+    }
+} catch (\Throwable $t) {
+    assert_test('Capabilities: Canonical Slash Format Registered & Resolvable', false, $t->getMessage());
+}
+
 // 3. Test Pre-flight Validator: Valid Quiz XML
 $validxml = '<?xml version="1.0" encoding="UTF-8"?>
 <quiz>
@@ -92,6 +114,38 @@ $xxexml = '<?xml version="1.0" encoding="UTF-8"?>
 </quiz>';
 $reportxxe = \qbank_questionhub\preflight_validator::validate($xxexml);
 assert_test('Preflight Validator: XXE Injection Defense', !$reportxxe->is_valid(), 'Expected blocking error');
+
+// 4b. Test Pre-flight Validator: Multi-byte UTF-16 DOCTYPE Defense
+$utf16lexxe = "\xFF\xFE" . mb_convert_encoding($xxexml, 'UTF-16LE', 'UTF-8');
+$reportutf16 = \qbank_questionhub\preflight_validator::validate($utf16lexxe);
+$utf16errors = array_column($reportutf16->get_errors(), 'code');
+assert_test(
+    'Preflight Validator: Multi-byte UTF-16 DOCTYPE Defense',
+    !$reportutf16->is_valid() && in_array('ERR_XXE_DOCTYPE_FORBIDDEN', $utf16errors, true),
+    'Expected ERR_XXE_DOCTYPE_FORBIDDEN in ' . json_encode($utf16errors)
+);
+
+// 4c. Test Pre-flight Validator: Embedded Media Path Traversal Defense
+$traversalxml = '<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="multichoice">
+    <name><text>Traversal Test</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Photo</p>]]></text>
+      <file name="../../etc/passwd" encoding="base64">YQ==</file>
+    </questiontext>
+    <single>true</single>
+    <answer fraction="100"><text>A</text></answer>
+    <answer fraction="0"><text>B</text></answer>
+  </question>
+</quiz>';
+$reporttraversal = \qbank_questionhub\preflight_validator::validate($traversalxml);
+$traversalerrors = array_column($reporttraversal->get_errors(), 'code');
+assert_test(
+    'Preflight Validator: Embedded Media Path Traversal Defense',
+    !$reporttraversal->is_valid() && in_array('ERR_FILE_PATH_TRAVERSAL', $traversalerrors, true),
+    'Expected ERR_FILE_PATH_TRAVERSAL in ' . json_encode($traversalerrors)
+);
 
 // 5. Test Pre-flight Validator: Single-Choice Fraction Violation
 $badmcxml = '<?xml version="1.0" encoding="UTF-8"?>
@@ -135,6 +189,24 @@ if ($course) {
             $importer = new \qbank_questionhub\package_importer(2);
             $importresult = $importer->import_package($validxml, true, ['title' => 'Sample Question']);
             assert_test('Package Importer: Import Valid Package', $importresult->success && $importresult->questioncount > 0, "Imported {$importresult->questioncount} questions");
+        }
+
+        // 6b. Test Single-Question Export (No Category Leakage)
+        $sampleq = $DB->get_records('question', null, 'id ASC', '*', 0, 1);
+        $firstq = reset($sampleq);
+        if ($firstq) {
+            $singlexml = $exporter->export_questions_xml([(int)$firstq->id]);
+            $hasquiz = str_contains($singlexml, '<quiz>');
+            $hascourse = str_contains($singlexml, '$course$');
+            preg_match_all('/<question type="(?!category)[^"]+"/', $singlexml, $singlematches);
+            $singlecount = count($singlematches[0]);
+            assert_test(
+                'Package Exporter: Single-Question Export (No Leakage)',
+                $hasquiz && $hascourse && ($singlecount === 1),
+                "Exported {$singlecount} question(s), length: " . strlen($singlexml)
+            );
+        } else {
+            cli_writeln(" [SKIP] No questions found in database for single-question export test");
         }
     } catch (\Throwable $t) {
         assert_test('Export/Import Roundtrip', false, $t->getMessage());
