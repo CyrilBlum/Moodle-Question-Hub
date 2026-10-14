@@ -320,7 +320,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = format_string($cat->name);
-        $level = $istop ? 0 : $depth;
+        $level = $istop ? 0 : max(1, $depth);
         if (!$istop) {
             $isfirst = empty($coursecategories);
             $coursecategories[] = [
@@ -345,7 +345,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'has_sub_total' => $total !== $own,
             ];
         }
-        $walk((int)$cat->id, $istop ? 0 : $depth + 1);
+        $walk((int)$cat->id, $istop ? 1 : $depth + 1);
     }
 };
 $walk(0, 0);

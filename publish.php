@@ -254,7 +254,7 @@ $walkcats = function (int $parentid, int $depth) use (&$walkcats, $childmap, $DB
                 'selected' => $isselected,
             ];
         }
-        $walkcats((int)$cat->id, $istop ? 0 : $depth + 1);
+        $walkcats((int)$cat->id, $istop ? 1 : $depth + 1);
     }
 };
 $walkcats(0, 0);
