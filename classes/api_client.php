@@ -220,6 +220,8 @@ class api_client {
             'xml' => $xml,
             'metadata' => $metadata,
         ];
+        // Whole categories with embedded media can be large; allow time for upload and validation.
+        $this->timeout = max($this->timeout, 180);
         return $this->post('/api/v1/packages', $payload, true);
     }
 
