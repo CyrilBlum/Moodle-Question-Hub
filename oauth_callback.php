@@ -27,14 +27,20 @@ require_once(__DIR__ . '/../../../config.php');
 require_login();
 $context = \context_system::instance();
 
-$code = required_param('code', PARAM_RAW);
+$code = optional_param('code', '', PARAM_RAW);
 $state = optional_param('state', '', PARAM_RAW);
+$hubError = optional_param('error', '', PARAM_TEXT);
 
 $oauthstate = $SESSION->qbank_questionhub_oauth ?? null;
 unset($SESSION->qbank_questionhub_oauth);
 
 $defaultreturn = new moodle_url('/question/bank/questionhub/view.php');
 $returnurl = !empty($oauthstate['returnurl']) ? new moodle_url($oauthstate['returnurl']) : $defaultreturn;
+
+if ($hubError !== '' || $code === '') {
+    \core\notification::error(get_string('error_oauth_failed', 'qbank_questionhub', $hubError ?: 'no authorization code'));
+    redirect($returnurl);
+}
 
 if (empty($oauthstate) || empty($oauthstate['code_verifier']) || $oauthstate['state'] !== $state) {
     \core\notification::error(get_string('error_unauthorized', 'qbank_questionhub'));

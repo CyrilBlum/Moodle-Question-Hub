@@ -224,6 +224,35 @@ class api_client {
     }
 
     /**
+     * Lists the packages owned by the linked Hub account.
+     *
+     * @return array List of { id, title, latest_version, versions, preview_enabled, downloads_count }.
+     */
+    public function get_my_packages(): array {
+        $result = $this->get('/api/v1/account/packages', [], true);
+        return $result['data'] ?? [];
+    }
+
+    /**
+     * Withdraws a whole package (all versions) from the Hub.
+     *
+     * @param string $id Package id.
+     */
+    public function withdraw_package(string $id): void {
+        $this->delete('/api/v1/packages/' . rawurlencode($id));
+    }
+
+    /**
+     * Withdraws a single release of a package.
+     *
+     * @param string $id Package id.
+     * @param string $version SemVer version.
+     */
+    public function withdraw_release(string $id, string $version): void {
+        $this->delete('/api/v1/packages/' . rawurlencode($id) . '/releases/' . rawurlencode($version));
+    }
+
+    /**
      * Exchanges OAuth 2.0 PKCE authorization code for an access token.
      *
      * @param string $code Authorization code.
@@ -323,6 +352,29 @@ class api_client {
         }
 
         return $decoded ?? [];
+    }
+
+    /**
+     * Generic DELETE request handler (authenticated).
+     *
+     * @param string $endpoint API endpoint path.
+     * @throws moodle_exception On error.
+     */
+    protected function delete(string $endpoint): void {
+        if (empty($this->token)) {
+            throw new moodle_exception('error_unauthorized', 'qbank_questionhub');
+        }
+        $curl = $this->get_curl();
+        $curl->setHeader($this->get_headers(false));
+        $response = $curl->delete($this->baseurl . $endpoint);
+        $httpcode = (int)($curl->get_info()['http_code'] ?? 0);
+
+        if ($curl->get_errno() !== 0) {
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);
+        }
+        if ($httpcode >= 400) {
+            $this->handle_http_error($httpcode, (string)$response);
+        }
     }
 
     /**

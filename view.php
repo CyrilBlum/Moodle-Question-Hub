@@ -75,6 +75,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \core\notification::success(get_string('token_saved', 'qbank_questionhub'));
         }
         redirect($thispageurl);
+    } else if ($action === 'withdraw_package' || $action === 'withdraw_release') {
+        try {
+            $client = new \qbank_questionhub\api_client();
+            $wpackage = required_param('packageid', PARAM_RAW_TRIMMED);
+            if ($action === 'withdraw_package') {
+                $client->withdraw_package($wpackage);
+            } else {
+                $client->withdraw_release($wpackage, required_param('version', PARAM_RAW_TRIMMED));
+            }
+            \core\notification::success(get_string('withdraw_done', 'qbank_questionhub'));
+        } catch (\Exception $e) {
+            \core\notification::error($e->getMessage());
+        }
+        redirect($thispageurl);
     } else if ($action === 'import_package') {
         require_capability('qbank/questionhub:import', $coursecontext);
         $packageid = required_param('packageid', PARAM_RAW_TRIMMED);
@@ -195,7 +209,8 @@ foreach ($cantonlist as $c) {
 
 // Format package cards data
 $packagesdata = [];
-foreach ($packageresult['packages'] ?? [] as $pkg) {
+// The Hub API returns the list under "data" (older mocks used "packages").
+foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
     $author = '';
     if (!empty($pkg['author'])) {
         $parts = [];
@@ -210,7 +225,7 @@ foreach ($packageresult['packages'] ?? [] as $pkg) {
 
     $packagesdata[] = [
         'id' => $pkg['id'],
-        'title' => $pkg['title'],
+        'title' => html_entity_decode($pkg['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
         'summary' => $pkg['summary'] ?? '',
         'latest_version' => $pkg['latest_version'] ?? '1.0.0',
         'license' => $pkg['license'] ?? 'CC-BY-4.0',
@@ -219,6 +234,7 @@ foreach ($packageresult['packages'] ?? [] as $pkg) {
         'level_badge' => $pkg['taxonomy']['subject_category'] ?? ($pkg['taxonomy']['level'] ?? ''),
         'stats' => $pkg['stats'] ?? ['question_count' => 0],
         'author_info' => $author,
+        'preview_enabled' => !empty($pkg['preview_enabled']),
     ];
 }
 
@@ -227,15 +243,50 @@ $userrecord = \qbank_questionhub\auth_manager::get_user_token_record((int)$USER-
 $hasaccount = !empty($userrecord) && !empty($userrecord->access_token);
 $accountname = $hasaccount ? ($userrecord->hub_name ?: ($userrecord->hub_email ?: 'Verbunden')) : '';
 
+// Packages the linked account has published (for withdrawal) and categories to publish.
+$mypackages = [];
+if ($hasaccount) {
+    try {
+        foreach ($client->get_my_packages() as $mp) {
+            $versions = [];
+            foreach ($mp['versions'] ?? [] as $v) {
+                $versions[] = ['version' => $v, 'can_withdraw' => count($mp['versions']) > 1];
+            }
+            $mypackages[] = [
+                'id' => $mp['id'],
+                'title' => html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                'latest_version' => $mp['latest_version'],
+                'downloads' => (int)($mp['downloads_count'] ?? 0),
+                'preview_on' => !empty($mp['preview_enabled']),
+                'versions' => $versions,
+            ];
+        }
+    } catch (\Exception $e) {
+        // The list is a convenience; the page works without it.
+        debugging($e->getMessage(), DEBUG_DEVELOPER);
+    }
+}
+
 // Course categories for import target dropdown
 $categories = $DB->get_records('question_categories', ['contextid' => $coursecontext->id], 'parent, sortorder, name');
 $coursecategories = [];
+$publishcategories = [];
 foreach ($categories as $cat) {
     $coursecategories[] = [
         'id' => $cat->id,
         'name' => format_string($cat->name),
         'selected' => ($cat->name !== 'top'),
     ];
+    if ($cat->name !== 'top') {
+        $publishparams = ['courseid' => $COURSE->id, 'categoryid' => $cat->id];
+        if (!empty($cmid)) {
+            $publishparams['cmid'] = $cmid;
+        }
+        $publishcategories[] = [
+            'name' => format_string($cat->name),
+            'url' => (new moodle_url('/question/bank/questionhub/publish.php', $publishparams))->out(false),
+        ];
+    }
 }
 
 // Build URLs
@@ -281,6 +332,9 @@ $templatedata = [
     'cantons' => $cantonsdata,
     'packages' => $packagesdata,
     'course_categories' => $coursecategories,
+    'publish_categories' => $publishcategories,
+    'my_packages' => $mypackages,
+    'has_my_packages' => !empty($mypackages),
     'pagination' => $pagination,
     'has_prev' => ($page > 1),
     'has_next' => ($page < ($pagination['total_pages'] ?? 1)),

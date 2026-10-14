@@ -109,4 +109,18 @@ class preflight_validator_test extends \advanced_testcase {
         $this->assertFalse($report->is_valid());
         $this->assertEquals('ERR_SVG_MALICIOUS_SCRIPT', $report->get_errors()[0]['code']);
     }
+
+    /**
+     * LaTeX and other literal braces are not Cloze tokens and must not be reported.
+     */
+    public function test_cloze_ignores_latex_braces(): void {
+        $text = '\\(\\begin{pmatrix} 1 & 2 \\end{pmatrix}\\) = {1:NUMERICAL:=5} und \\frac{a}{b}';
+        $this->assertNull(\qbank_questionhub\preflight_validator::find_cloze_problem($text));
+    }
+
+    public function test_cloze_reports_unterminated_and_untyped_tokens(): void {
+        $this->assertNotNull(\qbank_questionhub\preflight_validator::find_cloze_problem('x {1:SHORTANSWER:=offen'));
+        $this->assertNotNull(\qbank_questionhub\preflight_validator::find_cloze_problem('x {1:=Antwort}'));
+        $this->assertNull(\qbank_questionhub\preflight_validator::find_cloze_problem('{1:SHORTANSWER:=a\\}b~=c}'));
+    }
 }

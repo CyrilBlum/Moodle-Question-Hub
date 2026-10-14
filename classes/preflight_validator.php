@@ -398,43 +398,60 @@ class preflight_validator {
      * @param diagnostic_report $report
      */
     protected static function validate_cloze_syntax(string $text, int $qindex, string $qname, diagnostic_report $report): void {
-        // Check for balanced curly braces.
-        $open = substr_count($text, '{');
-        $close = substr_count($text, '}');
-        if ($open !== $close) {
+        $problem = self::find_cloze_problem($text);
+        if ($problem !== null) {
             $report->add_error(
                 'ERR_CLOZE_SYNTAX_INVALID',
-                "Cloze question '{$qname}' has unmatched curly braces ({$open} open vs {$close} close).",
+                "Cloze question '{$qname}': {$problem}",
                 $qindex,
                 $qname
             );
-            return;
         }
+    }
 
-        // Check for Cloze token format {1:TYPE:...}
-        if ($open > 0) {
-            preg_match_all('/\{([^{}]+)\}/', $text, $matches);
-            if (empty($matches[1])) {
-                $report->add_error(
-                    'ERR_CLOZE_SYNTAX_INVALID',
-                    "Cloze question '{$qname}' contains malformed cloze tokens.",
-                    $qindex,
-                    $qname
-                );
-            } else {
-                foreach ($matches[1] as $token) {
-                    // Standard cloze syntax: \d*:[A-Z_]+:.*
-                    if (!preg_match('/^\d*:[A-Z_]+:/i', $token)) {
-                        $report->add_error(
-                            'ERR_CLOZE_SYNTAX_INVALID',
-                            "Cloze token '{".substr($token, 0, 30)."}' in question '{$qname}' has invalid syntax.",
-                            $qindex,
-                            $qname
-                        );
+    /**
+     * Returns the first Cloze syntax problem or null.
+     *
+     * Only real Cloze tokens ({n:TYPE:...}) are checked. Other curly braces (LaTeX such as
+     * \begin{pmatrix}, code) are literal text in Moodle as well and are never reported.
+     *
+     * @param string $text
+     * @return string|null
+     */
+    public static function find_cloze_problem(string $text): ?string {
+        $length = strlen($text);
+        for ($i = 0; $i < $length; $i++) {
+            $char = $text[$i];
+            if ($char === '\\') {
+                $i++;
+                continue;
+            }
+            if ($char !== '{') {
+                continue;
+            }
+            $rest = substr($text, $i, 80);
+            if (preg_match('/^\{\d*:[A-Za-z_]+:/', $rest, $m)) {
+                $j = $i + strlen($m[0]);
+                $closed = false;
+                for (; $j < $length; $j++) {
+                    if ($text[$j] === '\\') {
+                        $j++;
+                        continue;
+                    }
+                    if ($text[$j] === '}') {
+                        $closed = true;
+                        break;
                     }
                 }
+                if (!$closed) {
+                    return "cloze element '" . substr($rest, 0, 30) . "' is not closed with }.";
+                }
+                $i = $j;
+            } else if (preg_match('/^\{\d+:/', $rest)) {
+                return "cloze element '" . substr($rest, 0, 30) . "' has no valid type (e.g. {1:SHORTANSWER:=answer}).";
             }
         }
+        return null;
     }
 
     /**

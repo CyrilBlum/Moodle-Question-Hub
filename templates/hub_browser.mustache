@@ -120,6 +120,68 @@
     </nav>
     {{/pagination.total_pages}}
 
+    {{#publish_categories.0}}
+    <div class="card mt-5">
+        <div class="card-header font-weight-bold">{{#str}} publish_category_heading, qbank_questionhub {{/str}}</div>
+        <ul class="list-group list-group-flush">
+            {{/publish_categories.0}}
+            {{#publish_categories}}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{name}}</span>
+                <a href="{{url}}" class="btn btn-sm btn-outline-primary">{{#str}} publish_category_button, qbank_questionhub {{/str}}</a>
+            </li>
+            {{/publish_categories}}
+            {{#publish_categories.0}}
+        </ul>
+    </div>
+    {{/publish_categories.0}}
+
+    {{#has_account}}
+    <div class="card mt-4">
+        <div class="card-header font-weight-bold">{{#str}} my_packages, qbank_questionhub {{/str}}</div>
+        {{^has_my_packages}}
+        <div class="card-body text-muted small">{{#str}} no_packages, qbank_questionhub {{/str}}</div>
+        {{/has_my_packages}}
+        <ul class="list-group list-group-flush">
+            {{#my_packages}}
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start flex-wrap">
+                    <div>
+                        <strong>{{title}}</strong>
+                        <div class="small text-muted">
+                            {{id}} · v{{latest_version}} · {{downloads}} Downloads ·
+                            {{#preview_on}}{{#str}} preview_on, qbank_questionhub {{/str}}{{/preview_on}}{{^preview_on}}{{#str}} preview_off, qbank_questionhub {{/str}}{{/preview_on}}
+                        </div>
+                        <div class="mt-1">
+                            {{#versions}}
+                            <form method="post" action="{{action_url}}" class="d-inline"
+                                  onsubmit="return confirm('{{#str}} withdraw_version_confirm, qbank_questionhub {{/str}}');">
+                                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                <input type="hidden" name="action" value="withdraw_release">
+                                <input type="hidden" name="packageid" value="{{id}}">
+                                <input type="hidden" name="version" value="{{version}}">
+                                <span class="badge badge-light border">{{version}}</span>
+                                {{#can_withdraw}}
+                                <button type="submit" class="btn btn-link btn-sm text-danger p-0 mr-2" title="{{#str}} withdraw_version, qbank_questionhub {{/str}}">&times;</button>
+                                {{/can_withdraw}}
+                            </form>
+                            {{/versions}}
+                        </div>
+                    </div>
+                    <form method="post" action="{{action_url}}"
+                          onsubmit="return confirm('{{#str}} withdraw_package_confirm, qbank_questionhub {{/str}}');">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="action" value="withdraw_package">
+                        <input type="hidden" name="packageid" value="{{id}}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">{{#str}} withdraw_package, qbank_questionhub {{/str}}</button>
+                    </form>
+                </div>
+            </li>
+            {{/my_packages}}
+        </ul>
+    </div>
+    {{/has_account}}
+
 </div>
 
 <!-- Modal: Preview Collection Questions -->

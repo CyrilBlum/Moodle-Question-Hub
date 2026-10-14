@@ -13,7 +13,8 @@
                 {{#canton_badge}}<span class="badge badge-info bg-info text-dark mr-1">{{canton_badge}}</span>{{/canton_badge}}
                 {{#level_badge}}<span class="badge badge-dark bg-dark text-white mr-1">{{level_badge}}</span>{{/level_badge}}
                 <span class="badge badge-light border text-muted mr-1">{{stats.question_count}} Fragen</span>
-                <span class="badge badge-light border text-muted">{{license}}</span>
+                <span class="badge badge-light border text-muted mr-1">{{license}}</span>
+                {{#preview_enabled}}<span class="badge badge-info bg-info text-dark">Vorschau</span>{{/preview_enabled}}
             </div>
             {{#author_info}}
             <div class="small text-muted mb-3">
@@ -21,9 +22,12 @@
             </div>
             {{/author_info}}
             <div class="d-flex justify-content-between mt-auto pt-2 border-top">
+                {{#preview_enabled}}
                 <button type="button" class="btn btn-sm btn-outline-secondary qh-preview-btn" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
                     <i class="fa fa-eye mr-1" aria-hidden="true"></i>Vorschau
                 </button>
+                {{/preview_enabled}}
+                {{^preview_enabled}}<span></span>{{/preview_enabled}}
                 <button type="button" class="btn btn-sm btn-primary qh-import-btn" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
                     <i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren
                 </button>

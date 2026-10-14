@@ -101,9 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subject = required_param('package_subject', PARAM_TEXT);
     $level = required_param('package_level', PARAM_ALPHA);
     $canton = required_param('package_canton', PARAM_ALPHA);
-    $gradesstr = optional_param('package_grades', 'GYM2, GYM3', PARAM_TEXT);
+    $gradesraw = optional_param_array('package_grades', ['GYM2', 'GYM3'], PARAM_ALPHANUM);
     $version = required_param('package_version', PARAM_RAW_TRIMMED);
     $license = required_param('package_license', PARAM_TEXT);
+    // Checkbox: absent when unchecked. Default in the form is checked.
+    $previewenabled = (bool)optional_param('package_preview', 0, PARAM_BOOL);
 
     try {
         $exporter = new \qbank_questionhub\package_exporter((int)$course->id);
@@ -125,7 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Action 2: Direct Publish to Marketplace
-        $grades = array_filter(array_map('trim', explode(',', $gradesstr)));
+        $allowedgrades = ['GYM1', 'GYM2', 'GYM3', 'GYM4'];
+        $grades = array_values(array_intersect($allowedgrades, $gradesraw));
         $metadata = [
             'id' => $packageid,
             'title' => $title,
@@ -133,6 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'version' => $version,
             'language' => 'de-CH',
             'license' => $license,
+            'preview_enabled' => $previewenabled,
             'taxonomy' => [
                 'framework' => 'CH-EDK-RLP',
                 'canton' => $canton,
@@ -233,13 +237,13 @@ foreach ($categories as $cat) {
     $qcount = $DB->count_records('question_bank_entries', ['questioncategoryid' => $cat->id]);
     $isSelected = ((int)$cat->id === (int)$categoryid);
     if ($isSelected) {
-        $defaulttitle = format_string($cat->name);
+        $defaulttitle = format_string($cat->name, true, ['escape' => false]);
         $clean = preg_replace('/[^a-z0-9]/', '', strtolower($cat->name));
         $defaultslug = 'ch.gym.inf.' . ($clean ?: 'questions');
     }
     $categoriesdata[] = [
         'id' => $cat->id,
-        'name' => format_string($cat->name),
+        'name' => format_string($cat->name, true, ['escape' => false]),
         'questioncount' => $qcount,
         'selected' => $isSelected,
     ];

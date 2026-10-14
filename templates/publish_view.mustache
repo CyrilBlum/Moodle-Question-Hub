@@ -70,7 +70,12 @@
 
                 <div class="col-md-3 mb-3">
                     <label for="package_grades" class="font-weight-bold">{{#str}} package_grades_label, qbank_questionhub {{/str}}:</label>
-                    <input type="text" id="package_grades" name="package_grades" class="form-control" value="GYM2, GYM3" required>
+                    <select id="package_grades" name="package_grades[]" class="custom-select form-control" multiple size="4" required>
+                        <option value="GYM1">GYM1</option>
+                        <option value="GYM2" selected>GYM2</option>
+                        <option value="GYM3" selected>GYM3</option>
+                        <option value="GYM4">GYM4</option>
+                    </select>
                 </div>
             </div>
 
@@ -88,6 +93,12 @@
                         <option value="CC0-1.0">CC0-1.0 (Gemeinfrei / Public Domain)</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="package_preview" name="package_preview" value="1" checked>
+                <label class="form-check-label font-weight-bold" for="package_preview">{{#str}} package_preview_label, qbank_questionhub {{/str}}</label>
+                <div class="text-muted small">{{#str}} package_preview_help, qbank_questionhub {{/str}}</div>
             </div>
 
             <hr class="my-4">
