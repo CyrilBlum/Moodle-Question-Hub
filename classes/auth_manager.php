@@ -37,18 +37,9 @@ class auth_manager {
      * @return string|null Active bearer token or null if unauthenticated.
      */
     public static function resolve_active_token(?int $userid = null): ?string {
-        global $USER, $DB;
-
-        $targetuserid = $userid !== null ? $userid : (!empty($USER->id) ? (int)$USER->id : 0);
-
-        if ($targetuserid > 0) {
-            $record = $DB->get_record('qbank_questionhub_tokens', ['userid' => $targetuserid]);
-            if ($record && !empty($record->access_token)) {
-                // If token has an expiry and is expired, skip it.
-                if ($record->expires_at == 0 || $record->expires_at > time()) {
-                    return $record->access_token;
-                }
-            }
+        $usertoken = self::resolve_user_token($userid);
+        if ($usertoken !== null) {
+            return $usertoken;
         }
 
         // Fallback to institutional Personal Access Token from plugin settings.
@@ -57,6 +48,21 @@ class auth_manager {
             return trim($institutiontoken);
         }
 
+        return null;
+    }
+
+    /** Resolves only the current Moodle user's Hub token, without an institutional fallback. */
+    public static function resolve_user_token(?int $userid = null): ?string {
+        global $USER, $DB;
+
+        $targetuserid = $userid !== null ? $userid : (!empty($USER->id) ? (int)$USER->id : 0);
+        if ($targetuserid <= 0) {
+            return null;
+        }
+        $record = $DB->get_record('qbank_questionhub_tokens', ['userid' => $targetuserid]);
+        if ($record && !empty($record->access_token) && ($record->expires_at == 0 || $record->expires_at > time())) {
+            return $record->access_token;
+        }
         return null;
     }
 

@@ -104,6 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $gradesraw = optional_param_array('package_grades', ['GYM2', 'GYM3'], PARAM_ALPHANUM);
     $version = required_param('package_version', PARAM_RAW_TRIMMED);
     $license = required_param('package_license', PARAM_TEXT);
+    $visibility = optional_param('package_visibility', 'public', PARAM_ALPHA);
+    if (!in_array($visibility, ['public', 'private'], true)) {
+        $visibility = 'public';
+    }
     // Checkbox: absent when unchecked. Default in the form is checked.
     $previewenabled = (bool)optional_param('package_preview', 0, PARAM_BOOL);
 
@@ -136,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'version' => $version,
             'language' => 'de-CH',
             'license' => $license,
+            'visibility' => $visibility,
             'preview_enabled' => $previewenabled,
             'taxonomy' => [
                 'framework' => 'CH-EDK-RLP',
@@ -148,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ],
         ];
 
-        $client = new \qbank_questionhub\api_client();
+        $client = new \qbank_questionhub\api_client(null, null, 30, true);
         $published = $client->publish($xmlcontent, $metadata);
 
         // Audit log in history table

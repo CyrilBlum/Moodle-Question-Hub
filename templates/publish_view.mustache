@@ -35,6 +35,14 @@
             </div>
 
             <div class="form-group mb-3">
+                <label for="package_visibility" class="font-weight-bold">{{#str}} package_visibility_label, qbank_questionhub {{/str}}:</label>
+                <select id="package_visibility" name="package_visibility" class="custom-select form-control">
+                    <option value="public" selected>{{#str}} package_visibility_public, qbank_questionhub {{/str}}</option>
+                    <option value="private">{{#str}} package_visibility_private, qbank_questionhub {{/str}}</option>
+                </select>
+            </div>
+
+            <div class="form-group mb-3">
                 <label for="package_summary" class="font-weight-bold">{{#str}} package_summary_label, qbank_questionhub {{/str}}:</label>
                 <textarea id="package_summary" name="package_summary" class="form-control" rows="3" required>{{default_summary}}</textarea>
             </div>

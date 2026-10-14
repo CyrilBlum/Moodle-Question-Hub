@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($thispageurl);
     } else if ($action === 'edit_package') {
         try {
-            $client = new \qbank_questionhub\api_client();
+            $client = new \qbank_questionhub\api_client(null, null, 30, true);
             $grades = optional_param_array('grades', [], PARAM_ALPHANUM);
             $tags = array_values(array_filter(array_map('trim', explode(',', optional_param('tags', '', PARAM_TEXT)))));
             $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), [
@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'grades' => array_values(array_intersect(['GYM1', 'GYM2', 'GYM3', 'GYM4'], $grades)),
                 'tags' => $tags,
                 'preview_enabled' => (bool)optional_param('preview_enabled', 0, PARAM_BOOL),
+                'visibility' => optional_param('visibility', 'public', PARAM_ALPHA),
             ]);
             \core\notification::success(get_string('settings_saved', 'qbank_questionhub'));
         } catch (\Exception $e) {
@@ -95,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($thispageurl);
     } else if ($action === 'withdraw_package' || $action === 'withdraw_release') {
         try {
-            $client = new \qbank_questionhub\api_client();
+            $client = new \qbank_questionhub\api_client(null, null, 30, true);
             $wpackage = required_param('packageid', PARAM_RAW_TRIMMED);
             if ($action === 'withdraw_package') {
                 $client->withdraw_package($wpackage);
@@ -116,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $preservehierarchy = (bool)optional_param('preservehierarchy', 1, PARAM_BOOL);
 
         try {
-            $client = new \qbank_questionhub\api_client();
+            $client = new \qbank_questionhub\api_client(null, null, 30, true);
             $xmlcontent = $client->download_release($packageid, $version);
 
             $importer = new \qbank_questionhub\package_importer(
@@ -167,7 +168,7 @@ if ($canton !== '') {
 }
 
 // Fetch taxonomy and packages from marketplace
-$client = new \qbank_questionhub\api_client();
+$client = new \qbank_questionhub\api_client(null, null, 30, true);
 $taxonomy = [];
 $packageresult = ['packages' => [], 'pagination' => ['page' => 1, 'limit' => 12, 'total' => 0, 'total_pages' => 1]];
 
@@ -245,14 +246,18 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
         'id' => $pkg['id'],
         'title' => html_entity_decode($pkg['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
         'summary' => $pkg['summary'] ?? '',
-        'latest_version' => $pkg['latest_version'] ?? '1.0.0',
-        'license' => $pkg['license'] ?? 'CC-BY-4.0',
+        'latest_version' => $pkg['latest_version'] ?? '',
+        'license' => $pkg['license'] ?? '',
         'subject_badge' => $pkg['taxonomy']['subject'] ?? 'Allgemein',
         'canton_badge' => $pkg['taxonomy']['canton'] ?? '',
         'level_badge' => $pkg['taxonomy']['subject_category'] ?? ($pkg['taxonomy']['level'] ?? ''),
         'stats' => $pkg['stats'] ?? ['question_count' => 0],
         'author_info' => $author,
-        'preview_enabled' => !empty($pkg['preview_enabled']),
+        'preview_enabled' => ($pkg['visibility'] ?? 'public') !== 'private' && !empty($pkg['preview_enabled']),
+        'is_private' => ($pkg['visibility'] ?? 'public') === 'private',
+        'can_access' => !empty($pkg['can_access']),
+        'request_access_url' => rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/')
+                . '/packages/' . rawurlencode($pkg['id']),
     ];
 }
 
@@ -277,6 +282,9 @@ if ($hasaccount) {
                 'latest_version' => $mp['latest_version'],
                 'downloads' => (int)($mp['downloads_count'] ?? 0),
                 'preview_on' => !empty($mp['preview_enabled']),
+                'is_private' => ($mp['visibility'] ?? 'public') === 'private',
+                'is_public' => ($mp['visibility'] ?? 'public') !== 'private',
+                'visibility' => $mp['visibility'] ?? 'public',
                 'summary' => $mp['summary'] ?? '',
                 'tags' => implode(', ', $mp['tags'] ?? []),
                 'lic_by' => ($mp['license'] ?? '') === 'CC-BY-4.0',
