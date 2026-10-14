@@ -75,6 +75,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \core\notification::success(get_string('token_saved', 'qbank_questionhub'));
         }
         redirect($thispageurl);
+    } else if ($action === 'edit_package') {
+        try {
+            $client = new \qbank_questionhub\api_client();
+            $grades = optional_param_array('grades', [], PARAM_ALPHANUM);
+            $tags = array_values(array_filter(array_map('trim', explode(',', optional_param('tags', '', PARAM_TEXT)))));
+            $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), [
+                'title' => required_param('title', PARAM_TEXT),
+                'summary' => required_param('summary', PARAM_TEXT),
+                'license' => required_param('license', PARAM_TEXT),
+                'grades' => array_values(array_intersect(['GYM1', 'GYM2', 'GYM3', 'GYM4'], $grades)),
+                'tags' => $tags,
+                'preview_enabled' => (bool)optional_param('preview_enabled', 0, PARAM_BOOL),
+            ]);
+            \core\notification::success(get_string('settings_saved', 'qbank_questionhub'));
+        } catch (\Exception $e) {
+            \core\notification::error($e->getMessage());
+        }
+        redirect($thispageurl);
     } else if ($action === 'withdraw_package' || $action === 'withdraw_release') {
         try {
             $client = new \qbank_questionhub\api_client();
@@ -254,10 +272,20 @@ if ($hasaccount) {
             }
             $mypackages[] = [
                 'id' => $mp['id'],
+                'domid' => md5($mp['id']),
                 'title' => html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                 'latest_version' => $mp['latest_version'],
                 'downloads' => (int)($mp['downloads_count'] ?? 0),
                 'preview_on' => !empty($mp['preview_enabled']),
+                'summary' => $mp['summary'] ?? '',
+                'tags' => implode(', ', $mp['tags'] ?? []),
+                'lic_by' => ($mp['license'] ?? '') === 'CC-BY-4.0',
+                'lic_bysa' => ($mp['license'] ?? '') === 'CC-BY-SA-4.0',
+                'lic_cc0' => ($mp['license'] ?? '') === 'CC0-1.0',
+                'g1' => in_array('GYM1', $mp['grades'] ?? [], true),
+                'g2' => in_array('GYM2', $mp['grades'] ?? [], true),
+                'g3' => in_array('GYM3', $mp['grades'] ?? [], true),
+                'g4' => in_array('GYM4', $mp['grades'] ?? [], true),
                 'versions' => $versions,
             ];
         }

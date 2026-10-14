@@ -234,6 +234,31 @@ class api_client {
     }
 
     /**
+     * Edits package settings on the Hub (title, summary, license, grades, tags, preview).
+     * The Hub is the single source of truth, so the web dashboard shows the change immediately.
+     *
+     * @param string $id Package id.
+     * @param array $patch Fields to change.
+     * @throws moodle_exception On error.
+     */
+    public function update_package(string $id, array $patch): void {
+        if (empty($this->token)) {
+            throw new moodle_exception('error_unauthorized', 'qbank_questionhub');
+        }
+        $curl = $this->get_curl();
+        $curl->setHeader($this->get_headers(true));
+        $curl->setopt(['CURLOPT_CUSTOMREQUEST' => 'PATCH']);
+        $response = $curl->post($this->baseurl . '/api/v1/packages/' . rawurlencode($id), json_encode($patch));
+        $httpcode = (int)($curl->get_info()['http_code'] ?? 0);
+        if ($curl->get_errno() !== 0) {
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);
+        }
+        if ($httpcode >= 400) {
+            $this->handle_http_error($httpcode, (string)$response);
+        }
+    }
+
+    /**
      * Withdraws a whole package (all versions) from the Hub.
      *
      * @param string $id Package id.

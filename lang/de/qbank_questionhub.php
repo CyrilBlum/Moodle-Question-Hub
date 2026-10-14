@@ -143,3 +143,7 @@ $string['preview_on'] = 'mit Vorschau';
 $string['preview_off'] = 'ohne Vorschau';
 $string['publish_category_heading'] = 'Ganze Kategorie veröffentlichen';
 $string['publish_category_button'] = 'Kategorie veröffentlichen';
+$string['edit_settings'] = 'Einstellungen';
+$string['save_settings'] = 'Einstellungen speichern';
+$string['settings_saved'] = 'Einstellungen im Question Hub gespeichert.';
+$string['version_immutable_note'] = 'Versionsnummern sind unveränderlich: Für geänderte Inhalte veröffentlichen Sie eine neue Version oder ziehen eine bestehende zurück.';

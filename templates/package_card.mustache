@@ -23,12 +23,12 @@
             {{/author_info}}
             <div class="d-flex justify-content-between mt-auto pt-2 border-top">
                 {{#preview_enabled}}
-                <button type="button" class="btn btn-sm btn-outline-secondary qh-preview-btn" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
+                <button type="button" class="btn btn-sm btn-outline-secondary qh-preview-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#previewModal" data-bs-target="#previewModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
                     <i class="fa fa-eye mr-1" aria-hidden="true"></i>Vorschau
                 </button>
                 {{/preview_enabled}}
                 {{^preview_enabled}}<span></span>{{/preview_enabled}}
-                <button type="button" class="btn btn-sm btn-primary qh-import-btn" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
+                <button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
                     <i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren
                 </button>
             </div>

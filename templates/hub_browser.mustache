@@ -22,7 +22,7 @@
                 <i class="fa fa-sign-in mr-1" aria-hidden="true"></i>
                 {{#str}} link_account_button, qbank_questionhub {{/str}}
             </a>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#patEntryForm">
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-target="#patEntryForm" data-bs-toggle="collapse" data-bs-target="#patEntryForm">
                 PAT
             </button>
         </div>
@@ -168,12 +168,46 @@
                             {{/versions}}
                         </div>
                     </div>
+                    <button class="btn btn-sm btn-outline-secondary mr-1" type="button" data-toggle="collapse" data-bs-toggle="collapse"
+                            data-target="#edit-{{domid}}" data-bs-target="#edit-{{domid}}">{{#str}} edit_settings, qbank_questionhub {{/str}}</button>
                     <form method="post" action="{{action_url}}"
                           onsubmit="return confirm('{{#str}} withdraw_package_confirm, qbank_questionhub {{/str}}');">
                         <input type="hidden" name="sesskey" value="{{sesskey}}">
                         <input type="hidden" name="action" value="withdraw_package">
                         <input type="hidden" name="packageid" value="{{id}}">
                         <button type="submit" class="btn btn-sm btn-outline-danger">{{#str}} withdraw_package, qbank_questionhub {{/str}}</button>
+                    </form>
+                </div>
+                <div class="collapse mt-3" id="edit-{{domid}}">
+                    <form method="post" action="{{action_url}}" class="border rounded p-3 bg-light">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="action" value="edit_package">
+                        <input type="hidden" name="packageid" value="{{id}}">
+                        <div class="form-group"><label>{{#str}} package_title_label, qbank_questionhub {{/str}}</label>
+                            <input type="text" name="title" class="form-control" value="{{title}}" required></div>
+                        <div class="form-group"><label>{{#str}} package_summary_label, qbank_questionhub {{/str}}</label>
+                            <textarea name="summary" class="form-control" rows="3" required>{{summary}}</textarea></div>
+                        <div class="form-group"><label>{{#str}} package_license_label, qbank_questionhub {{/str}}</label>
+                            <select name="license" class="custom-select form-control">
+                                <option value="CC-BY-4.0" {{#lic_by}}selected{{/lic_by}}>CC-BY-4.0</option>
+                                <option value="CC-BY-SA-4.0" {{#lic_bysa}}selected{{/lic_bysa}}>CC-BY-SA-4.0</option>
+                                <option value="CC0-1.0" {{#lic_cc0}}selected{{/lic_cc0}}>CC0-1.0</option>
+                            </select></div>
+                        <div class="form-group"><label>{{#str}} package_grades_label, qbank_questionhub {{/str}}</label>
+                            <select name="grades[]" class="custom-select form-control" multiple size="4">
+                                <option value="GYM1" {{#g1}}selected{{/g1}}>GYM1</option>
+                                <option value="GYM2" {{#g2}}selected{{/g2}}>GYM2</option>
+                                <option value="GYM3" {{#g3}}selected{{/g3}}>GYM3</option>
+                                <option value="GYM4" {{#g4}}selected{{/g4}}>GYM4</option>
+                            </select></div>
+                        <div class="form-group"><label>Tags</label>
+                            <input type="text" name="tags" class="form-control" value="{{tags}}"></div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" name="preview_enabled" value="1" id="pv-{{domid}}" {{#preview_on}}checked{{/preview_on}}>
+                            <label class="form-check-label" for="pv-{{domid}}">{{#str}} package_preview_label, qbank_questionhub {{/str}}</label>
+                        </div>
+                        <p class="text-muted small">{{#str}} version_immutable_note, qbank_questionhub {{/str}}</p>
+                        <button type="submit" class="btn btn-primary btn-sm">{{#str}} save_settings, qbank_questionhub {{/str}}</button>
                     </form>
                 </div>
             </li>
@@ -190,7 +224,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="previewModalLabel">Fragensammlung-Vorschau</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Schliessen">
+                <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Schliessen">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -202,7 +236,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schliessen</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Schliessen</button>
             </div>
         </div>
     </div>
@@ -223,7 +257,7 @@
 
                 <div class="modal-header">
                     <h5 class="modal-title" id="importModalLabel">{{#str}} import_confirm_title, qbank_questionhub {{/str}}</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Schliessen">
+                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Schliessen">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -251,7 +285,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
                     <button type="submit" class="btn btn-primary" id="importSubmitBtn">
                         <i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} import_button, qbank_questionhub {{/str}}
                     </button>
@@ -262,60 +296,77 @@
 </div>
 
 <script>
+// Works on Moodle 4.5 (Bootstrap 4) and 5.0 (Bootstrap 5): the buttons open the modals through
+// data attributes; this script only fills in the modal content.
 document.addEventListener('DOMContentLoaded', function() {
-    // Attach preview button handler
+    var hubUrl = '{{hub_url}}';
+
+    function plainText(html) {
+        var doc = new DOMParser().parseFromString(html || '', 'text/html');
+        return (doc.body.textContent || '').trim();
+    }
+
     document.querySelectorAll('.qh-preview-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var pkgId = this.getAttribute('data-packageid');
             var version = this.getAttribute('data-version');
             var title = this.getAttribute('data-title');
-
             var modalTitle = document.getElementById('previewModalLabel');
             var modalBody = document.getElementById('previewModalBody');
-            modalTitle.innerText = 'Vorschau: ' + title;
-            modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Lade Vorschau vom Hub...</p></div>';
+            modalTitle.textContent = 'Vorschau: ' + title;
+            modalBody.textContent = 'Lade Vorschau vom Hub ...';
 
-            $('#previewModal').modal('show');
-
-            fetch('{{hub_url}}/api/v1/packages/' + encodeURIComponent(pkgId) + '/preview?version=' + encodeURIComponent(version))
-                .then(function(res) { return res.json(); })
+            fetch(hubUrl + '/api/v1/packages/' + encodeURIComponent(pkgId) + '/preview?version=' + encodeURIComponent(version))
+                .then(function(res) {
+                    return res.json().then(function(data) {
+                        if (!res.ok) { throw new Error(data.message || ('HTTP ' + res.status)); }
+                        return data;
+                    });
+                })
                 .then(function(data) {
+                    modalBody.textContent = '';
                     if (!data.questions || data.questions.length === 0) {
-                        modalBody.innerHTML = '<div class="alert alert-warning">Keine Fragen zur Vorschau verfügbar.</div>';
+                        modalBody.textContent = 'Keine Fragen zur Vorschau verfügbar.';
                         return;
                     }
-                    var html = '<div class="list-group">';
+                    var list = document.createElement('div');
+                    list.className = 'list-group';
                     data.questions.forEach(function(q, i) {
-                        html += '<div class="list-group-item">';
-                        html += '<div class="d-flex w-100 justify-content-between">';
-                        html += '<h6 class="mb-1">' + (i + 1) + '. ' + (q.name || 'Unbenannt') + '</h6>';
-                        html += '<span class="badge badge-secondary">' + (q.type || 'Standard') + '</span>';
-                        html += '</div>';
-                        html += '<div class="text-muted mt-2 small">' + (q.questiontext || '') + '</div>';
-                        html += '</div>';
+                        var item = document.createElement('div');
+                        item.className = 'list-group-item';
+                        var head = document.createElement('div');
+                        head.className = 'd-flex w-100 justify-content-between';
+                        var h = document.createElement('h6');
+                        h.className = 'mb-1';
+                        h.textContent = (i + 1) + '. ' + (q.name || 'Unbenannt');
+                        var badge = document.createElement('span');
+                        badge.className = 'badge badge-secondary bg-secondary';
+                        badge.textContent = q.type || '';
+                        head.appendChild(h);
+                        head.appendChild(badge);
+                        var text = document.createElement('div');
+                        text.className = 'text-muted mt-2 small';
+                        text.textContent = plainText(q.questiontextHtml || q.questiontext);
+                        item.appendChild(head);
+                        item.appendChild(text);
+                        list.appendChild(item);
                     });
-                    html += '</div>';
-                    modalBody.innerHTML = html;
+                    modalBody.appendChild(list);
                 })
                 .catch(function(err) {
-                    modalBody.innerHTML = '<div class="alert alert-danger">Fehler beim Laden der Vorschau: ' + err.message + '</div>';
+                    modalBody.textContent = 'Vorschau nicht verfügbar: ' + err.message;
                 });
         });
     });
 
-    // Attach import button handler
     document.querySelectorAll('.qh-import-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            var pkgId = this.getAttribute('data-packageid');
-            var version = this.getAttribute('data-version');
             var title = this.getAttribute('data-title');
-
-            document.getElementById('importModalPackageId').value = pkgId;
+            var version = this.getAttribute('data-version');
+            document.getElementById('importModalPackageId').value = this.getAttribute('data-packageid');
             document.getElementById('importModalVersion').value = version;
             document.getElementById('importModalTitle').value = title;
-            document.getElementById('importModalTitleText').innerText = title + ' (' + version + ')';
-
-            $('#importModal').modal('show');
+            document.getElementById('importModalTitleText').textContent = title + ' (' + version + ')';
         });
     });
 });
