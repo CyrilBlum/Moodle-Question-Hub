@@ -147,3 +147,4 @@ $string['edit_settings'] = 'Einstellungen';
 $string['save_settings'] = 'Einstellungen speichern';
 $string['settings_saved'] = 'Einstellungen im Question Hub gespeichert.';
 $string['version_immutable_note'] = 'Versionsnummern sind unveränderlich: Für geänderte Inhalte veröffentlichen Sie eine neue Version oder ziehen eine bestehende zurück.';
+$string['incl_subcategories'] = 'inkl. Unterkategorien';

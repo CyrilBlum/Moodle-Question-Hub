@@ -126,8 +126,15 @@
         <ul class="list-group list-group-flush">
             {{/publish_categories.0}}
             {{#publish_categories}}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>{{name}}</span>
+            <li class="list-group-item d-flex justify-content-between align-items-center"
+                style="padding-left: calc(1.25rem + {{indent}}rem); {{#is_child}}border-left: 3px solid #dee2e6;{{/is_child}}">
+                <span>
+                    {{#is_child}}<span class="text-muted mr-1">&#9492;</span>{{/is_child}}
+                    <i class="fa {{#is_parent}}fa-folder-open{{/is_parent}}{{^is_parent}}fa-folder-o{{/is_parent}} text-muted mr-1" aria-hidden="true"></i>
+                    <span {{^is_child}}class="font-weight-bold"{{/is_child}}>{{name}}</span>
+                    <span class="badge badge-light border ml-2">{{own}}</span>
+                    {{#has_sub_total}}<span class="small text-muted ml-1">({{total}} {{#str}} incl_subcategories, qbank_questionhub {{/str}})</span>{{/has_sub_total}}
+                </span>
                 <a href="{{url}}" class="btn btn-sm btn-outline-primary">{{#str}} publish_category_button, qbank_questionhub {{/str}}</a>
             </li>
             {{/publish_categories}}

@@ -295,27 +295,60 @@ if ($hasaccount) {
     }
 }
 
-// Course categories for import target dropdown
-$categories = $DB->get_records('question_categories', ['contextid' => $coursecontext->id], 'parent, sortorder, name');
+// Course categories as a tree (import target dropdown and "publish a whole category" list).
+$categories = $DB->get_records('question_categories', ['contextid' => $coursecontext->id], 'sortorder, name');
+$children = [];
+foreach ($categories as $cat) {
+    $children[(int)$cat->parent][] = $cat;
+}
+$owncounts = [];
+foreach ($categories as $cat) {
+    $owncounts[(int)$cat->id] = $DB->count_records('question_bank_entries', ['questioncategoryid' => $cat->id]);
+}
+$totalcount = function (int $id) use (&$totalcount, $children, $owncounts): int {
+    $sum = $owncounts[$id] ?? 0;
+    foreach ($children[$id] ?? [] as $child) {
+        $sum += $totalcount((int)$child->id);
+    }
+    return $sum;
+};
+
 $coursecategories = [];
 $publishcategories = [];
-foreach ($categories as $cat) {
-    $coursecategories[] = [
-        'id' => $cat->id,
-        'name' => format_string($cat->name),
-        'selected' => ($cat->name !== 'top'),
-    ];
-    if ($cat->name !== 'top') {
-        $publishparams = ['courseid' => $COURSE->id, 'categoryid' => $cat->id];
-        if (!empty($cmid)) {
-            $publishparams['cmid'] = $cmid;
+$walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, &$coursecategories,
+        &$publishcategories, $COURSE, $cmid) {
+    foreach ($children[$parentid] ?? [] as $cat) {
+        $istop = ($cat->name === 'top' && $parentid === 0);
+        $name = format_string($cat->name);
+        $level = $istop ? 0 : $depth;
+        if (!$istop) {
+            $isfirst = empty($coursecategories);
+            $coursecategories[] = [
+                'id' => $cat->id,
+                'name' => str_repeat("\u{00A0}\u{00A0}\u{00A0}", max(0, $level - 1)) . ($level > 1 ? "\u{2514} " : '') . $name,
+                'selected' => $isfirst,
+            ];
+            $publishparams = ['courseid' => $COURSE->id, 'categoryid' => $cat->id];
+            if (!empty($cmid)) {
+                $publishparams['cmid'] = $cmid;
+            }
+            $own = $owncounts[(int)$cat->id] ?? 0;
+            $total = $totalcount((int)$cat->id);
+            $publishcategories[] = [
+                'name' => $name,
+                'url' => (new moodle_url('/question/bank/questionhub/publish.php', $publishparams))->out(false),
+                'indent' => max(0, $level - 1) * 1.5,
+                'is_child' => $level > 1,
+                'is_parent' => !empty($children[(int)$cat->id]),
+                'own' => $own,
+                'total' => $total,
+                'has_sub_total' => $total !== $own,
+            ];
         }
-        $publishcategories[] = [
-            'name' => format_string($cat->name),
-            'url' => (new moodle_url('/question/bank/questionhub/publish.php', $publishparams))->out(false),
-        ];
+        $walk((int)$cat->id, $istop ? 0 : $depth + 1);
     }
-}
+};
+$walk(0, 0);
 
 // Build URLs
 $reseturl = new moodle_url('/question/bank/questionhub/view.php', ['courseid' => $COURSE->id]);

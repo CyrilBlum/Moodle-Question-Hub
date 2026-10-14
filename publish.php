@@ -225,29 +225,39 @@ foreach ($cantonlist as $c) {
 }
 
 // Prepare category choices
-$categories = $DB->get_records('question_categories', ['contextid' => $context->id], 'parent, sortorder, name');
+$allcategories = $DB->get_records('question_categories', ['contextid' => $context->id], 'sortorder, name');
+$childmap = [];
+foreach ($allcategories as $cat) {
+    $childmap[(int)$cat->parent][] = $cat;
+}
 $categoriesdata = [];
 $defaulttitle = 'Fragensammlung';
 $defaultslug = 'ch.gym.inf.collection.' . time();
 
-foreach ($categories as $cat) {
-    if ($cat->name === 'top') {
-        continue;
+$walkcats = function (int $parentid, int $depth) use (&$walkcats, $childmap, $DB, $categoryid, &$categoriesdata,
+        &$defaulttitle, &$defaultslug) {
+    foreach ($childmap[$parentid] ?? [] as $cat) {
+        $istop = ($cat->name === 'top' && $parentid === 0);
+        if (!$istop) {
+            $qcount = $DB->count_records('question_bank_entries', ['questioncategoryid' => $cat->id]);
+            $isselected = ((int)$cat->id === (int)$categoryid);
+            $plainname = format_string($cat->name, true, ['escape' => false]);
+            if ($isselected) {
+                $defaulttitle = $plainname;
+                $clean = preg_replace('/[^a-z0-9]/', '', strtolower($cat->name));
+                $defaultslug = 'ch.gym.inf.' . ($clean ?: 'questions');
+            }
+            $categoriesdata[] = [
+                'id' => $cat->id,
+                'name' => str_repeat("\u{00A0}\u{00A0}\u{00A0}", max(0, $depth - 1)) . ($depth > 1 ? "\u{2514} " : '') . $plainname,
+                'questioncount' => $qcount,
+                'selected' => $isselected,
+            ];
+        }
+        $walkcats((int)$cat->id, $istop ? 0 : $depth + 1);
     }
-    $qcount = $DB->count_records('question_bank_entries', ['questioncategoryid' => $cat->id]);
-    $isSelected = ((int)$cat->id === (int)$categoryid);
-    if ($isSelected) {
-        $defaulttitle = format_string($cat->name, true, ['escape' => false]);
-        $clean = preg_replace('/[^a-z0-9]/', '', strtolower($cat->name));
-        $defaultslug = 'ch.gym.inf.' . ($clean ?: 'questions');
-    }
-    $categoriesdata[] = [
-        'id' => $cat->id,
-        'name' => format_string($cat->name, true, ['escape' => false]),
-        'questioncount' => $qcount,
-        'selected' => $isSelected,
-    ];
-}
+};
+$walkcats(0, 0);
 
 $cancelparams = ['courseid' => $course->id];
 if ($cmid > 0) {

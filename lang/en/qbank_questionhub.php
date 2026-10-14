@@ -147,3 +147,4 @@ $string['edit_settings'] = 'Settings';
 $string['save_settings'] = 'Save settings';
 $string['settings_saved'] = 'Settings saved on the Question Hub.';
 $string['version_immutable_note'] = 'Version numbers are immutable: publish a new version for changed content, or withdraw an existing one.';
+$string['incl_subcategories'] = 'incl. subcategories';

@@ -420,13 +420,16 @@ class preflight_validator {
      */
     public static function find_cloze_problem(string $text): ?string {
         $length = strlen($text);
+        $remainder = '';
         for ($i = 0; $i < $length; $i++) {
             $char = $text[$i];
             if ($char === '\\') {
+                $remainder .= substr($text, $i, 2);
                 $i++;
                 continue;
             }
             if ($char !== '{') {
+                $remainder .= $char;
                 continue;
             }
             $rest = substr($text, $i, 80);
@@ -449,7 +452,13 @@ class preflight_validator {
                 $i = $j;
             } else if (preg_match('/^\{\d+:/', $rest)) {
                 return "cloze element '" . substr($rest, 0, 30) . "' has no valid type (e.g. {1:SHORTANSWER:=answer}).";
+            } else {
+                $remainder .= '{';
             }
+        }
+        // A "}" that closes something like 1:SA:=answer without an opening "{".
+        if (preg_match('/(?<![{\d])\d+:[A-Za-z_]+:[^{}]*\}/', $remainder, $orphan)) {
+            return "cloze element '" . substr($orphan[0], 0, 30) . "' is missing its opening {.";
         }
         return null;
     }
