@@ -231,7 +231,8 @@ $string['open_category_questions'] = 'Open this category in the question bank';
 
 $string['unlink_category_button'] = 'Unlink from Hub';
 $string['categories_unlinked'] = 'Die Verknüpfung für «{$a->name}» und {$a->count} Kategorie(n) wurde aufgehoben.';
-$string['category_unlinked_status'] = 'No active Hub link';
+$string['category_unlinked_status'] = 'Link removed';
+$string['category_unlinked_status_help'] = 'This category was linked to a Hub package; the link was removed. The questions are unchanged and the package on the Hub is not affected. You can publish the category as a new package or link it again by importing the package again.';
 
 $string['local_changes_status'] = '{$a} local changes';
 $string['remote_update_status'] = 'v{$a} on the Hub';

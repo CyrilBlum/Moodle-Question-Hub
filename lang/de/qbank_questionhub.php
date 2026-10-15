@@ -231,7 +231,8 @@ $string['open_category_questions'] = 'Diese Kategorie in der Fragensammlung öff
 
 $string['unlink_category_button'] = 'Verknüpfung aufheben';
 $string['categories_unlinked'] = 'Die Verknüpfung für «{$a->name}» und {$a->count} Kategorie(n) wurde aufgehoben.';
-$string['category_unlinked_status'] = 'Keine aktive Hub-Verknüpfung';
+$string['category_unlinked_status'] = 'Verknüpfung entfernt';
+$string['category_unlinked_status_help'] = 'Diese Kategorie war mit einem Hub-Paket verknüpft; die Verknüpfung wurde entfernt. Die Fragen bleiben unverändert, und das Paket im Hub ist nicht betroffen. Sie können die Kategorie als neues Paket veröffentlichen oder durch einen erneuten Import wieder verknüpfen.';
 
 $string['local_changes_status'] = '{$a} lokale Änderungen';
 $string['remote_update_status'] = 'v{$a} im Hub';

@@ -280,7 +280,7 @@
                             <form method="post" action="{{action_url}}" class="d-inline ml-1"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="unlink_category"><input type="hidden" name="categoryid" value="{{id}}"><button type="submit" class="btn btn-sm btn-outline-secondary" title="{{#str}} unlink_category_button, qbank_questionhub {{/str}}"><i class="fa fa-chain-broken" aria-hidden="true"></i><span class="sr-only">{{#str}} unlink_category_button, qbank_questionhub {{/str}}</span></button></form>
                         {{/is_published}}
                         {{^is_published}}
-                            {{#is_unlinked}}<span class="small text-muted mr-2">{{#str}} category_unlinked_status, qbank_questionhub {{/str}}</span>{{/is_unlinked}}
+                            {{#is_unlinked}}<span class="small text-muted mr-2" title="{{#str}} category_unlinked_status_help, qbank_questionhub {{/str}}"><i class="fa fa-chain-broken mr-1 me-1" aria-hidden="true"></i>{{#str}} category_unlinked_status, qbank_questionhub {{/str}}</span>{{/is_unlinked}}
                             <a href="{{url}}" class="btn btn-sm btn-outline-primary"><i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} publish_category_button, qbank_questionhub {{/str}}</a>
                         {{/is_published}}
                         {{! Local category management, kept apart from the Hub actions. }}
