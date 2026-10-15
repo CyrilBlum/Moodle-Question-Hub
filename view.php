@@ -835,16 +835,12 @@ foreach ($mypackages as &$mypackage) {
 }
 unset($mypackage);
 
-// The library lists the Hub packages imported into this course that are still synced with a local
-// category, i.e. the Browse packages that show sync status instead of "Import". Plain file imports
-// (CLI, no package ID), removed links and own publications are not part of it.
+// The library lists the Hub packages synced with a local category in this course, imported ones and
+// own publications alike, i.e. the Browse packages that show sync status instead of "Import". Plain
+// file imports (CLI, no package ID) and removed links are not part of it.
 $library = [];
 if ($showlibrary) {
     foreach ($syncrowsbypackage as $packageid => $row) {
-        // A pull into an own package source is an import record too, but the package is not borrowed.
-        if ($row['link_action'] !== 'import' || $row['is_package_source']) {
-            continue;
-        }
         $remote = $getremotepackage($packageid);
         $title = html_entity_decode((string)($remote['title'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $library[] = $row + ['title' => $title !== '' ? $title : ($row['link_title'] ?: $packageid),

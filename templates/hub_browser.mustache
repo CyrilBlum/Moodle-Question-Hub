@@ -489,6 +489,7 @@
                     <div class="small text-muted">
                         <a href="{{hub_package_url}}" class="text-muted" target="_blank" rel="noopener" title="{{#str}} open_hub_package, qbank_questionhub {{/str}}"><code>{{package_id}}</code></a>
                         {{#package_version}}<span class="badge badge-light border ml-1">v{{package_version}}</span>{{/package_version}}
+                        {{#is_package_source}}<span class="ml-1">· {{#str}} sync_source_label, qbank_questionhub {{/str}}</span>{{/is_package_source}}
                     </div>
                     <div class="small text-muted">
                         <i class="fa fa-link mr-1" aria-hidden="true"></i>{{#str}} linked_to_category, qbank_questionhub {{/str}}
