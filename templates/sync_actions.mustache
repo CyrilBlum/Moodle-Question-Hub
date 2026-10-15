@@ -1,11 +1,17 @@
 {{!
     @template qbank_questionhub/sync_actions
 
-    Sync actions: push (package source with local changes, unless a newer Hub release must be pulled first), publish again
-    (withdrawn), pull (imported copy or own package) and package settings toggle.
+    Sync actions: review local changes (accept or reject), push (package source with local changes, unless a newer
+    Hub release must be pulled first), publish again (withdrawn), pull (imported copy or own package) and package
+    settings toggle.
     Shared by the category list, Browse cards, library and My packages; expects a category sync row as context.
     hide_settings_toggle: set where the category list (which holds the settings forms) is not on the page.
 }}
+{{#has_ahead}}{{^is_inherited_link}}
+    <a href="{{review_url}}" class="btn btn-sm btn-outline-warning mr-1" title="{{#str}} review_button_help, qbank_questionhub {{/str}}">
+        <i class="fa fa-list-alt mr-1" aria-hidden="true"></i>{{#str}} review_button, qbank_questionhub {{/str}}
+    </a>
+{{/is_inherited_link}}{{/has_ahead}}
 {{#is_package_source}}{{#has_changes}}
     {{! A newer Hub release must be pulled first (the Hub refuses the push); the pull shows conflicts. }}
     {{^can_pull}}

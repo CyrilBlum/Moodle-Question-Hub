@@ -475,6 +475,7 @@ if ($ownedpackage) {
         'category_name' => $category ? format_string($category->name, true, ['context' => $context, 'escape' => false]) : '',
         'base_version' => $latestpublication->package_version ?? '',
         'files' => $files ?? [],
+        'has_toolbar' => count($files ?? []) > 1,
         'files_count' => $files === null ? 0 : count($files),
         'files_unknown' => $files === null,
         'no_changes' => $files !== null && !$files,

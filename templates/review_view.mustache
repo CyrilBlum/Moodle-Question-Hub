@@ -1,0 +1,93 @@
+{{!
+    @template qbank_questionhub/review_view
+
+    Review of local changes in a category linked to a Hub package: each changed question with its diff
+    (synced version -> local version) and the buttons to accept or reject it.
+    An imported copy can accept (keep) or reject (restore the Hub version) a change; the package source
+    only rejects, since accepted changes are published by the next push.
+}}
+<div class="qbank_questionhub_review mb-5">
+    <h4 class="mb-1">
+        <i class="fa fa-list-alt text-warning mr-2" aria-hidden="true"></i>{{#str}} review_heading, qbank_questionhub, {{category_name}} {{/str}}
+    </h4>
+    <p class="text-muted mb-3">
+        <code>{{package_id}}</code> · {{#str}} review_synced_version, qbank_questionhub, {{package_version}} {{/str}}
+    </p>
+    <div class="alert alert-light border mb-4">
+        {{#is_copy}}{{#str}} review_intro_copy, qbank_questionhub {{/str}}{{/is_copy}}
+        {{#is_source}}{{#str}} review_intro_source, qbank_questionhub {{/str}}{{/is_source}}
+    </div>
+
+    {{#unknown}}<div class="alert alert-secondary">{{#str}} push_changes_unknown, qbank_questionhub {{/str}}</div>{{/unknown}}
+    {{#no_changes}}<div class="alert alert-info">{{#str}} review_no_changes, qbank_questionhub {{/str}}</div>{{/no_changes}}
+    {{#same_content}}<p class="small text-muted">{{#str}} push_same_content, qbank_questionhub, {{same_content}} {{/str}}</p>{{/same_content}}
+
+    {{#has_items}}
+    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+        <h5 class="mb-0">{{#str}} review_list_heading, qbank_questionhub, {{item_count}} {{/str}}</h5>
+        <div>
+            {{#has_many}}
+            <button type="button" class="btn btn-sm btn-outline-secondary mr-1 me-1" data-qh-review-all="open">
+                <i class="fa fa-plus-square-o mr-1" aria-hidden="true"></i>{{#str}} diff_expand_all, qbank_questionhub {{/str}}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary mr-1 me-1" data-qh-review-all="close">
+                <i class="fa fa-minus-square-o mr-1" aria-hidden="true"></i>{{#str}} diff_collapse_all, qbank_questionhub {{/str}}
+            </button>
+            {{/has_many}}
+            {{#can_accept_all}}
+            <form method="post" action="{{action_url}}" class="d-inline">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="accept_all">
+                {{#accept_all_ids}}<input type="hidden" name="entryids[]" value="{{id}}">{{/accept_all_ids}}
+                <button type="submit" class="btn btn-sm btn-success">
+                    <i class="fa fa-check-square-o mr-1" aria-hidden="true"></i>{{#str}} review_accept_all, qbank_questionhub {{/str}}
+                </button>
+            </form>
+            {{/can_accept_all}}
+        </div>
+    </div>
+    {{/has_items}}
+
+    {{#items}}
+    <div class="qh-review-item mb-2">
+        <div class="d-flex justify-content-end flex-wrap mb-1">
+            {{#can_accept}}
+            <form method="post" action="{{action_url}}" class="d-inline mr-1 me-1">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="accept">
+                <input type="hidden" name="entryid" value="{{entryid}}">
+                <button type="submit" class="btn btn-sm btn-outline-success" title="{{#str}} review_accept_help, qbank_questionhub {{/str}}">
+                    <i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} review_accept, qbank_questionhub {{/str}}
+                </button>
+            </form>
+            {{/can_accept}}
+            {{#can_reject}}
+            <form method="post" action="{{action_url}}" class="d-inline" onsubmit="return window.confirm(this.dataset.confirm);" data-confirm="{{reject_confirm}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="reject">
+                <input type="hidden" name="entryid" value="{{entryid}}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="{{#str}} review_reject_help, qbank_questionhub {{/str}}">
+                    <i class="fa fa-undo mr-1" aria-hidden="true"></i>{{#str}} review_reject, qbank_questionhub {{/str}}
+                </button>
+            </form>
+            {{/can_reject}}
+        </div>
+        {{#diff}}{{> qbank_questionhub/diff_files }}{{/diff}}
+    </div>
+    {{/items}}
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap mt-4">
+        <a href="{{return_url}}" class="btn btn-outline-secondary">{{#str}} review_back, qbank_questionhub {{/str}}</a>
+        {{#push_url}}{{#has_items}}
+        <a href="{{push_url}}" class="btn btn-primary"><i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} review_to_push, qbank_questionhub {{/str}}</a>
+        {{/has_items}}{{/push_url}}
+    </div>
+</div>
+{{#js}}
+document.querySelectorAll('[data-qh-review-all]').forEach(function(button) {
+    button.addEventListener('click', function() {
+        var open = button.getAttribute('data-qh-review-all') === 'open';
+        document.querySelectorAll('.qbank_questionhub_review details.qh-file').forEach(function(d) { d.open = open; });
+    });
+});
+{{/js}}

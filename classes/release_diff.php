@@ -141,7 +141,7 @@ class release_diff {
 
     /** Moodle XML as comparable lines: envelope, category entries and question ID comments removed. */
     public static function xml_lines(string $xml): array {
-        $xml = preg_replace('~<question type="category">.*?</question>~s', '', $xml);
+        $xml = preg_replace('~<question type="category">.*?</question>~s', '', self::pretty_xml($xml));
         $lines = [];
         foreach (preg_split('/\R/', $xml) as $line) {
             // The export envelope and the question ID comment differ between versions without a content change.
@@ -155,6 +155,22 @@ class release_diff {
             $lines[] = $line;
         }
         return $lines;
+    }
+
+    /**
+     * Re-indents XML so that a Moodle export and a package written by another tool give comparable lines.
+     * A single question element is accepted as well; unparsable XML is returned unchanged.
+     */
+    private static function pretty_xml(string $xml): string {
+        $doc = new \DOMDocument();
+        $doc->preserveWhiteSpace = false;
+        $doc->formatOutput = true;
+        $source = preg_match('~^\s*(<\?xml|<quiz)~', $xml) ? $xml : '<quiz>' . $xml . '</quiz>';
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($source, LIBXML_NONET);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        return $loaded ? $doc->saveXML() : $xml;
     }
 
     /**

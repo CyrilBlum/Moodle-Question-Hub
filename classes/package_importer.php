@@ -272,8 +272,7 @@ class package_importer {
             }
             $name = trim((string)$node->name->text);
             $idnumber = trim((string)$node->idnumber);
-            $identity = $idnumber !== '' ? ['idnumber', $idnumber] : ['name', $type, $name];
-            $basekey = hash('sha256', json_encode([$relative, $identity], JSON_UNESCAPED_UNICODE));
+            $basekey = self::source_key($relative, $idnumber, $type, $name);
             $seen[$basekey] = ($seen[$basekey] ?? 0) + 1;
             $sourcekey = $seen[$basekey] === 1 ? $basekey :
                 hash('sha256', $basekey . ':' . $seen[$basekey]);
@@ -320,12 +319,19 @@ class package_importer {
                             }
                         }
                         if (isset($previoushashes[$sourcekey])) {
-                            $status = $previoushashes[$sourcekey] === $sourcehash ? 'unchanged' : 'update';
+                            $status = $previoushashes[$sourcekey]['hash'] === $sourcehash ? 'unchanged' : 'update';
                         } else {
                             $status = 'update';
                             $uncertain = true;
                         }
                         $uncertain = $uncertain || $comparisonunavailable;
+                        // A question matched by name has no recorded Hub version (e.g. kept at the first link).
+                        // Unless it still holds the text of the previous Hub release, it is a local version
+                        // that an update would overwrite: the teacher decides.
+                        $previoustext = $previoushashes[$sourcekey]['text'] ?? null;
+                        if ($status === 'update' && $match['differs'] && $match['text'] !== $previoustext) {
+                            $status = 'conflict';
+                        }
                     }
                 }
             }
@@ -352,6 +358,80 @@ class package_importer {
             ];
         }
         return $items;
+    }
+
+    /**
+     * Makes a freshly imported question the newest version of an existing question bank entry
+     * (the entry the import created for it is removed).
+     */
+    public static function attach_as_version(int $questionid, int $entryid, \context $context): void {
+        global $DB;
+        $newversion = $DB->get_record('question_versions', ['questionid' => $questionid], '*', MUST_EXIST);
+        $newentryid = (int)$newversion->questionbankentryid;
+        $oldentry = $DB->get_record('question_bank_entries', ['id' => $entryid], '*', MUST_EXIST);
+        $newversion->questionbankentryid = $entryid;
+        // Moodle 4.5 has no question_bank_entries.nextversion (5.0 does); never reuse a number.
+        $newversion->version = max((int)($oldentry->nextversion ?? 0), 1 + (int)$DB->get_field_sql(
+            'SELECT MAX(version) FROM {question_versions} WHERE questionbankentryid = ?', [$entryid]));
+        $DB->update_record('question_versions', $newversion);
+        if (property_exists($oldentry, 'nextversion')) {
+            $oldentry->nextversion = $newversion->version + 1;
+            $DB->update_record('question_bank_entries', $oldentry);
+        }
+        $DB->delete_records('question_bank_entries', ['id' => $newentryid]);
+        $updatedquestion = $DB->get_record('question', ['id' => $questionid], '*', MUST_EXIST);
+        $updatedquestion->category = $oldentry->questioncategoryid;
+        \core\event\question_updated::create_from_question_instance($updatedquestion, $context)->trigger();
+    }
+
+    /**
+     * Imports a Moodle XML export of one question into a category and returns the new question ID.
+     * Category entries in the XML are ignored.
+     */
+    public static function import_question_xml(string $xml, \stdClass $category, \context $context,
+            \stdClass $course): int {
+        global $CFG;
+        require_once($CFG->dirroot . '/question/editlib.php');
+        require_once($CFG->dirroot . '/question/format/xml/format.php');
+        $tempfile = tempnam(make_temp_directory('questionhub'), 'qh_rev_');
+        file_put_contents($tempfile, $xml);
+        try {
+            $qformat = new qformat_xml_importer();
+            $contexts = new \core_question\local\bank\question_edit_contexts($context);
+            $qformat->setCourse($course);
+            $qformat->setContexts($contexts->all());
+            $qformat->setCategory($category);
+            $qformat->setCatfromfile(false);
+            $qformat->setContextfromfile(false);
+            $qformat->setMatchgrades('nearest');
+            $qformat->setStoponerror(true);
+            $qformat->setFilename($tempfile);
+            $qformat->setRealfilename('question.xml');
+            $qformat->displayprogress = false;
+            ob_start();
+            $ok = $qformat->importpreprocess() && $qformat->importprocess();
+            if ($ok) {
+                $qformat->importpostprocess();
+            }
+            $output = ob_get_clean();
+            $ids = array_map('intval', $qformat->questionids ?? []);
+            if (!$ok || count($ids) !== 1) {
+                throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', $output ?: '');
+            }
+            return $ids[0];
+        } finally {
+            @unlink($tempfile);
+        }
+    }
+
+    /**
+     * Key of a package question for repeat imports: its category path below the package root and its
+     * identity (idnumber, otherwise Moodle XML type and name). A further question with the same key
+     * gets a numbered key (see preview_package()).
+     */
+    public static function source_key(array $relative, string $idnumber, string $type, string $name): string {
+        $identity = $idnumber !== '' ? ['idnumber', $idnumber] : ['name', $type, $name];
+        return hash('sha256', json_encode([$relative, $identity], JSON_UNESCAPED_UNICODE));
     }
 
     /** Question ID of the latest version of a question bank entry. */
@@ -387,7 +467,8 @@ class package_importer {
      * told apart by an identical question text, otherwise there is no match.
      *
      * @param int[] $exclude entry IDs (as keys) already matched to other questions of the package
-     * @return array|null id (question bank entry) and differs (the question text is not identical)
+     * @return array|null id (question bank entry), differs (the question text is not identical) and text
+     *         (the local question text)
      */
     private function find_existing_question(int $categoryid, \SimpleXMLElement $node, string $idnumber,
             string $name, string $type, array $exclude = []): ?array {
@@ -423,10 +504,13 @@ class package_importer {
         // Moodle also serialises their text differently on import, so the text does not tell them apart.
         $differs = $requiretextmatch && $type !== 'cloze' && $match->questiontext !== '' &&
             $match->questiontext !== $questiontext;
-        return ['id' => (int)$match->id, 'differs' => $differs];
+        return ['id' => (int)$match->id, 'differs' => $differs, 'text' => (string)$match->questiontext];
     }
 
-    /** Fingerprints of questions in an earlier release, keyed independently of its root category name. */
+    /**
+     * Fingerprints (hash) and question texts of an earlier release, keyed independently of its root category
+     * name.
+     */
     private function release_fingerprints(string $xmlcontent): array {
         $xml = simplexml_load_string($xmlcontent, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOBLANKS);
         if ($xml === false) {
@@ -457,12 +541,14 @@ class package_importer {
             }
             $idnumber = trim((string)$node->idnumber);
             $name = trim((string)$node->name->text);
-            $identity = $idnumber !== '' ? ['idnumber', $idnumber] : ['name', $type, $name];
-            $basekey = hash('sha256', json_encode([$relative, $identity], JSON_UNESCAPED_UNICODE));
+            $basekey = self::source_key($relative, $idnumber, $type, $name);
             $seen[$basekey] = ($seen[$basekey] ?? 0) + 1;
             $key = $seen[$basekey] === 1 ? $basekey :
                 hash('sha256', $basekey . ':' . $seen[$basekey]);
-            $hashes[$key] = hash('sha256', dom_import_simplexml($node)->C14N());
+            $hashes[$key] = [
+                'hash' => hash('sha256', dom_import_simplexml($node)->C14N()),
+                'text' => (string)($node->questiontext->text ?? ''),
+            ];
         }
         return $hashes;
     }
@@ -649,21 +735,7 @@ class package_importer {
                             $hubquestionid = (int)$item['baselinequestionid'];
                         } else if ($item['status'] === 'update') {
                             $entryid = $item['entryid'];
-                            $oldentry = $DB->get_record('question_bank_entries', ['id' => $entryid], '*', MUST_EXIST);
-                            $newversion->questionbankentryid = $entryid;
-                            // Moodle 4.5 has no question_bank_entries.nextversion (5.0 does); never reuse a number.
-                            $newversion->version = max((int)($oldentry->nextversion ?? 0), 1 + (int)$DB->get_field_sql(
-                                'SELECT MAX(version) FROM {question_versions} WHERE questionbankentryid = ?', [$entryid]));
-                            $DB->update_record('question_versions', $newversion);
-                            if (property_exists($oldentry, 'nextversion')) {
-                                $oldentry->nextversion = $newversion->version + 1;
-                                $DB->update_record('question_bank_entries', $oldentry);
-                            }
-                            $DB->delete_records('question_bank_entries', ['id' => $newentryid]);
-                            $updatedquestion = $DB->get_record('question', ['id' => $questionid], '*', MUST_EXIST);
-                            $updatedquestion->category = $oldentry->questioncategoryid;
-                            \core\event\question_updated::create_from_question_instance(
-                                $updatedquestion, $this->context)->trigger();
+                            self::attach_as_version($questionid, (int)$entryid, $this->context);
                             $updatedcount++;
                             $addedcount--;
                         }

@@ -239,6 +239,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         return $item['status'] === 'conflict';
                     })),
                 ];
+                // Line diffs (local question -> Hub version) for questions the import would change or that conflict.
+                $blocks = \qbank_questionhub\release_diff::package_blocks($xmlcontent, count($items));
+                if ($blocks !== null) {
+                    $diffexporter = new \qbank_questionhub\package_exporter((int)$COURSE->id, (int)$bankcontext->id);
+                    $label = get_string('diff_label_local_hub', 'qbank_questionhub', $version);
+                    $difffor = static function(array $item) use ($blocks, $diffexporter, $label): array {
+                        $file = \qbank_questionhub\release_diff::compare($item['name'],
+                            \qbank_questionhub\release_diff::entry_lines($diffexporter, (int)$item['entryid']),
+                            \qbank_questionhub\release_diff::xml_lines($blocks[$item['index']]));
+                        return $file + ['label' => $label];
+                    };
+                    foreach ($importpreview['conflict'] as &$conflictitem) {
+                        if ($conflictitem['entryid']) {
+                            $files = \qbank_questionhub\release_diff::decorate([$difffor($conflictitem)]);
+                            $files[0]['open'] = false;
+                            $conflictitem['diff'] = ['files' => $files];
+                        }
+                    }
+                    unset($conflictitem);
+                    $updatefiles = [];
+                    foreach ($importpreview['update'] as $updateitem) {
+                        if ($updateitem['entryid']) {
+                            $updatefiles[] = $difffor($updateitem);
+                        }
+                    }
+                    $importpreview['update_diff'] = $updatefiles ? [
+                        'files' => \qbank_questionhub\release_diff::decorate($updatefiles),
+                        'has_toolbar' => count($updatefiles) > 1,
+                    ] : null;
+                }
                 $importpreview['conflictcount'] = count($importpreview['conflict']);
                 $importpreview['newcount'] = count($importpreview['new']);
                 $importpreview['updatecount'] = count($importpreview['update']);
@@ -825,6 +855,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'hub_package_url' => $pkgid !== '' ? $huburl . '/packages/' . rawurlencode($pkgid) : '',
                 'has_changes' => $haschanges,
                 'update_url' => $updateurl,
+                'review_url' => (new moodle_url('/question/bank/questionhub/review.php', $publishparams))->out(false),
                 'pkg_settings' => $pkgdetails,
                 'can_edit_category' => $canmanagecategories,
                 'can_delete_category' => $candeletecategories &&
