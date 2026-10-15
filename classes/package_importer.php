@@ -299,10 +299,7 @@ class package_importer {
             } else if ($categoryid) {
                 // Match an existing local question before importing a second copy. This also adopts
                 // questions that were imported before Question Hub tracking existed.
-                $entryid = $this->find_existing_question($categoryid, $node, $idnumber, $name, $type);
-                if ($entryid && isset($matchedentryids[$entryid])) {
-                    $entryid = 0;
-                }
+                $entryid = $this->find_existing_question($categoryid, $node, $idnumber, $name, $type, $matchedentryids);
                 if ($entryid) {
                     $matchedentryids[$entryid] = true;
                     if (!$history || $sameversion) {
@@ -385,10 +382,13 @@ class package_importer {
      * An idnumber is authoritative. Questions without one must also have the same type,
      * name and question text. Some question types, such as Cloze, keep their content in
      * type-specific tables and leave question.questiontext empty; a unique local name/type
-     * match is the only reliable identity available for those questions.
+     * match is the only reliable identity available for those questions. Several local
+     * questions with the same name are told apart by their question text.
+     *
+     * @param int[] $exclude entry IDs (as keys) already matched to other questions of the package
      */
     private function find_existing_question(int $categoryid, \SimpleXMLElement $node, string $idnumber,
-            string $name, string $type): int {
+            string $name, string $type, array $exclude = []): int {
         global $DB;
         $params = ['categoryid' => $categoryid];
         $requiretextmatch = $idnumber === '';
@@ -398,8 +398,8 @@ class package_importer {
         } else {
             $where = 'q.name = :name AND q.qtype = :qtype';
             $params['name'] = $name;
-            // Moodle XML calls this type "cloze"; Moodle stores it as "multianswer".
-            $params['qtype'] = $type === 'cloze' ? 'multianswer' : $type;
+            // Moodle XML names these types differently from the qtype plugins Moodle stores.
+            $params['qtype'] = ['cloze' => 'multianswer', 'matching' => 'match'][$type] ?? $type;
         }
         $sql = "SELECT qbe.id, q.questiontext FROM {question_bank_entries} qbe
                   JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
@@ -408,7 +408,11 @@ class package_importer {
                    AND q.parent = 0
                    AND qv.version = (SELECT MAX(v.version) FROM {question_versions} v
                                         WHERE v.questionbankentryid = qbe.id)";
-        $matches = $DB->get_records_sql($sql, $params, 0, 2);
+        $matches = array_diff_key($DB->get_records_sql($sql, $params), $exclude);
+        $questiontext = (string)($node->questiontext->text ?? '');
+        if ($requiretextmatch && count($matches) > 1) {
+            $matches = array_filter($matches, static fn($match) => $match->questiontext === $questiontext);
+        }
         if (count($matches) !== 1) {
             return 0;
         }
@@ -416,7 +420,6 @@ class package_importer {
         if (!$requiretextmatch) {
             return (int)$match->id;
         }
-        $questiontext = (string)($node->questiontext->text ?? '');
         if ($type === 'cloze' || $match->questiontext === '' || $match->questiontext === $questiontext) {
             return (int)$match->id;
         }
