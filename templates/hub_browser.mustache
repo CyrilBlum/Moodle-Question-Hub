@@ -389,21 +389,6 @@
                             {{id}} · v{{latest_version}} · {{downloads}} Downloads ·
                             {{#preview_on}}{{#str}} preview_on, qbank_questionhub {{/str}}{{/preview_on}}{{^preview_on}}{{#str}} preview_off, qbank_questionhub {{/str}}{{/preview_on}}
                         </div>
-                        <div class="mt-1">
-                            {{#versions}}
-                            <form method="post" action="{{action_url}}" class="d-inline"
-                                  onsubmit="return confirm('{{#str}} withdraw_version_confirm, qbank_questionhub {{/str}}');">
-                                <input type="hidden" name="sesskey" value="{{sesskey}}">
-                                <input type="hidden" name="action" value="withdraw_release">
-                                <input type="hidden" name="packageid" value="{{id}}">
-                                <input type="hidden" name="version" value="{{version}}">
-                                <span class="badge badge-light border">{{version}}</span>
-                                {{#can_withdraw}}
-                                <button type="submit" class="btn btn-link btn-sm text-danger p-0 mr-2" title="{{#str}} withdraw_version, qbank_questionhub {{/str}}">&times;</button>
-                                {{/can_withdraw}}
-                            </form>
-                            {{/versions}}
-                        </div>
                     </div>
                     <div class="d-inline-flex align-items-center flex-wrap mt-2 mt-md-0">
                         {{! Same status and push/pull rules as the category list, cards and library. }}
@@ -427,6 +412,7 @@
                         {{/is_package_admin}}
                     </div>
                 </div>
+                {{#is_package_admin}}
                 <div class="collapse mt-3" id="edit-{{domid}}">
                     <form method="post" action="{{action_url}}" class="border rounded p-3 bg-light">
                         <input type="hidden" name="sesskey" value="{{sesskey}}">
@@ -472,7 +458,26 @@
                         <p class="text-muted small">{{#str}} version_immutable_note, qbank_questionhub {{/str}}</p>
                         <button type="submit" class="btn btn-primary btn-sm">{{#str}} save_settings, qbank_questionhub {{/str}}</button>
                     </form>
+                    {{! Withdrawing single versions sits with the package settings, as on the Hub. }}
+                    <div class="border rounded p-3 mt-2">
+                        <div class="font-weight-bold small mb-2">{{#str}} withdraw_versions_heading, qbank_questionhub {{/str}}</div>
+                        {{#versions}}
+                        <form method="post" action="{{action_url}}" class="d-flex align-items-center justify-content-between border-top py-1"
+                              onsubmit="return confirm('{{#str}} withdraw_version_confirm, qbank_questionhub {{/str}}');">
+                            <input type="hidden" name="sesskey" value="{{sesskey}}">
+                            <input type="hidden" name="action" value="withdraw_release">
+                            <input type="hidden" name="packageid" value="{{id}}">
+                            <input type="hidden" name="version" value="{{version}}">
+                            <code>v{{version}}</code>
+                            {{#can_withdraw}}
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">{{#str}} withdraw_version, qbank_questionhub {{/str}}</button>
+                            {{/can_withdraw}}
+                            {{^can_withdraw}}<span class="small text-muted">{{#str}} withdraw_last_version_hint, qbank_questionhub {{/str}}</span>{{/can_withdraw}}
+                        </form>
+                        {{/versions}}
+                    </div>
                 </div>
+                {{/is_package_admin}}
             </li>
             {{/my_packages}}
         </ul>

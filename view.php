@@ -437,7 +437,7 @@ if ($hasaccount) {
             $ispackageadmin = ($mp['my_role'] ?? 'admin') === 'admin';
             $versions = [];
             foreach ($mp['versions'] ?? [] as $v) {
-                $versions[] = ['version' => $v, 'can_withdraw' => $ispackageadmin && count($mp['versions']) > 1];
+                $versions[] = ['version' => $v, 'can_withdraw' => count($mp['versions']) > 1];
             }
 
             // Find local publication history for this package to calculate changes and offer update.
