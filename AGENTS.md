@@ -14,3 +14,4 @@ Plugin quick facts:
 - No PHP locally: lint on the server with `php8.2 -l` / `php8.1 -l`; after deploying run `admin/cli/purge_caches.php`.
 - Language strings in `lang/en` and `lang/de` (Swiss Standard German: «ss», formal «Sie»).
 - Moodle `qformat_default::try_importing_using_qtypes()` derives the question-type XML handler name from `get_class($this)`. A subclass of `qformat_xml` must keep dispatching to `import_from_xml`, or CodeRunner and gapselect imports report unsupported types.
+- Git: work directly on `main` (no feature branches, for simplicity); small commits, push.
