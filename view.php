@@ -608,8 +608,9 @@ $getremotepackage = static function(string $packageid) use (&$remotepackages, &$
         return null;
     }
 };
+$canimport = has_capability('qbank/questionhub:import', $bankcontext);
 $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
-        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage) {
+        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = $cat->name;
@@ -675,6 +676,8 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $remoteversion = '';
             $hasremoteupdate = false;
             $remotechecked = false;
+            $pulltargetid = 0;
+            $pulltitle = '';
 
             if ($ispublished) {
                 $linkhistory = $directlink ?: $latestpub;
@@ -695,6 +698,14 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                         $remoteversion = (string)($remote['latest_version'] ?? '');
                         $hasremoteupdate = $remoteversion !== '' && $pkgversion !== '' &&
                             version_compare($remoteversion, $pkgversion, '>');
+                    }
+                    // Pull into the category that received the earlier import, so the importer's
+                    // item tracking (keyed by target category) updates the existing questions.
+                    // Own publications are excluded: an import record would end their push link.
+                    if ($hasremoteupdate && $canimport && $statushistory->action === 'import') {
+                        $pulltargetid = (int)$statushistory->categoryid;
+                        $pulltitle = html_entity_decode((string)($remote['title'] ?? $statushistory->package_title),
+                            ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     }
                 }
 
@@ -735,6 +746,10 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 }
             }
 
+            // Local changes not yet on the Hub; for the package source, removed questions count too.
+            $aheadknown = $ispackagesource ? $changesknown : $localchangesknown;
+            $aheadcount = $ispackagesource ? $changescount : ($haslocalchanges ? (int)$localstatus : 0);
+
             $publishcategories[] = [
                 'id' => $cat->id,
                 'name' => $name,
@@ -751,20 +766,19 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'is_published' => $ispublished,
                 'is_linked' => $islinked,
                 'is_unlinked' => $isunlinked,
-                'local_changes_known' => $localchangesknown,
-                'has_local_changes' => $haslocalchanges,
-                'local_changes_count' => $localstatus,
-                'is_local_up_to_date' => $islinked && $localchangesknown && !$haslocalchanges,
-                'remote_checked' => $remotechecked,
+                'has_ahead' => $islinked && $aheadknown && $aheadcount > 0,
+                'ahead_count' => $aheadcount,
                 'remote_version' => $remoteversion,
-                'has_remote_update' => $hasremoteupdate,
-                'is_remote_up_to_date' => $islinked && $remotechecked && !$hasremoteupdate,
+                'has_remote_update' => $islinked && $hasremoteupdate,
+                'is_in_sync' => $islinked && $aheadknown && $aheadcount === 0 && $remotechecked && !$hasremoteupdate,
+                'can_pull' => $pulltargetid > 0,
+                'pull_target_id' => $pulltargetid,
+                'pull_title' => $pulltitle,
                 'is_package_source' => $ispackagesource,
                 'package_id' => $pkgid,
                 'package_version' => $pkgversion,
-                'changes_count' => $changescount,
+                'hub_package_url' => $pkgid !== '' ? $huburl . '/packages/' . rawurlencode($pkgid) : '',
                 'has_changes' => $haschanges,
-                'changes_known' => $changesknown,
                 'update_url' => $updateurl,
                 'pkg_settings' => $pkgdetails,
             ];

@@ -238,64 +238,61 @@
                         <a href="{{question_bank_url}}" {{^is_child}}class="font-weight-bold"{{/is_child}} title="{{#str}} open_category_questions, qbank_questionhub {{/str}}">{{name}}</a>
                         <span class="badge badge-light border ml-2">{{own}}</span>
                         {{#has_sub_total}}<span class="small text-muted ml-1">({{total}} {{#str}} incl_subcategories, qbank_questionhub {{/str}})</span>{{/has_sub_total}}
-                        {{#is_package_source}}
-                            {{#changes_known}}
-                                {{#has_changes}}
-                                <span class="badge badge-warning bg-warning text-dark ml-2" title="{{#str}} changes_since_last_pub, qbank_questionhub, {{changes_count}} {{/str}}">
-                                    {{#str}} changes_count, qbank_questionhub, {{changes_count}} {{/str}}
-                                </span>
-                                {{/has_changes}}
-                                {{^has_changes}}
-                                <span class="badge badge-success bg-success text-white ml-2" title="{{#str}} no_changes_since_last_pub, qbank_questionhub {{/str}}">
-                                    <i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} up_to_date, qbank_questionhub {{/str}}
-                                </span>
-                                {{/has_changes}}
-                            {{/changes_known}}
-                            {{^changes_known}}
-                            <span class="badge badge-secondary bg-secondary text-white ml-2">
-                                v{{package_version}}
-                            </span>
-                            {{/changes_known}}
-                        {{/is_package_source}}
-                        {{#is_linked}}
-                            {{#local_changes_known}}
-                                {{#has_local_changes}}<span class="badge badge-warning bg-warning text-dark ml-2">{{#str}} local_changes_status, qbank_questionhub, {{local_changes_count}} {{/str}}</span>{{/has_local_changes}}
-                                {{#is_local_up_to_date}}<span class="badge badge-success bg-success text-white ml-2">{{#str}} local_up_to_date_status, qbank_questionhub {{/str}}</span>{{/is_local_up_to_date}}
-                            {{/local_changes_known}}
-                            {{#remote_checked}}
-                                {{#has_remote_update}}<span class="badge badge-info bg-info text-white ml-2">{{#str}} remote_update_status, qbank_questionhub, {{remote_version}} {{/str}}</span>{{/has_remote_update}}
-                                {{#is_remote_up_to_date}}<span class="badge badge-light border ml-2">{{#str}} remote_up_to_date_status, qbank_questionhub {{/str}}</span>{{/is_remote_up_to_date}}
-                            {{/remote_checked}}
-                        {{/is_linked}}
+                        {{#package_id}}
+                        <div class="small text-muted mt-1">
+                            <i class="fa fa-code-fork mr-1" aria-hidden="true"></i><a href="{{hub_package_url}}" class="text-muted" target="_blank" rel="noopener" title="{{#str}} open_hub_package, qbank_questionhub {{/str}}"><code>{{package_id}}</code></a>
+                            {{#package_version}}<span class="badge badge-light border ml-1">v{{package_version}}</span>{{/package_version}}
+                            {{#is_package_source}}<span class="ml-1">· {{#str}} sync_source_label, qbank_questionhub {{/str}}</span>{{/is_package_source}}
+                        </div>
+                        {{/package_id}}
                     </span>
-                    <span class="d-inline-flex align-items-center">
+                    <span class="d-inline-flex align-items-center flex-wrap">
+                        {{#has_ahead}}<span class="badge badge-warning bg-warning text-dark mr-1" title="{{#str}} sync_ahead_help, qbank_questionhub {{/str}}"><i class="fa fa-arrow-up mr-1" aria-hidden="true"></i>{{#str}} local_changes_status, qbank_questionhub, {{ahead_count}} {{/str}}</span>{{/has_ahead}}
+                        {{#has_remote_update}}<span class="badge badge-info bg-info text-white mr-1" title="{{#str}} sync_behind_help, qbank_questionhub {{/str}}"><i class="fa fa-arrow-down mr-1" aria-hidden="true"></i>{{#str}} remote_update_status, qbank_questionhub, {{remote_version}} {{/str}}</span>{{/has_remote_update}}
+                        {{#is_in_sync}}<span class="badge badge-success bg-success text-white mr-1"><i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} sync_in_sync, qbank_questionhub {{/str}}</span>{{/is_in_sync}}
                         {{#has_duplicates}}
                         <form method="post" action="{{action_url}}" class="d-inline mr-1"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="review_duplicates"><input type="hidden" name="duplicatecategoryid" value="{{id}}"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-clone mr-1" aria-hidden="true"></i>{{#str}} review_duplicates_count, qbank_questionhub, {{duplicate_count}} {{/str}}</button></form>
                         {{/has_duplicates}}
                         {{#is_package_source}}
-                            {{#has_changes}}
-                            <a href="{{update_url}}" class="btn btn-sm btn-primary mr-1">
-                                <i class="fa fa-refresh mr-1" aria-hidden="true"></i>{{#str}} update_category_button, qbank_questionhub {{/str}}
+                            <a href="{{update_url}}" class="btn btn-sm {{#has_changes}}btn-primary{{/has_changes}}{{^has_changes}}btn-outline-secondary{{/has_changes}} mr-1" title="{{#str}} push_button_help, qbank_questionhub, {{package_id}} {{/str}}">
+                                <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} push_button, qbank_questionhub {{/str}}
                             </a>
-                            {{/has_changes}}
-                            {{^has_changes}}
-                            <a href="{{update_url}}" class="btn btn-sm btn-outline-secondary mr-1">
-                                {{#str}} update_category_button, qbank_questionhub {{/str}}
-                            </a>
-                            {{/has_changes}}
+                        {{/is_package_source}}
+                        {{#can_pull}}
+                        <form method="post" action="{{action_url}}#importPreview" class="d-inline-flex mr-1">
+                            <input type="hidden" name="sesskey" value="{{sesskey}}">
+                            <input type="hidden" name="action" value="import_package">
+                            <input type="hidden" name="courseid" value="{{courseid}}">
+                            <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
+                            {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+                            <input type="hidden" name="packageid" value="{{package_id}}">
+                            <input type="hidden" name="version" value="{{remote_version}}">
+                            <input type="hidden" name="title" value="{{pull_title}}">
+                            <input type="hidden" name="targetcategoryid" value="{{pull_target_id}}">
+                            <input type="hidden" name="categorymode" value="keep">
+                            <input type="hidden" name="updatechanged" value="1">
+                            <button type="submit" class="btn btn-sm btn-info mr-1" title="{{#str}} pull_button_help, qbank_questionhub, {{remote_version}} {{/str}}">
+                                <i class="fa fa-cloud-download mr-1" aria-hidden="true"></i>{{#str}} pull_button, qbank_questionhub, {{remote_version}} {{/str}}
+                            </button>
+                            <button type="submit" name="dryrun" value="1" class="btn btn-sm btn-outline-info" title="{{#str}} pull_preview_help, qbank_questionhub {{/str}}">
+                                <i class="fa fa-eye mr-1" aria-hidden="true"></i>{{#str}} pull_preview_button, qbank_questionhub {{/str}}
+                            </button>
+                        </form>
+                        {{/can_pull}}
+                        {{#is_package_source}}
                             {{#pkg_settings}}
                             <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-bs-toggle="collapse"
-                                    data-target="#edit-cat-{{domid}}" data-bs-target="#edit-cat-{{domid}}">
-                                <i class="fa fa-cog mr-1" aria-hidden="true"></i>{{#str}} edit_settings, qbank_questionhub {{/str}}
+                                    data-target="#edit-cat-{{domid}}" data-bs-target="#edit-cat-{{domid}}" title="{{#str}} edit_settings, qbank_questionhub {{/str}}">
+                                <i class="fa fa-cog" aria-hidden="true"></i><span class="sr-only">{{#str}} edit_settings, qbank_questionhub {{/str}}</span>
                             </button>
                             {{/pkg_settings}}
                         {{/is_package_source}}
                         {{#is_published}}
-                            <form method="post" action="{{action_url}}" class="d-inline ml-1"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="unlink_category"><input type="hidden" name="categoryid" value="{{id}}"><button type="submit" class="btn btn-sm btn-outline-secondary">{{#str}} unlink_category_button, qbank_questionhub {{/str}}</button></form>
+                            <form method="post" action="{{action_url}}" class="d-inline ml-1"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="unlink_category"><input type="hidden" name="categoryid" value="{{id}}"><button type="submit" class="btn btn-sm btn-outline-secondary" title="{{#str}} unlink_category_button, qbank_questionhub {{/str}}"><i class="fa fa-chain-broken" aria-hidden="true"></i><span class="sr-only">{{#str}} unlink_category_button, qbank_questionhub {{/str}}</span></button></form>
                         {{/is_published}}
                         {{^is_published}}
                             {{#is_unlinked}}<span class="small text-muted mr-2">{{#str}} category_unlinked_status, qbank_questionhub {{/str}}</span>{{/is_unlinked}}
-                            <a href="{{url}}" class="btn btn-sm btn-outline-primary">{{#str}} publish_category_button, qbank_questionhub {{/str}}</a>
+                            <a href="{{url}}" class="btn btn-sm btn-outline-primary"><i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} publish_category_button, qbank_questionhub {{/str}}</a>
                         {{/is_published}}
                     </span>
                 </div>
