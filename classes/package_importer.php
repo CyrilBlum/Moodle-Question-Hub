@@ -299,13 +299,15 @@ class package_importer {
             } else if ($categoryid) {
                 // Match an existing local question before importing a second copy. This also adopts
                 // questions that were imported before Question Hub tracking existed.
-                $entryid = $this->find_existing_question($categoryid, $node, $idnumber, $name, $type, $matchedentryids);
-                if ($entryid) {
+                $match = $this->find_existing_question($categoryid, $node, $idnumber, $name, $type, $matchedentryids);
+                if ($match) {
+                    $entryid = $match['id'];
                     $matchedentryids[$entryid] = true;
                     if (!$history || $sameversion) {
-                        // Without package history there is no reliable baseline for an automatic
-                        // content update. Keep the matching local question and establish tracking.
-                        $status = 'unchanged';
+                        // Without package history there is no baseline that tells a local edit from a Hub
+                        // change. An identical question is adopted; a different one is a conflict the
+                        // teacher decides (keep the local question, take the Hub version or keep both).
+                        $status = $match['differs'] ? 'conflict' : 'unchanged';
                     } else {
                         if ($previoushashes === null) {
                             try {
@@ -346,7 +348,7 @@ class package_importer {
                 'name' => $name, 'type' => $type, 'category' => implode(' / ', $relative),
                 'status' => $status, 'sourcekey' => $sourcekey, 'sourcehash' => $sourcehash,
                 'entryid' => $entryid, 'trackingid' => $tracking->id ?? 0, 'uncertain' => $uncertain,
-                'baselinequestionid' => $baselinequestionid,
+                'baselinequestionid' => $baselinequestionid, 'index' => count($items),
             ];
         }
         return $items;
@@ -379,16 +381,16 @@ class package_importer {
     /**
      * Finds one unambiguous existing local question.
      *
-     * An idnumber is authoritative. Questions without one must also have the same type,
-     * name and question text. Some question types, such as Cloze, keep their content in
-     * type-specific tables and leave question.questiontext empty; a unique local name/type
-     * match is the only reliable identity available for those questions. Several local
-     * questions with the same name are told apart by their question text.
+     * An idnumber is authoritative. Without one, the only local question with the same name and type
+     * in the category is the same question, even if its text was edited since (on either side); the
+     * caller decides how to treat a different text. Several local questions with the same name are
+     * told apart by an identical question text, otherwise there is no match.
      *
      * @param int[] $exclude entry IDs (as keys) already matched to other questions of the package
+     * @return array|null id (question bank entry) and differs (the question text is not identical)
      */
     private function find_existing_question(int $categoryid, \SimpleXMLElement $node, string $idnumber,
-            string $name, string $type, array $exclude = []): int {
+            string $name, string $type, array $exclude = []): ?array {
         global $DB;
         $params = ['categoryid' => $categoryid];
         $requiretextmatch = $idnumber === '';
@@ -414,16 +416,14 @@ class package_importer {
             $matches = array_filter($matches, static fn($match) => $match->questiontext === $questiontext);
         }
         if (count($matches) !== 1) {
-            return 0;
+            return null;
         }
         $match = reset($matches);
-        if (!$requiretextmatch) {
-            return (int)$match->id;
-        }
-        if ($type === 'cloze' || $match->questiontext === '' || $match->questiontext === $questiontext) {
-            return (int)$match->id;
-        }
-        return 0;
+        // Cloze questions keep their content in type-specific tables and may leave questiontext empty;
+        // Moodle also serialises their text differently on import, so the text does not tell them apart.
+        $differs = $requiretextmatch && $type !== 'cloze' && $match->questiontext !== '' &&
+            $match->questiontext !== $questiontext;
+        return ['id' => (int)$match->id, 'differs' => $differs];
     }
 
     /** Fingerprints of questions in an earlier release, keyed independently of its root category name. */
@@ -625,6 +625,12 @@ class package_importer {
                         $entryid = $item['entryid'];
                         if ($item['status'] === 'kept') {
                             $hubquestionid = (int)$item['baselinequestionid'];
+                            if (!$hubquestionid && !$item['trackingid']) {
+                                // A local question kept at the first link has no Hub version to compare
+                                // with. Leaving it untracked makes the next pull match it again by name,
+                                // so a differing Hub version stays a conflict instead of overwriting it.
+                                continue;
+                            }
                         } else if (!$item['trackingid'] && $entryid) {
                             $hubquestionid = $this->latest_questionid((int)$entryid);
                         }
