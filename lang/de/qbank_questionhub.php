@@ -354,3 +354,25 @@ $string['error_review_entry'] = 'Diese Frage gehört nicht mehr zur verbundenen 
 $string['error_review_accept_source'] = 'Änderungen in der Paketquelle werden übernommen, indem Sie sie pushen.';
 $string['error_review_in_use'] = 'Die Frage wird in einem Test verwendet und kann nicht gelöscht werden.';
 $string['error_review_not_linked'] = 'Diese Kategorie ist nicht mit einem Hub-Paket verbunden.';
+
+// Fragen mit gleichem Namen und Typ, aber anderem Inhalt.
+$string['variants_found'] = '{$a} Fragename(n) kommen in derselben Kategorie mehrfach mit unterschiedlichem Inhalt vor (z. B. eine lokale Frage neben der importierten Hub-Fassung).';
+$string['variants_review'] = 'Vergleichen und bereinigen';
+$string['variants_heading'] = 'Gleicher Name, anderer Inhalt';
+$string['variants_intro'] = 'Jede Gruppe enthält Fragen derselben Kategorie mit gleichem Namen und Typ, aber unterschiedlichem Inhalt. Vergleichen Sie sie und kreuzen Sie die Fragen an, die gelöscht werden sollen; die übrige bleibt erhalten. Fragen, die in einem Test verwendet werden, können nicht gelöscht werden. Gelöschte Fragen werden mit allen Versionen entfernt.';
+$string['variants_none'] = 'Es gibt keine Fragen mit gleichem Namen und anderem Inhalt.';
+$string['variants_groups'] = 'Gruppen ({$a})';
+$string['variants_select_untracked'] = 'Fragen ohne Hub-Herkunft ankreuzen';
+$string['variants_select_none'] = 'Auswahl aufheben';
+$string['variants_delete'] = 'Löschen';
+$string['variants_created'] = 'Erstellt';
+$string['variants_modified'] = 'geändert {$a}';
+$string['variants_versions'] = 'Version (Anzahl)';
+$string['variants_origin'] = 'Herkunft';
+$string['variants_local'] = 'lokal';
+$string['variants_inuse'] = 'verwendet';
+$string['variants_inuse_help'] = 'In einem Test verwendet: kann hier nicht gelöscht werden';
+$string['variants_diff_label'] = 'Frage 1 → Frage {$a}';
+$string['variants_delete_selected'] = 'Ausgewählte Fragen löschen';
+$string['variants_delete_confirm'] = '{count} Frage(n) mit allen Versionen löschen?';
+$string['variants_deleted'] = '{$a} Frage(n) gelöscht.';

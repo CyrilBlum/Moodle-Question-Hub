@@ -1,0 +1,99 @@
+{{!
+    @template qbank_questionhub/variants_view
+
+    Questions with the same name and type but different content in one category (e.g. a local question and the
+    Hub version imported next to it): each group lists its questions with origin and use, diffs against the
+    oldest question and checkboxes to delete selected ones. Questions used in a quiz cannot be selected.
+}}
+<div class="qbank_questionhub_variants mb-5">
+    <h4 class="mb-1"><i class="fa fa-clone text-warning mr-2" aria-hidden="true"></i>{{#str}} variants_heading, qbank_questionhub {{/str}}</h4>
+    <div class="alert alert-light border my-3">{{#str}} variants_intro, qbank_questionhub {{/str}}</div>
+
+    {{^has_groups}}<div class="alert alert-info">{{#str}} variants_none, qbank_questionhub {{/str}}</div>{{/has_groups}}
+
+    {{#has_groups}}
+    <form method="post" action="{{action_url}}" id="qh-variants-form">
+        <input type="hidden" name="sesskey" value="{{sesskey}}">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+            <h5 class="mb-0">{{#str}} variants_groups, qbank_questionhub, {{group_count}} {{/str}}</h5>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary mr-1 me-1" data-qh-variants="hub">
+                    <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{#str}} variants_select_untracked, qbank_questionhub {{/str}}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-qh-variants="none">
+                    {{#str}} variants_select_none, qbank_questionhub {{/str}}
+                </button>
+            </div>
+        </div>
+
+        {{#groups}}
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <strong>{{name}}</strong> <span class="small text-muted ml-1 ms-1">{{categoryname}} · {{qtype}}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 small">
+                    <thead class="thead-light"><tr>
+                        <th style="width:6rem">{{#str}} variants_delete, qbank_questionhub {{/str}}</th>
+                        <th>#</th>
+                        <th>{{#str}} variants_created, qbank_questionhub {{/str}}</th>
+                        <th>{{#str}} variants_versions, qbank_questionhub {{/str}}</th>
+                        <th>{{#str}} variants_origin, qbank_questionhub {{/str}}</th>
+                    </tr></thead>
+                    <tbody>
+                    {{#entries}}
+                    <tr>
+                        <td>
+                            {{#can_delete}}<input type="checkbox" class="form-check-input position-static ml-0" name="delete[]" value="{{entryid}}"
+                                {{^has_tracked}}data-qh-untracked="1"{{/has_tracked}} aria-label="{{#str}} variants_delete, qbank_questionhub {{/str}} {{number}}">{{/can_delete}}
+                            {{^can_delete}}<span class="badge badge-secondary bg-secondary" title="{{#str}} variants_inuse_help, qbank_questionhub {{/str}}">{{#str}} variants_inuse, qbank_questionhub {{/str}}</span>{{/can_delete}}
+                        </td>
+                        <td>{{number}}</td>
+                        <td>{{created}}<div class="text-muted">{{#str}} variants_modified, qbank_questionhub, {{modified}} {{/str}}</div></td>
+                        <td>v{{version}} ({{versions}})</td>
+                        <td>
+                            {{#has_tracked}}<span class="badge badge-info bg-info text-white"><i class="fa fa-cloud-download mr-1" aria-hidden="true"></i>{{tracked}}</span>{{/has_tracked}}
+                            {{^has_tracked}}<span class="text-muted">{{#str}} variants_local, qbank_questionhub {{/str}}</span>{{/has_tracked}}
+                        </td>
+                    </tr>
+                    {{/entries}}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body pt-2 pb-1">{{#diff}}{{> qbank_questionhub/diff_files }}{{/diff}}</div>
+        </div>
+        {{/groups}}
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap mt-4">
+            <a href="{{return_url}}" class="btn btn-outline-secondary">{{#str}} review_back, qbank_questionhub {{/str}}</a>
+            <button type="submit" class="btn btn-danger" data-confirm="{{#str}} variants_delete_confirm, qbank_questionhub {{/str}}">
+                <i class="fa fa-trash mr-1" aria-hidden="true"></i>{{#str}} variants_delete_selected, qbank_questionhub {{/str}}
+            </button>
+        </div>
+    </form>
+    {{/has_groups}}
+    {{^has_groups}}<a href="{{return_url}}" class="btn btn-outline-secondary">{{#str}} review_back, qbank_questionhub {{/str}}</a>{{/has_groups}}
+</div>
+{{#js}}
+(function() {
+    var form = document.getElementById('qh-variants-form');
+    if (!form) {
+        return;
+    }
+    form.querySelectorAll('[data-qh-variants]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var hub = button.getAttribute('data-qh-variants') === 'hub';
+            form.querySelectorAll('input[name="delete[]"]').forEach(function(box) {
+                box.checked = hub && box.hasAttribute('data-qh-untracked');
+            });
+        });
+    });
+    form.addEventListener('submit', function(e) {
+        var count = form.querySelectorAll('input[name="delete[]"]:checked').length;
+        var message = form.querySelector('[data-confirm]').getAttribute('data-confirm').replace('{count}', count);
+        if (!count || !window.confirm(message)) {
+            e.preventDefault();
+        }
+    });
+})();
+{{/js}}

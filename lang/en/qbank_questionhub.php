@@ -354,3 +354,25 @@ $string['error_review_entry'] = 'This question is no longer part of the linked c
 $string['error_review_accept_source'] = 'Changes in the package source are accepted by pushing them.';
 $string['error_review_in_use'] = 'The question is used in a quiz and cannot be deleted.';
 $string['error_review_not_linked'] = 'This category is not linked to a Hub package.';
+
+// Questions with the same name and type but different content.
+$string['variants_found'] = '{$a} question name(s) occur more than once in the same category with different content (e.g. a local question next to the imported Hub version).';
+$string['variants_review'] = 'Compare and clean up';
+$string['variants_heading'] = 'Same name, different content';
+$string['variants_intro'] = 'Each group holds questions of the same category with the same name and type but different content. Compare them and tick the questions to delete; the remaining one is kept. Questions used in a quiz cannot be deleted. Deleted questions are removed with all their versions.';
+$string['variants_none'] = 'There are no questions with the same name and different content.';
+$string['variants_groups'] = 'Groups ({$a})';
+$string['variants_select_untracked'] = 'Tick the questions without Hub origin';
+$string['variants_select_none'] = 'Clear selection';
+$string['variants_delete'] = 'Delete';
+$string['variants_created'] = 'Created';
+$string['variants_modified'] = 'changed {$a}';
+$string['variants_versions'] = 'Version (count)';
+$string['variants_origin'] = 'Origin';
+$string['variants_local'] = 'local';
+$string['variants_inuse'] = 'in use';
+$string['variants_inuse_help'] = 'Used in a quiz: cannot be deleted here';
+$string['variants_diff_label'] = 'question 1 → question {$a}';
+$string['variants_delete_selected'] = 'Delete selected questions';
+$string['variants_delete_confirm'] = 'Delete {count} question(s) with all their versions?';
+$string['variants_deleted'] = '{$a} question(s) deleted.';

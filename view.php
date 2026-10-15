@@ -322,6 +322,12 @@ $showlibrary = ($section === 'library');
 $showmypackages = ($section === 'my_packages');
 $duplicategroups = \qbank_questionhub\duplicate_manager::find_removable($bankcontext);
 $duplicatecount = array_sum(array_map(static fn($group) => count($group['remove']), $duplicategroups));
+// Same name and type, different content (e.g. a local question next to its imported Hub version).
+$variantcount = count(\qbank_questionhub\duplicate_manager::find_variants($bankcontext));
+$variantsparams = ['courseid' => $COURSE->id, 'bankcontextid' => $bankcontext->id];
+if (!empty($cmid)) {
+    $variantsparams['cmid'] = $cmid;
+}
 
 $query = optional_param('q', '', PARAM_TEXT);
 $subject = optional_param('subject', '', PARAM_TEXT);
@@ -1035,6 +1041,9 @@ $templatedata = [
     'has_next' => ($page < ($pagination['total_pages'] ?? 1)),
     'import_preview' => $importpreview,
     'has_duplicates' => $duplicatecount > 0,
+    'has_variants' => $variantcount > 0,
+    'variant_count' => $variantcount,
+    'variants_url' => (new moodle_url('/question/bank/questionhub/variants.php', $variantsparams))->out(false),
     'duplicate_count' => $duplicatecount,
     'duplicate_categories' => (function() use ($duplicatepreview, $bankcontext): array {
         $categories = [];

@@ -126,6 +126,12 @@
         <form method="post" action="{{action_url}}" class="mt-2 mt-md-0"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="review_duplicates"><button type="submit" class="btn btn-sm btn-outline-danger">{{#str}} review_duplicates, qbank_questionhub {{/str}}</button></form>
     </div>
     {{/has_duplicates}}
+    {{#has_variants}}
+    <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap mb-4">
+        <span>{{#str}} variants_found, qbank_questionhub, {{variant_count}} {{/str}}</span>
+        <a href="{{variants_url}}" class="btn btn-sm btn-outline-danger mt-2 mt-md-0">{{#str}} variants_review, qbank_questionhub {{/str}}</a>
+    </div>
+    {{/has_variants}}
     {{#has_duplicate_preview}}
     <div class="card border-warning shadow-sm mb-4">
         <div class="card-header bg-warning text-dark font-weight-bold"><i class="fa fa-clone mr-2" aria-hidden="true"></i>{{#str}} duplicate_review_heading, qbank_questionhub {{/str}}</div>
