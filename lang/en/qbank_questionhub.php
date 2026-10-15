@@ -196,15 +196,9 @@ $string['badge_synced_help'] = 'Matches the latest published release on Question
 $string['badge_unknown'] = 'Unknown';
 $string['badge_unknown_help'] = 'The package was published before version snapshotting was enabled.';
 $string['update_package_button'] = 'Update package';
-$string['update_package_heading'] = 'Update package on Question Hub';
-$string['update_package_intro'] = 'You are updating the package "{$a->title}" (current version: v{$a->version}). {$a->changes} changed or new questions will be published.';
-$string['update_package_intro_nochanges'] = 'You are updating the package "{$a->title}" (current version: v{$a->version}). There are currently no local changes.';
-$string['changes_count'] = '{$a} changes';
-$string['changes_since_last_pub'] = '{$a} questions changed since the last release';
 $string['published_badge'] = 'Published';
 $string['error_update_source'] = 'The category does not match the specified package.';
 $string['error_update_version'] = 'The new version number must be higher than the existing version v{$a}.';
-$string['publish_update_button'] = 'Publish update to Question Hub';
 $string['publication_tracking_failed'] = 'Failed to record published question snapshot.';
 $string['duplicates_found'] = '{$a} removable duplicate questions found.';
 $string['review_duplicates'] = 'Review duplicates';
@@ -258,3 +252,44 @@ $string['missing_on_hub'] = 'Not on the Hub';
 $string['missing_on_hub_help'] = 'The Hub no longer offers this package. The questions in this category stay unchanged; publish the category again or remove the link.';
 $string['republish_button'] = 'Publish again';
 $string['republish_button_help'] = 'Publish this category as a package again (new version number required)';
+$string['category_delete_button'] = 'Delete category';
+$string['category_delete_confirm'] = 'Permanently delete category "{$a->name}" with {$a->subcategories} subcategories and {$a->questions} questions? A package on the Hub is kept. This cannot be undone.';
+$string['category_deleted'] = '"{$a->name}" was deleted ({$a->categories} categories, {$a->questions} questions).';
+$string['category_delete_in_use'] = '"{$a}" was not deleted: its questions are used in quizzes or random questions draw from it. Remove these uses first.';
+$string['category_delete_failed'] = '"{$a}" was not deleted: not all questions could be removed. Nothing was changed.';
+$string['category_naming_note'] = '<strong>Caution with categories linked to the Question Hub</strong>
+<ul class="mb-0">
+<li>On updates, questions are recognised by the path of their subcategory and the question name. Do not rename or move subcategories of a linked package: existing questions would otherwise be imported as new with the next version (duplicates).</li>
+<li>You may rename the top linked category; its name is not part of the path.</li>
+<li>If a rename is needed: change the source category first, publish a new version and make the same change in every imported copy before updating it.</li>
+<li>Use short, unique and stable names without additions such as initials, "old", "new" or version numbers (the Hub manages versions).</li>
+<li>Avoid categories with the same name on the same level.</li>
+</ul>';
+$string['import_conflicts_found'] = 'Some questions were changed both on the Hub and here. Decide for each question which version applies.';
+$string['import_preview_conflicts'] = 'conflicts';
+$string['import_preview_conflicts_heading'] = 'Conflicts: changed on the Hub and locally';
+$string['import_preview_conflicts_help'] = 'The local version is kept by default. If you take the Hub version, your version stays in the question\'s version history and can be restored.';
+$string['conflict_keep'] = 'Keep local version';
+$string['conflict_hub'] = 'Take Hub version';
+$string['conflict_both'] = 'Keep both (Hub version as copy "… (Hub v{$a})")';
+$string['error_conflicts_unresolved'] = 'A decision is missing for questions with conflicts. Open the preview and choose a version for each question.';
+$string['pull_before_push'] = 'A newer version exists on the Hub: pull it first, then publish.';
+$string['error_release_notes_required'] = 'Please describe the changes in this version.';
+$string['push_heading'] = 'New version of "{$a}"';
+$string['push_current_version'] = 'current version on the Hub: v{$a}';
+$string['push_source_category'] = 'source category: {$a}';
+$string['push_files_heading'] = 'Changed questions';
+$string['push_files_summary'] = '{$a} question(s) changed';
+$string['push_changes_unknown'] = 'The changes since the last version cannot be determined (no snapshot). You can still publish a new version.';
+$string['push_no_changes'] = 'No questions changed since the last version. You can still publish a new version, e.g. after an undone change.';
+$string['push_status_added'] = 'Added';
+$string['push_status_modified'] = 'Modified';
+$string['push_status_removed'] = 'Removed';
+$string['push_diff_too_large'] = 'This question is too large for a line-by-line view.';
+$string['release_notes_label'] = 'Release note';
+$string['release_notes_placeholder'] = 'What changed? e.g. "Fixed a typo in question 3, added two regression questions"';
+$string['push_version_help'] = 'Must be higher than v{$a}. Small fixes: raise the last number; new questions: the middle one.';
+$string['push_settings_note'] = 'Change title, summary, licence and other settings in the category list (gear icon).';
+$string['push_submit'] = 'Publish version';
+$string['push_new_version_link'] = 'Publish a new version';
+$string['push_same_content'] = '{$a} more question(s) have a new version number but unchanged content (e.g. an undone edit); they are not listed.';

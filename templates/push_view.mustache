@@ -1,0 +1,103 @@
+{{!
+    @template qbank_questionhub/push_view
+
+    Push a new release of an own package, similar to a commit: changed questions with line diffs,
+    release note and version number. Package settings are edited in the category list, not here.
+}}
+<style>
+.qh-diff { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-size: .8rem; width: 100%; border-collapse: collapse; table-layout: fixed; }
+.qh-diff td { padding: 0 .5rem; white-space: pre-wrap; word-break: break-all; vertical-align: top; }
+.qh-diff td.qh-ln { width: 3.5rem; color: #6e7781; text-align: right; user-select: none; }
+.qh-diff td.qh-sign { width: 1.25rem; user-select: none; }
+.qh-diff tr.qh-add td { background: #e6ffec; }
+.qh-diff tr.qh-add td.qh-ln { background: #ccffd8; }
+.qh-diff tr.qh-del td { background: #ffebe9; }
+.qh-diff tr.qh-del td.qh-ln { background: #ffd7d5; }
+.qh-diff tr.qh-hunk td { background: #ddf4ff; color: #57606a; padding: .15rem .5rem; }
+.qh-file > summary { list-style: none; cursor: pointer; }
+.qh-file > summary::-webkit-details-marker { display: none; }
+.qh-stat-add { color: #1a7f37; }
+.qh-stat-del { color: #cf222e; }
+</style>
+<div class="qbank_questionhub_push mb-5">
+    <h4 class="mb-1">
+        <i class="fa fa-code-fork text-primary mr-2" aria-hidden="true"></i>{{#str}} push_heading, qbank_questionhub, {{package_title}} {{/str}}
+    </h4>
+    <p class="text-muted mb-4">
+        <code>{{update_package_id}}</code> · {{#str}} push_current_version, qbank_questionhub, {{owned_version}} {{/str}}
+        {{#category_name}} · {{#str}} push_source_category, qbank_questionhub, {{category_name}} {{/str}}{{/category_name}}
+    </p>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+        <h5 class="mb-0">{{#str}} push_files_heading, qbank_questionhub {{/str}}</h5>
+        {{^files_unknown}}
+        <span class="small">
+            {{#str}} push_files_summary, qbank_questionhub, {{files_count}} {{/str}}
+            <span class="qh-stat-add ml-2 ms-2">+{{additions}}</span> <span class="qh-stat-del">−{{deletions}}</span>
+        </span>
+        {{/files_unknown}}
+    </div>
+    {{#files_unknown}}<div class="alert alert-secondary">{{#str}} push_changes_unknown, qbank_questionhub {{/str}}</div>{{/files_unknown}}
+    {{#no_changes}}<div class="alert alert-info">{{#str}} push_no_changes, qbank_questionhub {{/str}}</div>{{/no_changes}}
+    {{#same_content}}<p class="small text-muted">{{#str}} push_same_content, qbank_questionhub, {{same_content}} {{/str}}</p>{{/same_content}}
+
+    {{#files}}
+    <details class="qh-file card mb-3" open>
+        <summary class="card-header d-flex justify-content-between align-items-center flex-wrap">
+            <span>
+                {{#is_added}}<span class="badge badge-success bg-success mr-2 me-2">{{#str}} push_status_added, qbank_questionhub {{/str}}</span>{{/is_added}}
+                {{#is_modified}}<span class="badge badge-warning bg-warning text-dark mr-2 me-2">{{#str}} push_status_modified, qbank_questionhub {{/str}}</span>{{/is_modified}}
+                {{#is_removed}}<span class="badge badge-danger bg-danger mr-2 me-2">{{#str}} push_status_removed, qbank_questionhub {{/str}}</span>{{/is_removed}}
+                <strong>{{name}}</strong>
+            </span>
+            <span class="small"><span class="qh-stat-add">+{{additions}}</span> <span class="qh-stat-del">−{{deletions}}</span></span>
+        </summary>
+        <div class="card-body p-0" style="overflow-x: auto;">
+            {{#too_large}}<p class="text-muted small p-3 mb-0">{{#str}} push_diff_too_large, qbank_questionhub {{/str}}</p>{{/too_large}}
+            {{^too_large}}
+            <table class="qh-diff">
+                {{#hunks}}
+                <tr class="qh-hunk"><td colspan="4">{{header}}</td></tr>
+                {{#rows}}
+                <tr class="{{#is_add}}qh-add{{/is_add}}{{#is_del}}qh-del{{/is_del}}"><td class="qh-ln">{{old}}</td><td class="qh-ln">{{new}}</td><td class="qh-sign">{{sign}}</td><td>{{text}}</td></tr>
+                {{/rows}}
+                {{/hunks}}
+            </table>
+            {{/too_large}}
+        </div>
+    </details>
+    {{/files}}
+
+    <form method="post" action="{{action_url}}" class="card mt-4">
+        <div class="card-body">
+            <input type="hidden" name="sesskey" value="{{sesskey}}">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
+            {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+            <input type="hidden" name="categoryid" value="{{categoryid}}">
+            <input type="hidden" name="updatepackageid" value="{{update_package_id}}">
+            <div class="form-group mb-3">
+                <label for="release_notes" class="font-weight-bold">{{#str}} release_notes_label, qbank_questionhub {{/str}}</label>
+                <textarea id="release_notes" name="release_notes" class="form-control" rows="3" required
+                          placeholder="{{#str}} release_notes_placeholder, qbank_questionhub {{/str}}">{{release_notes}}</textarea>
+            </div>
+            <div class="form-group mb-3" style="max-width: 16rem;">
+                <label for="package_version" class="font-weight-bold">{{#str}} package_version_label, qbank_questionhub {{/str}}</label>
+                <input type="text" id="package_version" name="package_version" class="form-control" value="{{version_value}}" pattern="^\d+\.\d+\.\d+$" required>
+                <small class="form-text text-muted">{{#str}} push_version_help, qbank_questionhub, {{owned_version}} {{/str}}</small>
+            </div>
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <span class="small text-muted">{{#str}} push_settings_note, qbank_questionhub {{/str}}</span>
+                <div>
+                    <a href="{{cancel_url}}" class="btn btn-outline-secondary mr-2 me-2">{{#str}} cancel {{/str}}</a>
+                    <button type="submit" name="action" value="download_xml" formnovalidate class="btn btn-outline-primary mr-2 me-2">
+                        <i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} download_xml_button, qbank_questionhub {{/str}}
+                    </button>
+                    <button type="submit" name="action" value="publish_hub" class="btn btn-primary">
+                        <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} push_submit, qbank_questionhub {{/str}}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

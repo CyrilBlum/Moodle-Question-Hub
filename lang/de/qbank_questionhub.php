@@ -196,15 +196,9 @@ $string['badge_synced_help'] = 'Entspricht der auf dem Question Hub veröffentli
 $string['badge_unknown'] = 'Unbekannt';
 $string['badge_unknown_help'] = 'Das Paket wurde vor der Versionserfassung veröffentlicht.';
 $string['update_package_button'] = 'Paket aktualisieren';
-$string['update_package_heading'] = 'Paket auf Question Hub aktualisieren';
-$string['update_package_intro'] = 'Sie aktualisieren das Paket «{$a->title}» (aktuelle Version: v{$a->version}). Es werden {$a->changes} geänderte oder neue Fragen übertragen.';
-$string['update_package_intro_nochanges'] = 'Sie aktualisieren das Paket «{$a->title}» (aktuelle Version: v{$a->version}). Derzeit liegen keine lokalen Änderungen vor.';
-$string['changes_count'] = '{$a} Änderungen';
-$string['changes_since_last_pub'] = '{$a} Fragen seit der letzten Veröffentlichung geändert';
 $string['published_badge'] = 'Veröffentlicht';
 $string['error_update_source'] = 'Die Kategorie stimmt nicht mit dem angegebenen Paket überein.';
 $string['error_update_version'] = 'Die neue Versionsnummer muss höher sein als die bisherige Version v{$a}.';
-$string['publish_update_button'] = 'Update auf Question Hub veröffentlichen';
 $string['publication_tracking_failed'] = 'Versionserfassung für die Veröffentlichung konnte nicht gespeichert werden.';
 $string['duplicates_found'] = '{$a} entfernbaren Duplikatfragen gefunden.';
 $string['review_duplicates'] = 'Duplikate prüfen';
@@ -258,3 +252,44 @@ $string['missing_on_hub'] = 'Nicht im Hub';
 $string['missing_on_hub_help'] = 'Der Hub bietet dieses Paket nicht mehr an. Die Fragen in dieser Kategorie bleiben unverändert; veröffentlichen Sie die Kategorie erneut oder heben Sie die Verknüpfung auf.';
 $string['republish_button'] = 'Erneut veröffentlichen';
 $string['republish_button_help'] = 'Diese Kategorie erneut als Paket veröffentlichen (neue Versionsnummer nötig)';
+$string['category_delete_button'] = 'Kategorie löschen';
+$string['category_delete_confirm'] = 'Kategorie «{$a->name}» mit {$a->subcategories} Unterkategorie(n) und {$a->questions} Frage(n) endgültig löschen? Ein Paket im Hub bleibt bestehen. Dieser Vorgang kann nicht rückgängig gemacht werden.';
+$string['category_deleted'] = '«{$a->name}» wurde gelöscht ({$a->categories} Kategorie(n), {$a->questions} Frage(n)).';
+$string['category_delete_in_use'] = '«{$a}» wurde nicht gelöscht: Fragen daraus werden in Tests verwendet oder Zufallsfragen greifen auf die Kategorie zu. Entfernen Sie diese Verwendungen zuerst.';
+$string['category_delete_failed'] = '«{$a}» wurde nicht gelöscht: Nicht alle Fragen konnten entfernt werden. Es wurde nichts geändert.';
+$string['category_naming_note'] = '<strong>Achtung bei Kategorien, die mit dem Question Hub verknüpft sind</strong>
+<ul class="mb-0">
+<li>Beim Aktualisieren werden Fragen über den Pfad ihrer Unterkategorie und den Fragenamen wiedererkannt. Benennen Sie Unterkategorien eines verknüpften Pakets nicht um und verschieben Sie sie nicht: Sonst werden bestehende Fragen bei der nächsten Version als neu importiert (Duplikate).</li>
+<li>Die oberste verknüpfte Kategorie dürfen Sie umbenennen; ihr Name gehört nicht zum Pfad.</li>
+<li>Ist eine Umbenennung nötig: zuerst in der Quellkategorie ändern, neue Version veröffentlichen und dieselbe Änderung in allen importierten Kopien vornehmen, bevor diese aktualisiert werden.</li>
+<li>Verwenden Sie kurze, eindeutige und dauerhafte Namen ohne Zusätze wie Kürzel, «alt», «neu» oder Versionsnummern (die Version verwaltet der Hub).</li>
+<li>Vermeiden Sie gleichnamige Kategorien auf derselben Ebene.</li>
+</ul>';
+$string['import_conflicts_found'] = 'Einige Fragen wurden im Hub und hier geändert. Entscheiden Sie pro Frage, welche Fassung gelten soll.';
+$string['import_preview_conflicts'] = 'Konflikte';
+$string['import_preview_conflicts_heading'] = 'Konflikte: im Hub und lokal geändert';
+$string['import_preview_conflicts_help'] = 'Die lokale Fassung bleibt standardmässig erhalten. Übernehmen Sie die Hub-Fassung, bleibt Ihre Fassung im Versionsverlauf der Frage erhalten und kann wiederhergestellt werden.';
+$string['conflict_keep'] = 'Lokale Fassung behalten';
+$string['conflict_hub'] = 'Hub-Fassung übernehmen';
+$string['conflict_both'] = 'Beide behalten (Hub-Fassung als Kopie «… (Hub v{$a})»)';
+$string['error_conflicts_unresolved'] = 'Für Fragen mit Konflikten fehlt eine Entscheidung. Öffnen Sie die Vorschau und wählen Sie pro Frage eine Fassung.';
+$string['pull_before_push'] = 'Im Hub gibt es eine neuere Version: zuerst holen, dann veröffentlichen.';
+$string['error_release_notes_required'] = 'Bitte beschreiben Sie die Änderungen dieser Version.';
+$string['push_heading'] = 'Neue Version von «{$a}»';
+$string['push_current_version'] = 'aktuelle Version im Hub: v{$a}';
+$string['push_source_category'] = 'Quellkategorie: {$a}';
+$string['push_files_heading'] = 'Geänderte Fragen';
+$string['push_files_summary'] = '{$a} Frage(n) geändert';
+$string['push_changes_unknown'] = 'Die Änderungen seit der letzten Version lassen sich nicht ermitteln (keine Momentaufnahme vorhanden). Sie können trotzdem eine neue Version veröffentlichen.';
+$string['push_no_changes'] = 'Seit der letzten Version wurden keine Fragen geändert. Sie können trotzdem eine neue Version veröffentlichen, z. B. nach einer rückgängig gemachten Änderung.';
+$string['push_status_added'] = 'Neu';
+$string['push_status_modified'] = 'Geändert';
+$string['push_status_removed'] = 'Entfernt';
+$string['push_diff_too_large'] = 'Diese Frage ist zu gross für eine zeilenweise Anzeige.';
+$string['release_notes_label'] = 'Versionshinweis';
+$string['release_notes_placeholder'] = 'Was hat sich geändert? z. B. «Tippfehler in Aufgabe 3 korrigiert, zwei Fragen zu Regression ergänzt»';
+$string['push_version_help'] = 'Muss höher sein als v{$a}. Kleine Korrekturen: letzte Stelle erhöhen; neue Fragen: mittlere Stelle.';
+$string['push_settings_note'] = 'Titel, Beschreibung, Lizenz und weitere Einstellungen ändern Sie in der Kategorienliste (Zahnrad).';
+$string['push_submit'] = 'Version veröffentlichen';
+$string['push_new_version_link'] = 'Neue Version veröffentlichen';
+$string['push_same_content'] = '{$a} weitere Frage(n) haben eine neue Versionsnummer, aber unveränderten Inhalt (z. B. rückgängig gemachte Änderung); sie werden nicht aufgeführt.';

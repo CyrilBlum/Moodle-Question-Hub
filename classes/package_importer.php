@@ -252,6 +252,8 @@ class package_importer {
         ], 'timecreated DESC, id DESC', '*', 0, 1);
         $history = $previousimports ? reset($previousimports) : null;
         $sameversion = $history && $history->package_version === ($packagemetadata['version'] ?? '');
+        // Versions this category held at its last sync (pull or publish); a newer local version is a local edit.
+        $baseline = null;
         $previoushashes = null;
         $comparisonunavailable = false;
         $currentpath = [];
@@ -328,13 +330,37 @@ class package_importer {
                     }
                 }
             }
+            $baselinequestionid = 0;
+            if ($status === 'update' && $entryid) {
+                $baselinequestionid = (int)($tracking->questionid ?? 0);
+                if (!$baselinequestionid) {
+                    if ($baseline === null) {
+                        $synced = publication_tracker::latest((int)$this->course->id, (int)$this->targetcategory->id);
+                        $baseline = ($synced ? publication_tracker::snapshot((int)$synced->id) : null) ?? [];
+                    }
+                    $baselinequestionid = (int)($baseline[$entryid] ?? 0);
+                }
+                if ($baselinequestionid && $this->latest_questionid($entryid) !== $baselinequestionid) {
+                    // Changed on the Hub and edited here: never overwrite silently.
+                    $status = 'conflict';
+                }
+            }
             $items[] = [
                 'name' => $name, 'type' => $type, 'category' => implode(' / ', $relative),
                 'status' => $status, 'sourcekey' => $sourcekey, 'sourcehash' => $sourcehash,
                 'entryid' => $entryid, 'trackingid' => $tracking->id ?? 0, 'uncertain' => $uncertain,
+                'baselinequestionid' => $baselinequestionid,
             ];
         }
         return $items;
+    }
+
+    /** Question ID of the latest version of a question bank entry. */
+    private function latest_questionid(int $entryid): int {
+        global $DB;
+        return (int)$DB->get_field_sql(
+            'SELECT questionid FROM {question_versions} WHERE questionbankentryid = ? ORDER BY version DESC',
+            [$entryid], IGNORE_MULTIPLE);
     }
 
     /** Find an existing descendant without creating categories. */
@@ -444,11 +470,13 @@ class package_importer {
      * @param string $xmlcontent Raw XML package string.
      * @param bool $preservehierarchy Preserve nested category structure from XML package.
      * @param array $packagemetadata Optional metadata for history logging (id, version, title).
+     * @param array $resolutions Conflict decisions by source key: keep (local version), hub (Hub version
+     *        as new version), both (Hub version as a separate copy). Unresolved conflicts abort the import.
      * @return import_result
      * @throws moodle_exception On validation or import failure.
      */
     public function import_package(string $xmlcontent, bool $preservehierarchy = true, array $packagemetadata = [],
-            ?string $categorymode = null, bool $updatechanged = false): import_result {
+            ?string $categorymode = null, bool $updatechanged = false, array $resolutions = []): import_result {
         global $CFG, $DB, $USER;
         require_once($CFG->dirroot . '/question/editlib.php');
         require_once($CFG->dirroot . '/question/format/xml/format.php');
@@ -476,13 +504,22 @@ class package_importer {
             }
             unset($item);
         }
-        if ($categorymode !== null && !array_filter($plan, static function($item) {
-                return $item['status'] !== 'unchanged';
-            })) {
-            $result = new import_result(true, [], $report->get_warnings());
-            $result->unchangedcount = count($plan);
-            return $result;
+        foreach ($plan as &$item) {
+            if ($item['status'] !== 'conflict') {
+                continue;
+            }
+            $resolution = $resolutions[$item['sourcekey']] ?? '';
+            if (!in_array($resolution, ['keep', 'hub', 'both'], true)) {
+                throw new moodle_exception('error_conflicts_unresolved', 'qbank_questionhub');
+            }
+            $item['status'] = ['keep' => 'kept', 'hub' => 'update', 'both' => 'copy'][$resolution];
         }
+        unset($item);
+        // A release without content changes still has to be recorded, or the category keeps offering it.
+        $needsimport = $categorymode === null || (bool)array_filter($plan, static function($item) {
+            return !in_array($item['status'], ['unchanged', 'kept'], true);
+        });
+        $copysuffix = ' (Hub v' . ($packagemetadata['version'] ?? '') . ')';
 
         // 2. Retain the old CLI flattening behaviour when no new category placement mode is supplied.
         $processedxml = $xmlcontent;
@@ -512,7 +549,7 @@ class package_importer {
             $qformat->set_category_transformer(function(array $questions) use ($categorymode): void {
                 $this->remap_package_categories($questions, $categorymode);
             });
-            $qformat->set_question_filter(static function(array $questions) use ($plan): array {
+            $qformat->set_question_filter(static function(array $questions) use ($plan, $copysuffix): array {
                 $index = 0;
                 $filtered = [];
                 foreach ($questions as $question) {
@@ -523,7 +560,10 @@ class package_importer {
                     if (!isset($plan[$index])) {
                         throw new \coding_exception('Package question count changed during import.');
                     }
-                    if ($plan[$index]['status'] !== 'unchanged') {
+                    if ($plan[$index]['status'] === 'copy') {
+                        $question->name .= $copysuffix;
+                    }
+                    if (!in_array($plan[$index]['status'], ['unchanged', 'kept'], true)) {
                         $filtered[] = $question;
                     }
                     $index++;
@@ -550,20 +590,22 @@ class package_importer {
         ob_start();
         $importok = false;
         try {
-            if ($qformat->importpreprocess()) {
-                $importok = $qformat->importprocess();
-                if ($importok) {
-                    $qformat->importpostprocess();
+            if ($needsimport) {
+                if ($qformat->importpreprocess()) {
+                    $importok = $qformat->importprocess();
+                    if ($importok) {
+                        $qformat->importpostprocess();
+                    }
                 }
-            }
-            if (!$importok) {
-                $output = ob_get_clean();
-                throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', $output ?: '');
+                if (!$importok) {
+                    $output = ob_get_clean();
+                    throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', $output ?: '');
+                }
             }
 
             // 6. Determine newly imported question IDs directly from format instance.
             // Completely eliminates cross-process race conditions and full-table scans.
-            $newids = array_map('intval', $qformat->questionids ?? []);
+            $newids = $needsimport ? array_map('intval', $qformat->questionids ?? []) : [];
 
             $addedcount = count($newids);
             $updatedcount = 0;
@@ -572,9 +614,17 @@ class package_importer {
                 $packagehash = hash('sha256', (string)$packagemetadata['id']);
                 $nextid = 0;
                 foreach ($plan as $item) {
-                    if ($item['status'] === 'unchanged') {
+                    // Version last written from the Hub; a kept local edit keeps the old one, so the
+                    // question stays a conflict until the teacher takes a Hub version.
+                    $hubquestionid = null;
+                    if ($item['status'] === 'unchanged' || $item['status'] === 'kept') {
                         $unchangedcount++;
                         $entryid = $item['entryid'];
+                        if ($item['status'] === 'kept') {
+                            $hubquestionid = (int)$item['baselinequestionid'];
+                        } else if (!$item['trackingid'] && $entryid) {
+                            $hubquestionid = $this->latest_questionid((int)$entryid);
+                        }
                     } else {
                         if (!isset($newids[$nextid])) {
                             throw new \coding_exception('Imported question count does not match the preview.');
@@ -583,14 +633,23 @@ class package_importer {
                         $newversion = $DB->get_record('question_versions', ['questionid' => $questionid], '*', MUST_EXIST);
                         $newentryid = (int)$newversion->questionbankentryid;
                         $entryid = $newentryid;
-                        if ($item['status'] === 'update') {
+                        $hubquestionid = $questionid;
+                        if ($item['status'] === 'copy') {
+                            // The separate copy stays untracked; the tracked local question is kept.
+                            $entryid = $item['entryid'];
+                            $hubquestionid = (int)$item['baselinequestionid'];
+                        } else if ($item['status'] === 'update') {
                             $entryid = $item['entryid'];
                             $oldentry = $DB->get_record('question_bank_entries', ['id' => $entryid], '*', MUST_EXIST);
                             $newversion->questionbankentryid = $entryid;
-                            $newversion->version = (int)$oldentry->nextversion;
+                            // Moodle 4.5 has no question_bank_entries.nextversion (5.0 does); never reuse a number.
+                            $newversion->version = max((int)($oldentry->nextversion ?? 0), 1 + (int)$DB->get_field_sql(
+                                'SELECT MAX(version) FROM {question_versions} WHERE questionbankentryid = ?', [$entryid]));
                             $DB->update_record('question_versions', $newversion);
-                            $oldentry->nextversion = $newversion->version + 1;
-                            $DB->update_record('question_bank_entries', $oldentry);
+                            if (property_exists($oldentry, 'nextversion')) {
+                                $oldentry->nextversion = $newversion->version + 1;
+                                $DB->update_record('question_bank_entries', $oldentry);
+                            }
                             $DB->delete_records('question_bank_entries', ['id' => $newentryid]);
                             $updatedquestion = $DB->get_record('question', ['id' => $questionid], '*', MUST_EXIST);
                             $updatedquestion->category = $oldentry->questioncategoryid;
@@ -600,17 +659,20 @@ class package_importer {
                             $addedcount--;
                         }
                     }
+                    $tracking = (object)[
+                        'questionbankentryid' => $entryid, 'sourcehash' => $item['sourcehash'], 'timemodified' => time(),
+                    ];
+                    if ($hubquestionid) {
+                        $tracking->questionid = $hubquestionid;
+                    }
                     if ($item['trackingid']) {
-                        $DB->update_record('qbank_questionhub_items', (object)[
-                            'id' => $item['trackingid'], 'questionbankentryid' => $entryid,
-                            'sourcehash' => $item['sourcehash'], 'timemodified' => time(),
-                        ]);
+                        $tracking->id = $item['trackingid'];
+                        $DB->update_record('qbank_questionhub_items', $tracking);
                     } else if ($entryid) {
-                        $DB->insert_record('qbank_questionhub_items', (object)[
-                            'packagehash' => $packagehash, 'targetcategoryid' => $this->targetcategory->id,
-                            'sourcekey' => $item['sourcekey'], 'questionbankentryid' => $entryid,
-                            'sourcehash' => $item['sourcehash'], 'timemodified' => time(),
-                        ]);
+                        $tracking->packagehash = $packagehash;
+                        $tracking->targetcategoryid = $this->targetcategory->id;
+                        $tracking->sourcekey = $item['sourcekey'];
+                        $DB->insert_record('qbank_questionhub_items', $tracking);
                     }
                 }
                 if ($nextid !== count($newids)) {

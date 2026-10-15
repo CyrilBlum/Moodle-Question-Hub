@@ -133,7 +133,6 @@ if ($categoryid > 0) {
 }
 
 $ownedpackage = null;
-$changescount = null;
 if ($updatepackageid !== '') {
     if ($questionid > 0) {
         throw new moodle_exception('error_update_source', 'qbank_questionhub');
@@ -181,41 +180,65 @@ if ($updatepackageid !== '') {
     if (!$latestpublication) {
         $latestpublication = \qbank_questionhub\publication_tracker::latest_active_publication_by_package($updatepackageid, (int)$course->id);
     }
-
-    if ($categoryid > 0 && $latestpublication) {
-        $changes = \qbank_questionhub\publication_tracker::changes($categoryid, $latestpublication);
-        if ($changes !== null) {
-            $changescount = $changes['count'];
-        }
-    }
 }
 
 // Handle Form Submissions (Download XML or Direct Publish)
+$inputerror = null;
+$postedversion = null;
+$postednotes = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_sesskey();
     $action = optional_param('action', 'publish_hub', PARAM_ALPHAEXT);
 
-    $packageid = required_param('package_id', PARAM_RAW_TRIMMED);
-    $title = required_param('package_title', PARAM_TEXT);
-    $summary = required_param('package_summary', PARAM_TEXT);
-    $subject = required_param('package_subject', PARAM_TEXT);
-    $level = required_param('package_level', PARAM_ALPHA);
-    $canton = required_param('package_canton', PARAM_ALPHA);
-    $gradesraw = optional_param_array('package_grades', ['GYM2', 'GYM3'], PARAM_ALPHANUM);
-    $version = required_param('package_version', PARAM_RAW_TRIMMED);
-    $license = required_param('package_license', PARAM_TEXT);
-    $visibility = optional_param('package_visibility', 'public', PARAM_ALPHA);
-    if (!in_array($visibility, ['public', 'private'], true)) {
-        $visibility = 'public';
-    }
-    // Checkbox: absent when unchecked. Default in the form is checked.
-    $previewenabled = (bool)optional_param('package_preview', 0, PARAM_BOOL);
-    if ($ownedpackage && ($packageid !== $updatepackageid ||
-            version_compare($version, $ownedpackage['latest_version'], '<='))) {
-        throw new moodle_exception('error_update_version', 'qbank_questionhub', '', $ownedpackage['latest_version']);
+    if ($ownedpackage) {
+        // An update only adds a release; the package settings stay as on the Hub (edited in the category list).
+        $packageid = $updatepackageid;
+        $version = required_param('package_version', PARAM_RAW_TRIMMED);
+        $releasenotes = trim(required_param('release_notes', PARAM_TEXT));
+        $title = html_entity_decode($ownedpackage['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $summary = (string)($ownedpackage['summary'] ?? '');
+        $subject = (string)($ownedpackage['subject'] ?? 'Informatik');
+        $level = (string)($ownedpackage['subject_category'] ?? 'SF');
+        $canton = (string)($ownedpackage['canton'] ?? 'ZH');
+        $gradesraw = $ownedpackage['grades'] ?? ['GYM2', 'GYM3'];
+        $license = (string)($ownedpackage['license'] ?? 'CC-BY-4.0');
+        $visibility = ($ownedpackage['visibility'] ?? 'public') === 'private' ? 'private' : 'public';
+        $previewenabled = !empty($ownedpackage['preview_enabled']);
+        $tags = $ownedpackage['tags'] ?? [];
+        if ($action !== 'publish_hub') {
+            // Downloading the XML needs neither a release note nor a new version.
+        } else if ($releasenotes === '') {
+            $inputerror = new moodle_exception('error_release_notes_required', 'qbank_questionhub');
+        } else if (version_compare($version, $ownedpackage['latest_version'], '<=')) {
+            $inputerror = new moodle_exception('error_update_version', 'qbank_questionhub', '', $ownedpackage['latest_version']);
+        }
+        // Shown again in the form after an error.
+        $postedversion = $version;
+        $postednotes = $releasenotes;
+    } else {
+        $packageid = required_param('package_id', PARAM_RAW_TRIMMED);
+        $title = required_param('package_title', PARAM_TEXT);
+        $summary = required_param('package_summary', PARAM_TEXT);
+        $subject = required_param('package_subject', PARAM_TEXT);
+        $level = required_param('package_level', PARAM_ALPHA);
+        $canton = required_param('package_canton', PARAM_ALPHA);
+        $gradesraw = optional_param_array('package_grades', ['GYM2', 'GYM3'], PARAM_ALPHANUM);
+        $version = required_param('package_version', PARAM_RAW_TRIMMED);
+        $license = required_param('package_license', PARAM_TEXT);
+        $visibility = optional_param('package_visibility', 'public', PARAM_ALPHA);
+        if (!in_array($visibility, ['public', 'private'], true)) {
+            $visibility = 'public';
+        }
+        // Checkbox: absent when unchecked. Default in the form is checked.
+        $previewenabled = (bool)optional_param('package_preview', 0, PARAM_BOOL);
+        $releasenotes = '';
+        $tags = [];
     }
 
     try {
+        if ($inputerror) {
+            throw $inputerror;
+        }
         $exporter = new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id);
         $publishedquestions = $questionid > 0 ? [] : \qbank_questionhub\publication_tracker::current($categoryid);
 
@@ -254,9 +277,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'grades' => array_values($grades),
                 'subject_category' => $level,
                 'subject' => $subject,
-                'tags' => [],
+                'tags' => array_values($tags),
             ],
         ];
+        if ($releasenotes !== '') {
+            $metadata['release_notes'] = $releasenotes;
+        }
+        if ($ownedpackage) {
+            // The Hub refuses the update if a newer release exists that this category has not pulled yet.
+            $synced = \qbank_questionhub\publication_tracker::latest((int)$course->id, $categoryid);
+            if ($synced && $synced->package_id === $packageid) {
+                $metadata['base_version'] = $synced->package_version;
+            }
+        }
 
         $client = new \qbank_questionhub\api_client(null, null, 30, true);
         $published = $client->publish($xmlcontent, $metadata);
@@ -396,8 +429,6 @@ $templatedata = [
     'is_update' => !empty($ownedpackage),
     'update_package_id' => $updatepackageid,
     'owned_version' => $ownedpackage['latest_version'] ?? '',
-    'changes_count' => $changescount,
-    'has_changes_count' => ($changescount !== null),
     'default_package_id' => $defaultslug,
     'default_title' => $defaulttitle,
     'default_summary' => $defaultsummary,
@@ -420,6 +451,32 @@ $renderer = $PAGE->get_renderer('core_question', 'bank');
 $qbankaction = new \core_question\output\qbank_action_menu($thispageurl);
 echo $renderer->render($qbankaction);
 
-echo $OUTPUT->render_from_template('qbank_questionhub/publish_view', $templatedata);
+if ($ownedpackage) {
+    // Push view: what changed since the last release, plus version and release note only.
+    $diff = null;
+    if ($categoryid > 0 && $latestpublication) {
+        $diff = \qbank_questionhub\release_diff::since($categoryid, $latestpublication,
+            new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id));
+    }
+    $files = $diff['files'] ?? null;
+    $category = $DB->get_record('question_categories', ['id' => $categoryid], 'id,name', IGNORE_MISSING);
+    $templatedata += [
+        'package_title' => $defaulttitle,
+        'category_name' => $category ? format_string($category->name, true, ['context' => $context, 'escape' => false]) : '',
+        'base_version' => $latestpublication->package_version ?? '',
+        'files' => $files ?? [],
+        'files_count' => $files === null ? 0 : count($files),
+        'files_unknown' => $files === null,
+        'no_changes' => $files !== null && !$files,
+        'same_content' => $diff['same_content'] ?? 0,
+        'additions' => array_sum(array_column($files ?? [], 'additions')),
+        'deletions' => array_sum(array_column($files ?? [], 'deletions')),
+        'version_value' => $postedversion ?? $defaultversion,
+        'release_notes' => $postednotes,
+    ];
+    echo $OUTPUT->render_from_template('qbank_questionhub/push_view', $templatedata);
+} else {
+    echo $OUTPUT->render_from_template('qbank_questionhub/publish_view', $templatedata);
+}
 
 echo $OUTPUT->footer();

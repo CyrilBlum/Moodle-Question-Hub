@@ -66,6 +66,7 @@
                 <span class="badge badge-success">{{newcount}} {{#str}} import_preview_new, qbank_questionhub {{/str}}</span>
                 <span class="badge badge-primary">{{updatecount}} {{#str}} import_preview_updated, qbank_questionhub {{/str}}</span>
                 <span class="badge badge-secondary">{{unchangedcount}} {{#str}} import_preview_unchanged, qbank_questionhub {{/str}}</span>
+                {{#conflictcount}}<span class="badge badge-danger bg-danger">{{conflictcount}} {{#str}} import_preview_conflicts, qbank_questionhub {{/str}}</span>{{/conflictcount}}
             </p>
             {{#new.0}}<h6>{{#str}} import_preview_new_heading, qbank_questionhub {{/str}}</h6><ul>{{#new}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}</li>{{/new}}</ul>{{/new.0}}
             {{#update.0}}<h6>{{#str}} import_preview_updated_heading, qbank_questionhub {{/str}}</h6><ul>{{#update}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#uncertain}} <small class="text-warning">{{#str}} import_preview_uncertain, qbank_questionhub {{/str}}</small>{{/uncertain}}</li>{{/update}}</ul>{{/update.0}}
@@ -82,6 +83,29 @@
                 <input type="hidden" name="targetcategoryid" value="{{targetcategoryid}}">
                 <input type="hidden" name="categorymode" value="{{categorymode}}">
                 {{#updatechanged}}<input type="hidden" name="updatechanged" value="1">{{/updatechanged}}
+                {{#conflict.0}}
+                <div class="border border-danger rounded p-3 mb-3">
+                    <h6 class="text-danger">{{#str}} import_preview_conflicts_heading, qbank_questionhub {{/str}}</h6>
+                    <p class="small text-muted">{{#str}} import_preview_conflicts_help, qbank_questionhub {{/str}}</p>
+                    {{#conflict}}
+                    <fieldset class="mb-2">
+                        <legend class="h6 mb-1">{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}</legend>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="resolution[{{sourcekey}}]" id="res-keep-{{sourcekey}}" value="keep" checked>
+                            <label class="form-check-label" for="res-keep-{{sourcekey}}">{{#str}} conflict_keep, qbank_questionhub {{/str}}</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="resolution[{{sourcekey}}]" id="res-hub-{{sourcekey}}" value="hub">
+                            <label class="form-check-label" for="res-hub-{{sourcekey}}">{{#str}} conflict_hub, qbank_questionhub {{/str}}</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="resolution[{{sourcekey}}]" id="res-both-{{sourcekey}}" value="both">
+                            <label class="form-check-label" for="res-both-{{sourcekey}}">{{#str}} conflict_both, qbank_questionhub, {{version}} {{/str}}</label>
+                        </div>
+                    </fieldset>
+                    {{/conflict}}
+                </div>
+                {{/conflict.0}}
                 <button type="submit" class="btn btn-primary">{{#str}} import_preview_confirm, qbank_questionhub {{/str}}</button>
             </form>
             <a href="{{browse_tab_url}}" class="btn btn-outline-secondary ml-2">{{#str}} import_preview_cancel, qbank_questionhub {{/str}}</a>
@@ -259,6 +283,26 @@
                             {{#is_unlinked}}<span class="small text-muted mr-2">{{#str}} category_unlinked_status, qbank_questionhub {{/str}}</span>{{/is_unlinked}}
                             <a href="{{url}}" class="btn btn-sm btn-outline-primary"><i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} publish_category_button, qbank_questionhub {{/str}}</a>
                         {{/is_published}}
+                        {{! Local category management, kept apart from the Hub actions. }}
+                        <span class="d-inline-flex align-items-center ml-4 ms-4">
+                            {{#can_edit_category}}
+                            <button type="button" class="btn btn-sm btn-outline-secondary qh-edit-category mr-1 me-1"
+                                    data-categoryid="{{id}}" data-parent="{{category_parent}}" data-sortorder="{{category_sortorder}}"
+                                    data-questioncount="{{own}}" title="{{#str}} editcategory, question {{/str}}">
+                                <i class="fa fa-pencil" aria-hidden="true"></i><span class="sr-only visually-hidden">{{#str}} editcategory, question {{/str}}</span>
+                            </button>
+                            {{/can_edit_category}}
+                            {{#can_delete_category}}
+                            <form method="post" action="{{action_url}}" class="d-inline" data-confirm="{{category_delete_confirm}}" onsubmit="return confirm(this.dataset.confirm);">
+                                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                                <input type="hidden" name="action" value="delete_category">
+                                <input type="hidden" name="categoryid" value="{{id}}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="{{#str}} category_delete_button, qbank_questionhub {{/str}}">
+                                    <i class="fa fa-trash" aria-hidden="true"></i><span class="sr-only visually-hidden">{{#str}} category_delete_button, qbank_questionhub {{/str}}</span>
+                                </button>
+                            </form>
+                            {{/can_delete_category}}
+                        </span>
                     </span>
                 </div>
                 {{#pkg_settings}}
@@ -306,7 +350,9 @@
                             <div class="text-muted small">{{#str}} package_preview_help, qbank_questionhub {{/str}}</div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">{{#str}} version_immutable_note, qbank_questionhub {{/str}}</small>
+                            <small class="text-muted">{{#str}} version_immutable_note, qbank_questionhub {{/str}}
+                                {{! Also without detected changes, e.g. after an undone edit. }}
+                                <a href="{{update_url}}" class="ml-1 ms-1">{{#str}} push_new_version_link, qbank_questionhub {{/str}}</a></small>
                             <button type="submit" class="btn btn-sm btn-primary">{{#str}} save_settings, qbank_questionhub {{/str}}</button>
                         </div>
                     </form>
@@ -563,7 +609,54 @@
     </div>
 </div>
 
+<template id="qh-category-naming-note">
+    <div class="alert alert-warning qh-category-naming-note" role="note">{{{category_naming_note}}}</div>
+</template>
+
 <script>
+// Edit a category in core's own category form (same form as Question bank > Categories), with a
+// naming note for Question Hub links. RequireJS is available once the user clicks.
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.qh-edit-category');
+    if (!btn) {
+        return;
+    }
+    require(['core_form/modalform'], function(ModalForm) {
+        var args = {
+            contextid: '{{bankcontextid}}',
+            categoryid: btn.dataset.categoryid,
+            sortorder: btn.dataset.sortorder,
+            questioncount: btn.dataset.questioncount,
+            parent: btn.dataset.parent + ',{{bankcontextid}}'
+        };
+        // Moodle 5.0 banks live in a mod_qbank module, 4.5 banks in the course context.
+        if ('{{cmid}}') {
+            args.cmid = '{{cmid}}';
+        } else {
+            args.courseid = '{{courseid}}';
+        }
+        var modalForm = new ModalForm({
+            formClass: 'qbank_managecategories\\form\\question_category_edit_form',
+            args: args,
+            modalConfig: {title: btn.getAttribute('title'), large: true},
+            saveButtonText: {{#quote}}{{#str}} savechanges {{/str}}{{/quote}},
+            returnFocus: btn
+        });
+        modalForm.addEventListener(modalForm.events.LOADED, function() {
+            // LOADED fires again after a server-side validation error re-renders the form.
+            var form = modalForm.getFormNode();
+            if (form && !form.parentNode.querySelector('.qh-category-naming-note')) {
+                var note = document.getElementById('qh-category-naming-note').content.cloneNode(true);
+                form.parentNode.insertBefore(note, form);
+            }
+        });
+        modalForm.addEventListener(modalForm.events.FORM_SUBMITTED, function() {
+            window.location.reload();
+        });
+        modalForm.show();
+    });
+});
+
 // Works on Moodle 4.5 (Bootstrap 4) and 5.0 (Bootstrap 5): the buttons open the modals through
 // data attributes; this script only fills in the modal content.
 document.addEventListener('DOMContentLoaded', function() {

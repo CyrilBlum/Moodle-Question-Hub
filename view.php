@@ -153,6 +153,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]));
         }
         redirect($thispageurl);
+    } else if ($action === 'delete_category') {
+        require_capability('moodle/question:managecategory', $bankcontext);
+        require_capability('moodle/question:editall', $bankcontext);
+        $categoryid = required_param('categoryid', PARAM_INT);
+        try {
+            $deleted = \qbank_questionhub\category_remover::delete($bankcontext, $categoryid);
+            \core\notification::success(get_string('category_deleted', 'qbank_questionhub', $deleted));
+        } catch (\moodle_exception $e) {
+            \core\notification::error($e->getMessage());
+        }
+        redirect($thispageurl);
     } else if ($action === 'import_package') {
         require_capability('qbank/questionhub:import', $bankcontext);
         $packageid = required_param('packageid', PARAM_RAW_TRIMMED);
@@ -162,6 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $categorymode = optional_param('categorymode', 'keep', PARAM_ALPHA);
         $updatechanged = (bool)optional_param('updatechanged', 0, PARAM_BOOL);
         $dryrun = (bool)optional_param('dryrun', 0, PARAM_BOOL);
+        $resolutions = optional_param_array('resolution', [], PARAM_ALPHA);
         if (!in_array($categorymode, ['keep', 'rename'], true)) {
             $categorymode = 'keep';
         }
@@ -177,8 +189,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             $metadata = ['id' => $packageid, 'version' => $version, 'title' => $title];
-            if ($dryrun) {
+            $items = null;
+            if (!$dryrun && $updatechanged && !$resolutions) {
+                // A one-click pull must not decide conflicts: show them in the preview instead.
                 $items = $importer->preview_package($xmlcontent, $metadata, $categorymode);
+                if (array_filter($items, static fn($item) => $item['status'] === 'conflict')) {
+                    $dryrun = true;
+                    \core\notification::warning(get_string('import_conflicts_found', 'qbank_questionhub'));
+                }
+            }
+            if ($dryrun) {
+                $items = $items ?? $importer->preview_package($xmlcontent, $metadata, $categorymode);
                 if (!$updatechanged) {
                     foreach ($items as &$item) {
                         $item['status'] = 'new';
@@ -198,12 +219,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'unchanged' => array_values(array_filter($items, static function($item) {
                         return $item['status'] === 'unchanged';
                     })),
+                    'conflict' => array_values(array_filter($items, static function($item) {
+                        return $item['status'] === 'conflict';
+                    })),
                 ];
+                $importpreview['conflictcount'] = count($importpreview['conflict']);
                 $importpreview['newcount'] = count($importpreview['new']);
                 $importpreview['updatecount'] = count($importpreview['update']);
                 $importpreview['unchangedcount'] = count($importpreview['unchanged']);
             } else {
-                $result = $importer->import_package($xmlcontent, true, $metadata, $categorymode, $updatechanged);
+                $result = $importer->import_package($xmlcontent, true, $metadata, $categorymode, $updatechanged,
+                    $resolutions);
                 \core\notification::success(get_string('import_result_summary', 'qbank_questionhub', (object)[
                     'added' => $result->addedcount, 'updated' => $result->updatedcount,
                     'unchanged' => $result->unchangedcount,
@@ -568,8 +594,19 @@ $getremotepackage = static function(string $packageid) use (&$remotepackages, &$
     }
 };
 $canimport = has_capability('qbank/questionhub:import', $bankcontext);
+$canmanagecategories = has_capability('moodle/question:managecategory', $bankcontext);
+$candeletecategories = $canmanagecategories && has_capability('moodle/question:editall', $bankcontext);
+$categorymanager = new \core_question\category_manager();
+$subcategorycount = function (int $id) use (&$subcategorycount, $children): int {
+    $count = 0;
+    foreach ($children[$id] ?? [] as $child) {
+        $count += 1 + $subcategorycount((int)$child->id);
+    }
+    return $count;
+};
 $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
-        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl, &$remotepackagesmissing) {
+        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl, &$remotepackagesmissing,
+        $canmanagecategories, $candeletecategories, $categorymanager, $subcategorycount) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = $cat->name;
@@ -756,6 +793,14 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'has_changes' => $haschanges,
                 'update_url' => $updateurl,
                 'pkg_settings' => $pkgdetails,
+                'can_edit_category' => $canmanagecategories,
+                'can_delete_category' => $candeletecategories &&
+                    !$categorymanager->is_only_child_of_top_category_in_context((int)$cat->id),
+                'category_parent' => (int)$cat->parent,
+                'category_sortorder' => (int)$cat->sortorder,
+                'category_delete_confirm' => get_string('category_delete_confirm', 'qbank_questionhub', (object)[
+                    'name' => $name, 'subcategories' => $subcategorycount((int)$cat->id), 'questions' => $total,
+                ]),
             ];
         }
         $walk((int)$cat->id, $istop ? 1 : $depth + 1);
@@ -894,6 +939,7 @@ $templatedata = [
     'packages' => $packagesdata,
     'course_categories' => $coursecategories,
     'publish_categories' => $publishcategories,
+    'category_naming_note' => get_string('category_naming_note', 'qbank_questionhub'),
     'my_packages' => $mypackages,
     'has_my_packages' => !empty($mypackages),
     'pagination' => $pagination,

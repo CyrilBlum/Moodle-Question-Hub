@@ -1,14 +1,19 @@
 {{!
     @template qbank_questionhub/sync_actions
 
-    Sync actions: push (package source with local changes), publish again (withdrawn), pull (imported copy) and package settings toggle.
+    Sync actions: push (package source with local changes, unless a newer Hub release must be pulled first), publish again
+    (withdrawn), pull (imported copy or own package) and package settings toggle.
     Shared by the category list, Browse cards, library and My packages; expects a category sync row as context.
     hide_settings_toggle: set where the category list (which holds the settings forms) is not on the page.
 }}
 {{#is_package_source}}{{#has_changes}}
+    {{! A newer Hub release must be pulled first (the Hub refuses the push); the pull shows conflicts. }}
+    {{^can_pull}}
     <a href="{{update_url}}" class="btn btn-sm btn-primary mr-1" title="{{#str}} push_button_help, qbank_questionhub, {{package_id}} {{/str}}">
         <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} push_button, qbank_questionhub {{/str}}
     </a>
+    {{/can_pull}}
+    {{#can_pull}}<span class="small text-muted mr-2 me-2">{{#str}} pull_before_push, qbank_questionhub {{/str}}</span>{{/can_pull}}
 {{/has_changes}}{{/is_package_source}}
 {{#can_republish}}
     <a href="{{url}}" class="btn btn-sm btn-outline-primary mr-1" title="{{#str}} republish_button_help, qbank_questionhub {{/str}}">
