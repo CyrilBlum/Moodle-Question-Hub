@@ -55,6 +55,9 @@ qbank_questionhub/
 ├── lang/
 │   ├── en/qbank_questionhub.php # English strings
 │   └── de/qbank_questionhub.php # Swiss German strings (ss, zero German double-s)
+├── pix/
+│   ├── icon.svg                 # Plugin icon (SVG, PNG fallback 16x16)
+│   └── icon.png
 ├── templates/
 │   ├── hub_browser.mustache
 │   ├── package_card.mustache
