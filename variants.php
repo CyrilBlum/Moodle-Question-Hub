@@ -64,9 +64,10 @@ $PAGE->set_heading($course->fullname);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_sesskey();
-    // One choice per group: the entry ID to keep, 0 keeps all questions of the group.
-    $keepids = optional_param_array('keep', [], PARAM_INT);
-    $result = \qbank_questionhub\duplicate_manager::keep_variants($context, $keepids);
+    // One choice per group: the entry ID to keep, "m" + entry ID to let a used local question take over the
+    // Hub question, or 0 to keep all questions of the group.
+    $choices = optional_param_array('keep', [], PARAM_ALPHANUM);
+    $result = \qbank_questionhub\duplicate_manager::apply_variants($context, $course, $choices);
     \core\notification::success(get_string('variants_result', 'qbank_questionhub', (object)$result));
     redirect($thispageurl);
 }
@@ -84,6 +85,7 @@ foreach (\qbank_questionhub\duplicate_manager::find_variants($context, $category
     $files = [];
     $entries = [];
     $tracked = array_filter($group['entries'], static fn($entry) => $entry['tracked'] !== '');
+    $mergesource = \qbank_questionhub\duplicate_manager::merge_source($group);
     // How a question is named in the diff legend: number, origin, creation date and ID.
     $side = static fn(array $entry, int $position) => get_string('variants_side', 'qbank_questionhub', (object)[
         'number' => $position + 1,
@@ -97,6 +99,9 @@ foreach (\qbank_questionhub\duplicate_manager::find_variants($context, $category
             'groupindex' => $index,
             // Suggestion of the helper button: the only question that came from a Hub package.
             'is_hub_choice' => count($tracked) === 1 && $entry['tracked'] !== '',
+            // A used local question can take over the Hub question as a new version.
+            'can_merge' => $mergesource && $entry['inuse'] && $entry['tracked'] === '',
+            'is_merge_source' => $mergesource && $mergesource['entryid'] === $entry['entryid'],
             'preview_url' => (new moodle_url('/question/bank/previewquestion/preview.php',
                 ['id' => $entry['questionid']] + $bankparams))->out(false),
             'edit_url' => (new moodle_url('/question/bank/editquestion/question.php',

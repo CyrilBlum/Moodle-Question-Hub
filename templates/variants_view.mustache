@@ -4,10 +4,12 @@
     Questions with the same name and type but different content in one category (e.g. a local question and the
     Hub version imported next to it): each group lists its questions with origin and use, links to preview and
     edit them, and diffs against question 1 with a legend naming both sides. The teacher chooses the question to
-    keep per group (default: keep all); the others are deleted unless a quiz uses them. The category name links
-    to its question list.
+    keep per group (default: keep all); the others are deleted unless a quiz uses them. A used local question can
+    instead take over the Hub question: its content becomes a new version and the separate Hub question is
+    deleted. The category name links to its question list.
 }}
 <div class="qbank_questionhub_variants mb-5">
+    <a href="{{return_url}}" class="d-inline-block small mb-3"><i class="fa fa-arrow-left mr-1 me-1" aria-hidden="true"></i>{{#str}} review_back, qbank_questionhub {{/str}}</a>
     <h4 class="mb-1"><i class="fa fa-clone text-warning mr-2" aria-hidden="true"></i>{{#str}} variants_heading, qbank_questionhub {{/str}}</h4>
     <div class="alert alert-light border my-3">{{#str}} variants_intro, qbank_questionhub {{/str}}</div>
 
@@ -45,13 +47,21 @@
                     </tr></thead>
                     <tbody>
                     {{#entries}}
-                    <tr data-qh-entry="{{entryid}}" {{#inuse}}data-qh-inuse="1"{{/inuse}}>
+                    <tr data-qh-entry="{{entryid}}" {{#inuse}}data-qh-inuse="1"{{/inuse}} {{#is_merge_source}}data-qh-source="1"{{/is_merge_source}}>
                         <td>
                             <div class="form-check">
                                 <input type="radio" class="form-check-input" name="keep[{{groupindex}}]" value="{{entryid}}" id="qh-keep-{{entryid}}"
                                     {{#is_hub_choice}}data-qh-hub="1"{{/is_hub_choice}}>
                                 <label class="form-check-label" for="qh-keep-{{entryid}}">{{#str}} variants_keep_this, qbank_questionhub {{/str}}</label>
                             </div>
+                            {{#can_merge}}
+                            <div class="form-check">
+                                <input type="radio" class="form-check-input" name="keep[{{groupindex}}]" value="m{{entryid}}" id="qh-merge-{{entryid}}" data-qh-merge="1">
+                                <label class="form-check-label" for="qh-merge-{{entryid}}" title="{{#str}} variants_merge_help, qbank_questionhub {{/str}}">{{#str}} variants_merge_this, qbank_questionhub {{/str}}</label>
+                            </div>
+                            {{/can_merge}}
+                            <span class="badge badge-success bg-success d-none" data-qh-fate="merge">{{#str}} variants_will_merge, qbank_questionhub {{/str}}</span>
+                            <span class="badge badge-danger bg-danger d-none" data-qh-fate="merged">{{#str}} variants_will_be_merged, qbank_questionhub {{/str}}</span>
                             <span class="badge badge-danger bg-danger d-none" data-qh-fate="delete">{{#str}} variants_will_delete, qbank_questionhub {{/str}}</span>
                             <span class="badge badge-secondary bg-secondary d-none" data-qh-fate="inuse" title="{{#str}} variants_inuse_help, qbank_questionhub {{/str}}">{{#str}} variants_stays_inuse, qbank_questionhub {{/str}}</span>
                         </td>
@@ -106,12 +116,17 @@
     var update = function(group) {
         var chosen = group.querySelector('input[type="radio"]:checked');
         var keepall = !chosen || chosen.value === '0';
+        var merge = !keepall && chosen.value.charAt(0) === 'm';
+        var target = keepall ? '' : chosen.value.replace('m', '');
         group.querySelectorAll('tr[data-qh-entry]').forEach(function(row) {
-            var kept = keepall || row.getAttribute('data-qh-entry') === chosen.value;
+            var kept = keepall || row.getAttribute('data-qh-entry') === target;
             var inuse = row.hasAttribute('data-qh-inuse');
+            var merged = merge && row.hasAttribute('data-qh-source');
             row.classList.toggle('table-success', !keepall && kept);
-            row.classList.toggle('table-danger', !kept && !inuse);
-            row.querySelector('[data-qh-fate="delete"]').classList.toggle('d-none', kept || inuse);
+            row.classList.toggle('table-danger', !kept && (!inuse || merged));
+            row.querySelector('[data-qh-fate="merge"]').classList.toggle('d-none', !(merge && kept));
+            row.querySelector('[data-qh-fate="merged"]').classList.toggle('d-none', !merged);
+            row.querySelector('[data-qh-fate="delete"]').classList.toggle('d-none', kept || inuse || merged);
             row.querySelector('[data-qh-fate="inuse"]').classList.toggle('d-none', kept || !inuse);
         });
     };
@@ -124,7 +139,8 @@
         button.addEventListener('click', function() {
             var hub = button.getAttribute('data-qh-variants') === 'hub';
             groups.forEach(function(group) {
-                var target = hub ? group.querySelector('input[data-qh-hub]') : null;
+                // A used local question takes over the Hub question; otherwise the Hub question is kept.
+                var target = hub ? (group.querySelector('input[data-qh-merge]') || group.querySelector('input[data-qh-hub]')) : null;
                 (target || group.querySelector('input[value="0"]')).checked = true;
                 update(group);
             });

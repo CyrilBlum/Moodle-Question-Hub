@@ -151,40 +151,112 @@ class duplicate_manager {
     }
 
     /**
-     * Keeps the chosen question of each variant group and deletes the others (all versions). Groups without
-     * exactly one chosen question are left alone; questions used in a quiz are never deleted.
-     *
-     * @param int[] $keepids question bank entries to keep, at most one per group
-     * @return array deleted (questions deleted) and inuse (questions kept because a quiz uses them)
+     * The Hub question a used local question of a group can take over: the only question of the group that
+     * came from a Hub package, provided no quiz uses it.
      */
-    public static function keep_variants(\context $context, array $keepids): array {
+    public static function merge_source(array $group): ?array {
+        $tracked = array_values(array_filter($group['entries'], static fn($entry) => $entry['tracked'] !== ''));
+        return count($tracked) === 1 && !$tracked[0]['inuse'] ? $tracked[0] : null;
+    }
+
+    /**
+     * Applies the choice of each variant group: keep one question and delete the others (all versions), or
+     * ("m" + entry ID) let a used local question take over the Hub question. Groups without a valid choice are
+     * left alone; questions used in a quiz are never deleted.
+     *
+     * Taking over: the content of the Hub question becomes a new version of the local question (quizzes keep
+     * using it, earlier attempts keep their version), its Hub tracking and sync state move to the local
+     * question, and the separate Hub question is deleted.
+     *
+     * @param string[] $choices per group: entry ID to keep, or "m" + entry ID to take over the Hub question
+     * @return array merged, deleted and inuse (questions kept because a quiz uses them)
+     */
+    public static function apply_variants(\context $context, \stdClass $course, array $choices): array {
         global $CFG, $DB;
         require_once($CFG->libdir . '/questionlib.php');
-        $keep = array_flip(array_filter(array_map('intval', $keepids)));
-        $result = ['deleted' => 0, 'inuse' => 0];
+        $keep = [];
+        $merge = [];
+        foreach ($choices as $choice) {
+            if (preg_match('/^(m?)(\d+)$/', (string)$choice, $match) && (int)$match[2] > 0) {
+                $keep[(int)$match[2]] = true;
+                if ($match[1] === 'm') {
+                    $merge[(int)$match[2]] = true;
+                }
+            }
+        }
+        $result = ['merged' => 0, 'deleted' => 0, 'inuse' => 0];
         foreach (self::find_variants($context) as $group) {
-            $chosen = array_filter($group['entries'], static fn($entry) => isset($keep[$entry['entryid']]));
+            $chosen = array_values(array_filter($group['entries'], static fn($entry) => isset($keep[$entry['entryid']])));
             if (count($chosen) !== 1) {
                 continue;
             }
+            $target = $chosen[0];
+            $source = null;
+            if (isset($merge[$target['entryid']])) {
+                $source = self::merge_source($group);
+                if (!$source || $source['entryid'] === $target['entryid']) {
+                    continue;
+                }
+                self::take_over($context, $course, $source, $target);
+                $result['merged']++;
+            }
             foreach ($group['entries'] as $entry) {
-                if (isset($keep[$entry['entryid']])) {
+                if ($entry['entryid'] === $target['entryid'] || ($source && $entry['entryid'] === $source['entryid'])) {
                     continue;
                 }
                 if ($entry['inuse']) {
                     $result['inuse']++;
                     continue;
                 }
-                question_require_capability_on($entry['questionid'], 'edit');
-                $DB->delete_records('qbank_questionhub_items', ['questionbankentryid' => $entry['entryid']]);
-                foreach ($DB->get_fieldset_select('question_versions', 'questionid', 'questionbankentryid = ?',
-                        [$entry['entryid']]) as $questionid) {
-                    question_delete_question((int)$questionid);
-                }
+                self::delete_entry($entry);
                 $result['deleted']++;
             }
         }
         return $result;
+    }
+
+    /** The Hub question's content becomes a new version of the target; tracking and sync state move along. */
+    private static function take_over(\context $context, \stdClass $course, array $source, array $target): void {
+        global $DB;
+        question_require_capability_on($target['questionid'], 'edit');
+        question_require_capability_on($source['questionid'], 'edit');
+        $exporter = new package_exporter((int)$course->id, (int)$context->id);
+        $xml = $exporter->export_questions_xml([$source['questionid']]);
+        $categoryid = (int)$DB->get_field('question_bank_entries', 'questioncategoryid', ['id' => $target['entryid']],
+            MUST_EXIST);
+        $category = $DB->get_record('question_categories', ['id' => $categoryid], '*', MUST_EXIST);
+
+        $transaction = $DB->start_delegated_transaction();
+        $newid = package_importer::import_question_xml($xml, $category, $context, $course);
+        package_importer::attach_as_version($newid, $target['entryid'], $context);
+        // The next pull compares with this version: it holds the Hub content.
+        $DB->execute('UPDATE {qbank_questionhub_items} SET questionbankentryid = ?, questionid = ?
+                       WHERE questionbankentryid = ?', [$target['entryid'], $newid, $source['entryid']]);
+        foreach ($DB->get_records('qbank_questionhub_published', ['questionbankentryid' => $source['entryid']]) as $row) {
+            $existing = $DB->get_record('qbank_questionhub_published',
+                ['historyid' => $row->historyid, 'questionbankentryid' => $target['entryid']]);
+            if ($existing) {
+                $DB->set_field('qbank_questionhub_published', 'questionid', $newid, ['id' => $existing->id]);
+                $DB->delete_records('qbank_questionhub_published', ['id' => $row->id]);
+            } else {
+                $DB->update_record('qbank_questionhub_published', (object)[
+                    'id' => $row->id, 'questionbankentryid' => $target['entryid'], 'questionid' => $newid,
+                ]);
+            }
+        }
+        self::delete_entry($source);
+        $transaction->allow_commit();
+    }
+
+    /** Deletes a question bank entry with all versions and its Hub tracking. */
+    private static function delete_entry(array $entry): void {
+        global $DB;
+        question_require_capability_on($entry['questionid'], 'edit');
+        $DB->delete_records('qbank_questionhub_items', ['questionbankentryid' => $entry['entryid']]);
+        foreach ($DB->get_fieldset_select('question_versions', 'questionid', 'questionbankentryid = ?',
+                [$entry['entryid']]) as $questionid) {
+            question_delete_question((int)$questionid);
+        }
     }
 
     public static function delete_removable(\context $context, int $categoryid = 0): int {
