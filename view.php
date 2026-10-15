@@ -255,12 +255,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $blocks = \qbank_questionhub\release_diff::package_blocks($xmlcontent, count($items));
                 if ($blocks !== null) {
                     $diffexporter = new \qbank_questionhub\package_exporter((int)$COURSE->id, (int)$bankcontext->id);
-                    $label = get_string('diff_label_local_hub', 'qbank_questionhub', $version);
-                    $difffor = static function(array $item) use ($blocks, $diffexporter, $label): array {
+                    $sides = [get_string('diff_side_local', 'qbank_questionhub'),
+                        get_string('diff_side_hub', 'qbank_questionhub', $version)];
+                    $difffor = static function(array $item) use ($blocks, $diffexporter, $sides): array {
                         $file = \qbank_questionhub\release_diff::compare($item['name'],
                             \qbank_questionhub\release_diff::entry_lines($diffexporter, (int)$item['entryid']),
                             \qbank_questionhub\release_diff::xml_lines($blocks[$item['index']]));
-                        return $file + ['label' => $label];
+                        return \qbank_questionhub\release_diff::label_sides([$file], ...$sides)[0];
                     };
                     foreach ($importpreview['conflict'] as &$conflictitem) {
                         if ($conflictitem['entryid']) {

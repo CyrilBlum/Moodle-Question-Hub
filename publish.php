@@ -493,7 +493,9 @@ if ($ownedpackage) {
         $diff = \qbank_questionhub\release_diff::since($categoryid, $latestpublication,
             new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id));
     }
-    $files = $diff['files'] ?? null;
+    $files = $diff === null ? null : \qbank_questionhub\release_diff::label_sides($diff['files'],
+        get_string('diff_side_published', 'qbank_questionhub', $latestpublication->package_version),
+        get_string('diff_side_current', 'qbank_questionhub'));
     $category = $DB->get_record('question_categories', ['id' => $categoryid], 'id,name', IGNORE_MISSING);
     $templatedata += [
         'package_title' => $defaulttitle,

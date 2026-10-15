@@ -2,8 +2,10 @@
     @template qbank_questionhub/variants_view
 
     Questions with the same name and type but different content in one category (e.g. a local question and the
-    Hub version imported next to it): each group lists its questions with origin and use, diffs against the
-    oldest question and checkboxes to delete selected ones. Questions used in a quiz cannot be selected.
+    Hub version imported next to it): each group lists its questions with origin and use, links to preview and
+    edit them, and diffs against question 1 with a legend naming both sides. The teacher chooses the question to
+    keep per group (default: keep all); the others are deleted unless a quiz uses them. The category name links
+    to its question list.
 }}
 <div class="qbank_questionhub_variants mb-5">
     <h4 class="mb-1"><i class="fa fa-clone text-warning mr-2" aria-hidden="true"></i>{{#str}} variants_heading, qbank_questionhub {{/str}}</h4>
@@ -18,37 +20,49 @@
             <h5 class="mb-0">{{#str}} variants_groups, qbank_questionhub, {{group_count}} {{/str}}</h5>
             <div>
                 <button type="button" class="btn btn-sm btn-outline-secondary mr-1 me-1" data-qh-variants="hub">
-                    <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{#str}} variants_select_untracked, qbank_questionhub {{/str}}
+                    <i class="fa fa-magic mr-1" aria-hidden="true"></i>{{#str}} variants_keep_hub, qbank_questionhub {{/str}}
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-qh-variants="none">
-                    {{#str}} variants_select_none, qbank_questionhub {{/str}}
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-qh-variants="all">
+                    {{#str}} variants_reset, qbank_questionhub {{/str}}
                 </button>
             </div>
         </div>
 
         {{#groups}}
-        <div class="card mb-3">
+        <div class="card mb-3" data-qh-group="{{groupindex}}">
             <div class="card-header bg-light">
-                <strong>{{name}}</strong> <span class="small text-muted ml-1 ms-1">{{categoryname}} · {{qtype}}</span>
+                <strong>{{name}}</strong>
+                <span class="small text-muted ml-1 ms-1"><a href="{{category_url}}"><i class="fa fa-folder-open-o mr-1" aria-hidden="true"></i>{{categoryname}}</a> · {{qtype}}</span>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm mb-0 small">
                     <thead class="thead-light"><tr>
-                        <th style="width:6rem">{{#str}} variants_delete, qbank_questionhub {{/str}}</th>
-                        <th>#</th>
+                        <th style="width:7rem">{{#str}} variants_keep, qbank_questionhub {{/str}}</th>
+                        <th>{{#str}} duplicate_question, qbank_questionhub {{/str}}</th>
                         <th>{{#str}} variants_created, qbank_questionhub {{/str}}</th>
                         <th>{{#str}} variants_versions, qbank_questionhub {{/str}}</th>
                         <th>{{#str}} variants_origin, qbank_questionhub {{/str}}</th>
                     </tr></thead>
                     <tbody>
                     {{#entries}}
-                    <tr>
+                    <tr data-qh-entry="{{entryid}}" {{#inuse}}data-qh-inuse="1"{{/inuse}}>
                         <td>
-                            {{#can_delete}}<input type="checkbox" class="form-check-input position-static ml-0" name="delete[]" value="{{entryid}}"
-                                {{^has_tracked}}data-qh-untracked="1"{{/has_tracked}} aria-label="{{#str}} variants_delete, qbank_questionhub {{/str}} {{number}}">{{/can_delete}}
-                            {{^can_delete}}<span class="badge badge-secondary bg-secondary" title="{{#str}} variants_inuse_help, qbank_questionhub {{/str}}">{{#str}} variants_inuse, qbank_questionhub {{/str}}</span>{{/can_delete}}
+                            <div class="form-check">
+                                <input type="radio" class="form-check-input" name="keep[{{groupindex}}]" value="{{entryid}}" id="qh-keep-{{entryid}}"
+                                    {{#is_hub_choice}}data-qh-hub="1"{{/is_hub_choice}}>
+                                <label class="form-check-label" for="qh-keep-{{entryid}}">{{#str}} variants_keep_this, qbank_questionhub {{/str}}</label>
+                            </div>
+                            <span class="badge badge-danger bg-danger d-none" data-qh-fate="delete">{{#str}} variants_will_delete, qbank_questionhub {{/str}}</span>
+                            <span class="badge badge-secondary bg-secondary d-none" data-qh-fate="inuse" title="{{#str}} variants_inuse_help, qbank_questionhub {{/str}}">{{#str}} variants_stays_inuse, qbank_questionhub {{/str}}</span>
                         </td>
-                        <td>{{number}}</td>
+                        <td class="text-nowrap">
+                            <strong>{{#str}} variants_number, qbank_questionhub, {{number}} {{/str}}</strong>
+                            <a href="{{preview_url}}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary ml-1 ms-1">
+                                <i class="fa fa-search mr-1" aria-hidden="true"></i>{{#str}} duplicate_preview, qbank_questionhub {{/str}}</a>
+                            <a href="{{edit_url}}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fa fa-pencil mr-1" aria-hidden="true"></i>{{#str}} edit {{/str}}</a>
+                            <div class="text-muted">ID {{questionid}}{{#inuse}} · {{#str}} variants_inuse, qbank_questionhub {{/str}}{{/inuse}}</div>
+                        </td>
                         <td>{{created}}<div class="text-muted">{{#str}} variants_modified, qbank_questionhub, {{modified}} {{/str}}</div></td>
                         <td>v{{version}} ({{versions}})</td>
                         <td>
@@ -57,6 +71,14 @@
                         </td>
                     </tr>
                     {{/entries}}
+                    <tr>
+                        <td colspan="5">
+                            <div class="form-check">
+                                <input type="radio" class="form-check-input" name="keep[{{groupindex}}]" value="0" id="qh-keep-all-{{groupindex}}" checked>
+                                <label class="form-check-label text-muted" for="qh-keep-all-{{groupindex}}">{{#str}} variants_keep_all, qbank_questionhub {{/str}}</label>
+                            </div>
+                        </td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
@@ -66,8 +88,8 @@
 
         <div class="d-flex justify-content-between align-items-center flex-wrap mt-4">
             <a href="{{return_url}}" class="btn btn-outline-secondary">{{#str}} review_back, qbank_questionhub {{/str}}</a>
-            <button type="submit" class="btn btn-danger" data-confirm="{{#str}} variants_delete_confirm, qbank_questionhub {{/str}}">
-                <i class="fa fa-trash mr-1" aria-hidden="true"></i>{{#str}} variants_delete_selected, qbank_questionhub {{/str}}
+            <button type="submit" class="btn btn-danger" data-confirm="{{#str}} variants_apply_confirm, qbank_questionhub {{/str}}">
+                <i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} variants_apply, qbank_questionhub {{/str}}
             </button>
         </div>
     </form>
@@ -80,16 +102,36 @@
     if (!form) {
         return;
     }
+    // Marks what happens to each question of a group: kept, deleted, or kept because a quiz uses it.
+    var update = function(group) {
+        var chosen = group.querySelector('input[type="radio"]:checked');
+        var keepall = !chosen || chosen.value === '0';
+        group.querySelectorAll('tr[data-qh-entry]').forEach(function(row) {
+            var kept = keepall || row.getAttribute('data-qh-entry') === chosen.value;
+            var inuse = row.hasAttribute('data-qh-inuse');
+            row.classList.toggle('table-success', !keepall && kept);
+            row.classList.toggle('table-danger', !kept && !inuse);
+            row.querySelector('[data-qh-fate="delete"]').classList.toggle('d-none', kept || inuse);
+            row.querySelector('[data-qh-fate="inuse"]').classList.toggle('d-none', kept || !inuse);
+        });
+    };
+    var groups = form.querySelectorAll('[data-qh-group]');
+    groups.forEach(function(group) {
+        group.addEventListener('change', function() { update(group); });
+        update(group);
+    });
     form.querySelectorAll('[data-qh-variants]').forEach(function(button) {
         button.addEventListener('click', function() {
             var hub = button.getAttribute('data-qh-variants') === 'hub';
-            form.querySelectorAll('input[name="delete[]"]').forEach(function(box) {
-                box.checked = hub && box.hasAttribute('data-qh-untracked');
+            groups.forEach(function(group) {
+                var target = hub ? group.querySelector('input[data-qh-hub]') : null;
+                (target || group.querySelector('input[value="0"]')).checked = true;
+                update(group);
             });
         });
     });
     form.addEventListener('submit', function(e) {
-        var count = form.querySelectorAll('input[name="delete[]"]:checked').length;
+        var count = form.querySelectorAll('tr.table-danger').length;
         var message = form.querySelector('[data-confirm]').getAttribute('data-confirm').replace('{count}', count);
         if (!count || !window.confirm(message)) {
             e.preventDefault();

@@ -41,11 +41,68 @@ class release_diff {
             }
             $files[] = $file + ['entryid' => (int)$entryid];
         }
+        $deleted = [];
         foreach ($changes['removed'] as $entryid => $questionid) {
-            $files[] = self::file((int)$questionid, 0, $exporter) + ['entryid' => (int)$entryid];
+            if (self::question_exists((int)$questionid)) {
+                $files[] = self::file((int)$questionid, 0, $exporter) + ['entryid' => (int)$entryid];
+            } else {
+                $deleted[] = (int)$entryid;
+            }
+        }
+        if ($deleted) {
+            $files = array_merge($files, self::deleted_from_release($history, $previous, $current, $deleted));
         }
         usort($files, static fn($a, $b) => strcmp($a['name'], $b['name']));
         return ['files' => self::decorate($files), 'same_content' => $samecontent];
+    }
+
+    private static function question_exists(int $questionid): bool {
+        global $DB;
+        return $DB->record_exists('question', ['id' => $questionid]);
+    }
+
+    /**
+     * Removed questions that were deleted in Moodle (their versions are gone): name and content come from the
+     * published release on the Hub. Its questions that do not exist here any more (by name, also under their
+     * previous names) are the deleted ones; all their lines are shown as removed.
+     *
+     * @param int[] $entryids the deleted question bank entries
+     */
+    private static function deleted_from_release(\stdClass $history, array $previous, array $current,
+            array $entryids): array {
+        global $DB;
+        $ids = array_filter(array_merge(array_values($current), array_values(array_intersect_key($previous, $current))));
+        $known = [];
+        foreach (array_chunk(array_unique($ids), 500) as $chunk) {
+            foreach ($DB->get_records_list('question', 'id', $chunk, '', 'id, name') as $question) {
+                $known[trim($question->name)] = true;
+            }
+        }
+        try {
+            $xml = (new api_client(null, null, 30, true))->download_release((string)$history->package_id,
+                (string)$history->package_version);
+        } catch (\Throwable $e) {
+            $xml = '';
+        }
+        $files = [];
+        preg_match_all('~<question type="(?!category")[^"]*">.*?</question>~s', $xml, $matches);
+        foreach ($matches[0] as $block) {
+            if (count($files) === count($entryids)) {
+                break;
+            }
+            $node = simplexml_load_string($block, 'SimpleXMLElement', LIBXML_NONET);
+            $name = $node ? trim((string)$node->name->text) : '';
+            if ($name === '' || isset($known[$name])) {
+                continue;
+            }
+            $files[] = self::compare($name, self::xml_lines($block), [], 'removed') + ['entryid' => $entryids[count($files)]];
+        }
+        // Deleted questions that cannot be identified in the release (e.g. the Hub is not reachable).
+        foreach (array_slice($entryids, count($files)) as $entryid) {
+            $files[] = self::compare(get_string('diff_removed_unknown', 'qbank_questionhub', $entryid), [], [], 'removed') +
+                ['entryid' => $entryid, 'no_content' => true];
+        }
+        return $files;
     }
 
     /** One changed question: added (no old version), removed (no new version) or modified. */
@@ -115,6 +172,16 @@ class release_diff {
                 $hunk['tail_count'] = count($hunk['tail'] ?? []);
             }
             unset($hunk);
+        }
+        unset($file);
+        return $files;
+    }
+
+    /** Names both sides of the diffs, shown as a legend above each diff (− old, + new). */
+    public static function label_sides(array $files, string $old, string $new): array {
+        foreach ($files as &$file) {
+            $file['old_label'] = $old;
+            $file['new_label'] = $new;
         }
         unset($file);
         return $files;

@@ -8,7 +8,8 @@
     Context variables:
     * files: results of \qbank_questionhub\release_diff::decorate()
     * has_toolbar: show the buttons to open or close all questions
-    * files[].label: optional note next to the name (e.g. what is compared)
+    * files[].label: optional note next to the name
+    * files[].old_label, files[].new_label: where the removed (−) and added (+) lines come from, shown as a legend
 }}
 <style>
 .qh-diffs .qh-file { border: 1px solid #d0d7de; border-radius: 6px; margin-bottom: .75rem; background: #fff; }
@@ -45,6 +46,13 @@
     padding: .2rem .5rem; font-size: .78rem; }
 .qh-diffs .qh-gap-toggle:hover { background: #ddf4ff; }
 .qh-diffs .qh-diff tr.qh-hidden { display: none; }
+.qh-diffs .qh-sides { display: flex; flex-wrap: wrap; gap: .25rem 1rem; padding: .4rem .75rem; font-size: .8rem;
+    border-bottom: 1px solid #d0d7de; background: #fff; }
+.qh-diffs .qh-side { display: inline-flex; align-items: center; gap: .35rem; }
+.qh-diffs .qh-side b { font-family: SFMono-Regular, Menlo, Consolas, monospace; width: 1.1rem; text-align: center;
+    border-radius: 3px; }
+.qh-diffs .qh-side-old b { background: #ffd7d5; color: #cf222e; }
+.qh-diffs .qh-side-new b { background: #ccffd8; color: #1a7f37; }
 </style>
 <div class="qh-diffs" data-qh-diffs>
     {{#has_toolbar}}
@@ -72,7 +80,14 @@
             </span>
         </summary>
         <div class="qh-body">
+            {{#old_label}}
+            <div class="qh-sides">
+                <span class="qh-side qh-side-old"><b>−</b>{{old_label}}</span>
+                <span class="qh-side qh-side-new"><b>+</b>{{new_label}}</span>
+            </div>
+            {{/old_label}}
             {{#too_large}}<p class="text-muted small p-3 mb-0">{{#str}} push_diff_too_large, qbank_questionhub {{/str}}</p>{{/too_large}}
+            {{#no_content}}<p class="text-muted small p-3 mb-0">{{#str}} diff_removed_no_content, qbank_questionhub {{/str}}</p>{{/no_content}}
             {{^too_large}}
             <table class="qh-diff">
                 <colgroup><col style="width:3.25rem"><col style="width:3.25rem"><col style="width:1.25rem"><col></colgroup>

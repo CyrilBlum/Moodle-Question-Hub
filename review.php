@@ -99,7 +99,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $exporter = new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id);
 $diff = \qbank_questionhub\local_changes::files($history, $exporter);
 $items = [];
-foreach ($diff['files'] ?? [] as $file) {
+$files = \qbank_questionhub\release_diff::label_sides($diff['files'] ?? [],
+    get_string('diff_side_synced', 'qbank_questionhub', $history->package_version),
+    get_string('diff_side_current', 'qbank_questionhub'));
+foreach ($files as $file) {
     $items[] = [
         'entryid' => $file['entryid'],
         'name' => $file['name'],

@@ -64,32 +64,52 @@ $PAGE->set_heading($course->fullname);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_sesskey();
-    $entryids = optional_param_array('delete', [], PARAM_INT);
-    $deleted = \qbank_questionhub\duplicate_manager::delete_variants($context, $entryids);
-    \core\notification::success(get_string('variants_deleted', 'qbank_questionhub', $deleted));
+    // One choice per group: the entry ID to keep, 0 keeps all questions of the group.
+    $keepids = optional_param_array('keep', [], PARAM_INT);
+    $result = \qbank_questionhub\duplicate_manager::keep_variants($context, $keepids);
+    \core\notification::success(get_string('variants_result', 'qbank_questionhub', (object)$result));
     redirect($thispageurl);
 }
 
 $exporter = new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id);
 $format = get_string('strftimedatetime', 'langconfig');
+// Question bank pages need the mod_qbank cmid on Moodle 5.0 and the course ID on 4.5 (course context).
+$bankparams = (int)$context->contextlevel === CONTEXT_MODULE ? ['cmid' => $context->instanceid] :
+    ['courseid' => $course->id];
+$returnlocal = $thispageurl->out_as_local_url(false);
 $groups = [];
 foreach (\qbank_questionhub\duplicate_manager::find_variants($context, $categoryid) as $index => $group) {
     $first = $group['entries'][0];
     $firstlines = \qbank_questionhub\release_diff::question_lines($exporter, $first['questionid']);
     $files = [];
     $entries = [];
+    $tracked = array_filter($group['entries'], static fn($entry) => $entry['tracked'] !== '');
+    // How a question is named in the diff legend: number, origin, creation date and ID.
+    $side = static fn(array $entry, int $position) => get_string('variants_side', 'qbank_questionhub', (object)[
+        'number' => $position + 1,
+        'origin' => $entry['tracked'] !== '' ? $entry['tracked'] : get_string('variants_local', 'qbank_questionhub'),
+        'created' => userdate($entry['timecreated'], $format),
+        'id' => $entry['questionid'],
+    ]);
     foreach ($group['entries'] as $position => $entry) {
         $entries[] = $entry + [
             'number' => $position + 1,
+            'groupindex' => $index,
+            // Suggestion of the helper button: the only question that came from a Hub package.
+            'is_hub_choice' => count($tracked) === 1 && $entry['tracked'] !== '',
+            'preview_url' => (new moodle_url('/question/bank/previewquestion/preview.php',
+                ['id' => $entry['questionid']] + $bankparams))->out(false),
+            'edit_url' => (new moodle_url('/question/bank/editquestion/question.php',
+                ['id' => $entry['questionid'], 'returnurl' => $returnlocal] + $bankparams))->out(false),
             'created' => userdate($entry['timecreated'], $format),
             'modified' => userdate($entry['timemodified'], $format),
             'has_tracked' => $entry['tracked'] !== '',
-            'can_delete' => !$entry['inuse'],
         ];
         if ($position > 0) {
-            $files[] = \qbank_questionhub\release_diff::compare($group['name'], $firstlines,
-                \qbank_questionhub\release_diff::question_lines($exporter, $entry['questionid'])) +
-                ['label' => get_string('variants_diff_label', 'qbank_questionhub', $position + 1)];
+            $files[] = \qbank_questionhub\release_diff::label_sides([
+                \qbank_questionhub\release_diff::compare($group['name'], $firstlines,
+                    \qbank_questionhub\release_diff::question_lines($exporter, $entry['questionid'])),
+            ], $side($first, 0), $side($entry, $position))[0];
         }
     }
     $files = \qbank_questionhub\release_diff::decorate($files);
@@ -98,8 +118,11 @@ foreach (\qbank_questionhub\duplicate_manager::find_variants($context, $category
     }
     unset($file);
     $groups[] = [
+        'groupindex' => $index,
         'name' => $group['name'],
         'categoryname' => format_string($group['categoryname'], true, ['context' => $context, 'escape' => false]),
+        'category_url' => (new moodle_url('/question/edit.php',
+            ['cat' => $group['categoryid'] . ',' . $context->id] + $bankparams))->out(false),
         'qtype' => $group['qtype'],
         'entries' => $entries,
         'diff' => ['files' => $files],

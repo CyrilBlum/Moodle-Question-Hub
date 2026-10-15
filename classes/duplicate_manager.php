@@ -88,7 +88,7 @@ class duplicate_manager {
     /**
      * Groups of questions in the same category with the same name and type whose content differs, e.g. a
      * local question and the Hub version imported next to it. Unlike exact duplicates, the teacher picks
-     * which ones to delete.
+     * which one to keep.
      *
      * @return array[] groups: categoryid, categoryname, name, qtype, entries (entryid, questionid of the latest
      *         version, version, versions, timecreated, timemodified, tracked by a Hub package, in use)
@@ -151,21 +151,28 @@ class duplicate_manager {
     }
 
     /**
-     * Deletes the selected questions (all versions) of variant groups. Only questions that belong to a variant
-     * group in this context and are not used in a quiz are deleted; every group keeps at least one question.
+     * Keeps the chosen question of each variant group and deletes the others (all versions). Groups without
+     * exactly one chosen question are left alone; questions used in a quiz are never deleted.
      *
-     * @param int[] $entryids question bank entries to delete
-     * @return int number of deleted questions
+     * @param int[] $keepids question bank entries to keep, at most one per group
+     * @return array deleted (questions deleted) and inuse (questions kept because a quiz uses them)
      */
-    public static function delete_variants(\context $context, array $entryids): int {
+    public static function keep_variants(\context $context, array $keepids): array {
         global $CFG, $DB;
         require_once($CFG->libdir . '/questionlib.php');
-        $selected = array_flip(array_map('intval', $entryids));
-        $count = 0;
+        $keep = array_flip(array_filter(array_map('intval', $keepids)));
+        $result = ['deleted' => 0, 'inuse' => 0];
         foreach (self::find_variants($context) as $group) {
-            $remaining = count($group['entries']);
+            $chosen = array_filter($group['entries'], static fn($entry) => isset($keep[$entry['entryid']]));
+            if (count($chosen) !== 1) {
+                continue;
+            }
             foreach ($group['entries'] as $entry) {
-                if (!isset($selected[$entry['entryid']]) || $entry['inuse'] || $remaining <= 1) {
+                if (isset($keep[$entry['entryid']])) {
+                    continue;
+                }
+                if ($entry['inuse']) {
+                    $result['inuse']++;
                     continue;
                 }
                 question_require_capability_on($entry['questionid'], 'edit');
@@ -174,11 +181,10 @@ class duplicate_manager {
                         [$entry['entryid']]) as $questionid) {
                     question_delete_question((int)$questionid);
                 }
-                $remaining--;
-                $count++;
+                $result['deleted']++;
             }
         }
-        return $count;
+        return $result;
     }
 
     public static function delete_removable(\context $context, int $categoryid = 0): int {
