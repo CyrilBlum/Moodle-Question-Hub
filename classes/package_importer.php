@@ -286,12 +286,14 @@ class package_importer {
             $uncertain = false;
             if ($tracking) {
                 $entry = $DB->get_record('question_bank_entries', ['id' => $tracking->questionbankentryid]);
-                if (!$entry || ($categoryid && (int)$entry->questioncategoryid !== $categoryid)) {
-                    throw new moodle_exception('error_import_failed', 'qbank_questionhub', '',
-                        'A previously imported question was moved or removed: ' . $name);
+                if ($entry) {
+                    // A teacher may move a question after importing it. Preserve that choice and
+                    // continue to update the tracked entry instead of aborting the complete import.
+                    $entryid = (int)$entry->id;
+                    $status = $tracking->sourcehash === $sourcehash ? 'unchanged' : 'update';
                 }
-                $entryid = (int)$entry->id;
-                $status = $tracking->sourcehash === $sourcehash ? 'unchanged' : 'update';
+                // If the entry was deleted, retain the tracking ID in the plan. A new copy is
+                // imported and replaces this stale tracking record transactionally below.
             } else if ($categoryid) {
                 // Match an existing local question before importing a second copy. This also adopts
                 // questions that were imported before Question Hub tracking existed.

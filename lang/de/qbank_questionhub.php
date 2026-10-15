@@ -238,3 +238,7 @@ $string['duplicate_keep_badge'] = 'Behalten';
 $string['duplicate_delete_badge'] = 'Löschen';
 $string['review_duplicates_count'] = '{$a} Duplikate prüfen';
 $string['open_category_questions'] = 'Diese Kategorie in der Fragensammlung öffnen';
+
+$string['unlink_category_button'] = 'Verknüpfung aufheben';
+$string['category_unlinked'] = 'Die Verknüpfung für «{$a}» wurde aufgehoben.';
+$string['category_unlinked_status'] = 'Keine aktive Hub-Verknüpfung';

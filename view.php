@@ -123,6 +123,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \core\notification::error($e->getMessage());
         }
         redirect($thispageurl);
+    } else if ($action === 'unlink_category') {
+        require_capability('moodle/question:managecategory', $bankcontext);
+        $categoryid = required_param('categoryid', PARAM_INT);
+        $category = $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $bankcontext->id], '*', MUST_EXIST);
+        $link = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid);
+        if ($link && !empty($link->package_id)) {
+            $DB->insert_record('qbank_questionhub_history', (object)[
+                'userid' => (int)$USER->id, 'action' => 'unlink', 'package_id' => $link->package_id,
+                'package_version' => $link->package_version, 'package_title' => $link->package_title,
+                'courseid' => (int)$COURSE->id, 'categoryid' => $categoryid, 'question_count' => 0,
+                'timecreated' => time(), 'snapshotted' => 0,
+            ]);
+            \core\notification::success(get_string('category_unlinked', 'qbank_questionhub', $category->name));
+        }
+        redirect($thispageurl);
     } else if ($action === 'import_package') {
         require_capability('qbank/questionhub:import', $bankcontext);
         $packageid = required_param('packageid', PARAM_RAW_TRIMMED);
@@ -581,7 +596,10 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $publishparams = ['courseid' => $COURSE->id, 'categoryid' => $cat->id,
                 'bankcontextid' => $bankcontext->id];
             // Core requires both category and context IDs, plus the question-bank activity ID.
-            $questionbankparams = ['cmid' => $cmid, 'cat' => $cat->id . ',' . $bankcontext->id];
+            $questionbankparams = ['courseid' => $COURSE->id, 'cat' => $cat->id . ',' . $bankcontext->id];
+            if (!empty($cmid)) {
+                $questionbankparams['cmid'] = $cmid;
+            }
             if (!empty($cmid)) {
                 $publishparams['cmid'] = $cmid;
             }
@@ -590,11 +608,12 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $categoryduplicatecount = $duplicatecountforcategory((int)$cat->id);
 
             $latestpub = \qbank_questionhub\publication_tracker::find_local_publication_for_category((int)$cat->id, (int)$COURSE->id);
+            $isunlinked = \qbank_questionhub\publication_tracker::is_unlinked((int)$COURSE->id, (int)$cat->id);
             $matchedpackage = null;
             if ($latestpub && !empty($latestpub->package_id)) {
                 $matchedpackage = $mypackagesbyid[$latestpub->package_id] ?? null;
             }
-            if (!$matchedpackage) {
+            if (!$matchedpackage && !$isunlinked) {
                 // Try matching by category name or slug to an owned package in My Packages.
                 $cleanname = preg_replace('/[^a-z0-9]/', '', mb_strtolower($name));
                 foreach ($mypackagesbyid as $mp) {
@@ -673,6 +692,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'has_duplicates' => $categoryduplicatecount > 0,
                 'duplicate_count' => $categoryduplicatecount,
                 'is_published' => $ispublished,
+                'is_unlinked' => $isunlinked,
                 'is_package_source' => $ispackagesource,
                 'package_id' => $pkgid,
                 'package_version' => $pkgversion,

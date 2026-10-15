@@ -30,7 +30,7 @@ class publication_tracker {
         $sql = "SELECT *
                   FROM {qbank_questionhub_history}
                  WHERE categoryid = :categoryid
-                   AND action IN ('publish', 'import')
+                   AND action IN ('publish', 'import', 'unlink')
                    AND package_id IS NOT NULL
                    AND " . $DB->sql_isnotempty('qbank_questionhub_history', 'package_id', false, true);
         $params = ['categoryid' => $categoryid];
@@ -41,12 +41,28 @@ class publication_tracker {
         $sql .= " ORDER BY timecreated DESC, id DESC";
         $records = $DB->get_records_sql($sql, $params, 0, 1);
         if ($records) {
-            return reset($records);
+            $latest = reset($records);
+            return $latest->action === 'unlink' ? null : $latest;
         }
         if ($courseid > 0) {
             return self::latest(0, $categoryid);
         }
         return null;
+    }
+
+    /** Whether the latest category link was explicitly removed. */
+    public static function is_unlinked(int $courseid, int $categoryid): bool {
+        global $DB;
+        $params = ['categoryid' => $categoryid];
+        $sql = "SELECT action FROM {qbank_questionhub_history}
+                  WHERE categoryid = :categoryid AND action IN ('publish', 'import', 'unlink')";
+        if ($courseid > 0) {
+            $sql .= ' AND (courseid = :courseid OR courseid = 0)';
+            $params['courseid'] = $courseid;
+        }
+        $sql .= ' ORDER BY timecreated DESC, id DESC';
+        $record = $DB->get_record_sql($sql, $params, IGNORE_MISSING);
+        return $record && $record->action === 'unlink';
     }
 
     /** Latest record for a package ID, or null. */

@@ -280,7 +280,11 @@
                             </button>
                             {{/pkg_settings}}
                         {{/is_package_source}}
+                        {{#is_published}}
+                            <form method="post" action="{{action_url}}" class="d-inline ml-1"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="unlink_category"><input type="hidden" name="categoryid" value="{{id}}"><button type="submit" class="btn btn-sm btn-outline-secondary">{{#str}} unlink_category_button, qbank_questionhub {{/str}}</button></form>
+                        {{/is_published}}
                         {{^is_published}}
+                            {{#is_unlinked}}<span class="small text-muted mr-2">{{#str}} category_unlinked_status, qbank_questionhub {{/str}}</span>{{/is_unlinked}}
                             <a href="{{url}}" class="btn btn-sm btn-outline-primary">{{#str}} publish_category_button, qbank_questionhub {{/str}}</a>
                         {{/is_published}}
                     </span>
