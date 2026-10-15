@@ -624,10 +624,13 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             ];
             $publishparams = ['courseid' => $COURSE->id, 'categoryid' => $cat->id,
                 'bankcontextid' => $bankcontext->id];
-            // Core requires both category and context IDs, plus the question-bank activity ID.
-            $questionbankparams = ['courseid' => $COURSE->id, 'cat' => $cat->id . ',' . $bankcontext->id];
-            if (!empty($cmid)) {
-                $questionbankparams['cmid'] = $cmid;
+            // Core requires both category and context IDs. Moodle 5.0 banks are mod_qbank modules and need
+            // their cmid; edit.php redirects any request with courseid to the bank overview there.
+            $questionbankparams = ['cat' => $cat->id . ',' . $bankcontext->id];
+            if ($bankcontext->contextlevel == CONTEXT_MODULE) {
+                $questionbankparams['cmid'] = $bankcontext->instanceid;
+            } else {
+                $questionbankparams['courseid'] = $COURSE->id;
             }
             if (!empty($cmid)) {
                 $publishparams['cmid'] = $cmid;
