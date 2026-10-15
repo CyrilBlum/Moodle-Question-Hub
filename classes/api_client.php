@@ -318,7 +318,8 @@ class api_client {
 
         $url = $this->baseurl . $endpoint;
         if (!empty($params)) {
-            $url .= '?' . http_build_query($params);
+            // Explicit '&': Moodle sets arg_separator.output to '&amp;', which would garble a URL sent to the Hub.
+            $url .= '?' . http_build_query($params, '', '&');
         }
 
         $curl = $this->get_curl();

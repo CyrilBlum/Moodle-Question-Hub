@@ -161,6 +161,7 @@ class auth_manager {
             'state' => $state,
         ];
 
-        return $huburl . '/oauth/authorize?' . http_build_query($params);
+        // Explicit '&': Moodle sets arg_separator.output to '&amp;', which the template would escape a second time.
+        return $huburl . '/oauth/authorize?' . http_build_query($params, '', '&');
     }
 }
