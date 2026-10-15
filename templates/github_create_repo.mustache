@@ -1,0 +1,30 @@
+{{!
+    @template qbank_questionhub/github_create_repo
+
+    Separate form below a package's settings: create a private repository in the connected GitHub account
+    and link it to the package (the Hub commits the current version right away).
+
+    Context variables required for this template:
+    * action_url, sesskey - Form target.
+    * gh_package_id - Hub package id.
+    * gh_domid - Unique id suffix.
+    * github_connected, github_login - GitHub connection of the Hub account.
+
+    Example context (json):
+    {"action_url": "#", "sesskey": "x", "gh_package_id": "ch.gym.inf.x", "gh_domid": "a1", "github_connected": true, "github_login": "konto"}
+}}
+{{#github_connected}}
+<form method="post" action="{{action_url}}" class="border rounded p-3 mt-2">
+    <input type="hidden" name="sesskey" value="{{sesskey}}">
+    <input type="hidden" name="action" value="create_github_repo">
+    <input type="hidden" name="packageid" value="{{gh_package_id}}">
+    <label for="ghnew-{{gh_domid}}" class="font-weight-bold small">{{#str}} github_new_repo_label, qbank_questionhub {{/str}}</label>
+    <div class="d-flex flex-wrap align-items-center">
+        <span class="text-monospace font-monospace small mr-1 me-1">{{github_login}}/</span>
+        <input type="text" id="ghnew-{{gh_domid}}" name="repo_name" class="form-control form-control-sm w-auto flex-grow-1 mr-2 me-2"
+               value="{{gh_package_id}}" pattern="[A-Za-z0-9_.\-]{1,100}" required>
+        <button type="submit" class="btn btn-sm btn-outline-primary">{{#str}} github_create_link_button, qbank_questionhub {{/str}}</button>
+    </div>
+    <small class="form-text text-muted">{{#str}} github_new_repo_help, qbank_questionhub, {{github_login}} {{/str}}</small>
+</form>
+{{/github_connected}}

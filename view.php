@@ -116,6 +116,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \core\notification::error($e->getMessage());
         }
         redirect($thispageurl);
+    } else if ($action === 'create_github_repo') {
+        // Create a private repository in the connected GitHub account and link it; the Hub commits the current version.
+        try {
+            $client = new \qbank_questionhub\api_client(null, null, 30, true);
+            $created = $client->create_github_repo(required_param('repo_name', PARAM_RAW_TRIMMED));
+            \core\notification::success(get_string('github_repo_created_named', 'qbank_questionhub', s($created['html_url'] ?? $created['repo'])));
+            $updated = $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), ['github_repo' => $created['repo']]);
+            \qbank_questionhub\api_client::notify_github_result($updated['github_sync'] ?? null);
+        } catch (\Exception $e) {
+            \core\notification::error($e->getMessage());
+        }
+        redirect($thispageurl);
     } else if ($action === 'withdraw_package' || $action === 'withdraw_release') {
         try {
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
@@ -540,6 +552,8 @@ if ($hasaccount) {
                     'summary' => $mp['summary'] ?? '',
                     'tags' => implode(', ', $mp['tags'] ?? []),
                     'github_repo' => (string)($mp['github_repo'] ?? ''),
+                    'gh_package_id' => $mp['id'],
+                    'gh_domid' => 'mp' . md5($mp['id']),
                     'lic_by' => ($mp['license'] ?? '') === 'CC-BY-4.0',
                     'lic_bysa' => ($mp['license'] ?? '') === 'CC-BY-SA-4.0',
                     'lic_cc0' => ($mp['license'] ?? '') === 'CC0-1.0',
@@ -794,6 +808,8 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                     'summary' => $mp['summary'] ?? '',
                     'tags' => implode(', ', $mp['tags'] ?? []),
                     'github_repo' => (string)($mp['github_repo'] ?? ''),
+                    'gh_package_id' => $pkgid,
+                    'gh_domid' => 'cat' . md5($pkgid . '_' . $cat->id),
                     'is_private' => ($mp['visibility'] ?? 'public') === 'private',
                     'is_public' => ($mp['visibility'] ?? 'public') !== 'private',
                     'lic_by' => ($mp['license'] ?? 'CC-BY-4.0') === 'CC-BY-4.0',
@@ -995,6 +1011,8 @@ $templatedata = [
     'library' => $library,
     'has_library' => !empty($library),
     'hub_url' => $huburl,
+    // Package settings (browse and my packages) offer the GitHub link; asks the Hub only there.
+] + ($hasaccount && ($showbrowse || $showmypackages) ? $client->github_template_data($huburl) : []) + [
     'sesskey' => sesskey(),
     'courseid' => $COURSE->id,
     'cmid' => $cmid,

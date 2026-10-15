@@ -356,10 +356,7 @@
                             </select></div>
                         <div class="form-group"><label>Tags</label>
                             <input type="text" name="tags" class="form-control" value="{{tags}}"></div>
-                        <div class="form-group"><label>{{#str}} github_repo_label, qbank_questionhub {{/str}}</label>
-                            <input type="text" name="github_repo" class="form-control text-monospace font-monospace" value="{{github_repo}}" placeholder="git@github.com:konto/repository.git">
-                            <input type="hidden" name="github_repo_orig" value="{{github_repo}}">
-                            <small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small></div>
+                        {{> qbank_questionhub/github_settings_field }}
                         <div class="form-check mb-3">
                             <input type="checkbox" name="preview_enabled" value="1" class="form-check-input" id="prev-cat-{{domid}}" {{#preview_on}}checked{{/preview_on}}>
                             <label class="form-check-label font-weight-bold" for="prev-cat-{{domid}}">{{#str}} package_preview_label, qbank_questionhub {{/str}}</label>
@@ -372,6 +369,7 @@
                             <button type="submit" class="btn btn-sm btn-primary">{{#str}} save_settings, qbank_questionhub {{/str}}</button>
                         </div>
                     </form>
+                    {{> qbank_questionhub/github_create_repo }}
                 </div>
                 {{/pkg_settings}}
             </li>
@@ -462,10 +460,7 @@
                             </select></div>
                         <div class="form-group"><label>Tags</label>
                             <input type="text" name="tags" class="form-control" value="{{tags}}"></div>
-                        <div class="form-group"><label>{{#str}} github_repo_label, qbank_questionhub {{/str}}</label>
-                            <input type="text" name="github_repo" class="form-control text-monospace font-monospace" value="{{github_repo}}" placeholder="git@github.com:konto/repository.git">
-                            <input type="hidden" name="github_repo_orig" value="{{github_repo}}">
-                            <small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small></div>
+                        {{> qbank_questionhub/github_settings_field }}
                         <div class="form-check mb-3">
                             <input type="checkbox" class="form-check-input" name="preview_enabled" value="1" id="pv-{{domid}}" {{#preview_on}}checked{{/preview_on}}>
                             <label class="form-check-label" for="pv-{{domid}}">{{#str}} package_preview_label, qbank_questionhub {{/str}}</label>
@@ -473,6 +468,7 @@
                         <p class="text-muted small">{{#str}} version_immutable_note, qbank_questionhub {{/str}}</p>
                         <button type="submit" class="btn btn-primary btn-sm">{{#str}} save_settings, qbank_questionhub {{/str}}</button>
                     </form>
+                    {{> qbank_questionhub/github_create_repo }}
                     {{! Withdrawing single versions sits with the package settings, as on the Hub. }}
                     <div class="border rounded p-3 mt-2">
                         <div class="font-weight-bold small mb-2">{{#str}} withdraw_versions_heading, qbank_questionhub {{/str}}</div>

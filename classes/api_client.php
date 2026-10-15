@@ -266,6 +266,50 @@ class api_client {
     }
 
     /**
+     * GitHub connection of the linked Hub account: { connected, login, connected_at }.
+     *
+     * @return array
+     */
+    public function get_github_connection(): array {
+        return $this->get('/api/v1/account/github', [], true);
+    }
+
+    /**
+     * Creates a private repository in the GitHub account connected to the linked Hub account.
+     *
+     * @param string $name Repository name.
+     * @return array { repo: git@github.com:owner/name.git, html_url }.
+     */
+    public function create_github_repo(string $name): array {
+        return $this->post('/api/v1/account/github/repos', ['name' => $name], true);
+    }
+
+    /**
+     * Template data for the GitHub parts of the plugin pages; an unreachable Hub counts as not connected.
+     *
+     * @param string $huburl Base URL of the Hub, for the link to its GitHub settings.
+     * @return array github_connected, github_login, github_connect_html.
+     */
+    public function github_template_data(string $huburl): array {
+        $connection = ['connected' => false, 'login' => null];
+        if (!empty($this->token)) {
+            try {
+                $connection = $this->get_github_connection();
+            } catch (\Exception $e) {
+                debugging($e->getMessage(), DEBUG_DEVELOPER);
+            }
+        }
+        $settingsurl = rtrim($huburl, '/') . '/dashboard#github';
+        $link = \html_writer::link($settingsurl, s(parse_url($huburl, PHP_URL_HOST) ?: $huburl),
+            ['target' => '_blank', 'rel' => 'noopener']);
+        return [
+            'github_connected' => !empty($connection['connected']),
+            'github_login' => (string)($connection['login'] ?? ''),
+            'github_connect_html' => get_string('github_connect_hint', 'qbank_questionhub', $link),
+        ];
+    }
+
+    /**
      * Shows the outcome of the Hub's GitHub commit (publish response `github`, settings response `github_sync`).
      * Nothing is shown when the package has no linked repository (null).
      *
@@ -279,7 +323,7 @@ class api_client {
             if (!empty($result['repo_created'])) {
                 \core\notification::info(get_string('github_repo_created', 'qbank_questionhub'));
             }
-            \core\notification::info(get_string('github_commit_done', 'qbank_questionhub', s($result['commit_url'] ?? '')));
+            \core\notification::success(get_string('github_commit_done', 'qbank_questionhub', s($result['commit_url'] ?? '')));
             if (!empty($result['warning'])) {
                 \core\notification::warning(s($result['warning']));
             }
@@ -459,6 +503,10 @@ class api_client {
                 throw new moodle_exception('error_notfound', 'qbank_questionhub', '', $message);
             case 410:
                 throw new moodle_exception('error_package_withdrawn', 'qbank_questionhub', '', $message);
+            case 400:
+            case 409:
+                // A refused request (validation, name taken), not a network problem.
+                throw new moodle_exception('error_hub_rejected', 'qbank_questionhub', '', $message ?: "HTTP {$httpcode}");
             default:
                 $detail = !empty($message) ? $message : ("HTTP {$httpcode}: " . substr($body, 0, 300));
                 throw new moodle_exception('error_network', 'qbank_questionhub', '', $detail);

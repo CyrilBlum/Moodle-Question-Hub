@@ -209,6 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tags = $ownedpackage['tags'] ?? [];
         // The GitHub link stays as set in the package settings.
         $githubrepo = '';
+        $githubnewname = '';
         if ($action !== 'publish_hub') {
             // Downloading the XML needs neither a release note nor a new version.
         } else if ($releasenotes === '') {
@@ -237,7 +238,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $previewenabled = (bool)optional_param('package_preview', 0, PARAM_BOOL);
         $releasenotes = '';
         $tags = [];
-        $githubrepo = optional_param('package_github_repo', '', PARAM_RAW_TRIMMED);
+        // GitHub (optional): none, a new private repository created before publishing, or an existing one.
+        $githubmode = optional_param('github_mode', 'none', PARAM_ALPHA);
+        $githubrepo = $githubmode === 'existing' ? optional_param('package_github_repo', '', PARAM_RAW_TRIMMED) : '';
+        $githubnewname = $githubmode === 'new' ? optional_param('package_github_new', '', PARAM_RAW_TRIMMED) : '';
     }
 
     try {
@@ -300,6 +304,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $client = new \qbank_questionhub\api_client(null, null, 30, true);
+        if ($githubnewname !== '') {
+            // Created first: if that fails, nothing is published. The Hub commits the release into it.
+            $createdrepo = $client->create_github_repo($githubnewname);
+            $metadata['github_repo'] = $createdrepo['repo'];
+            \core\notification::success(get_string('github_repo_created_named', 'qbank_questionhub',
+                s($createdrepo['html_url'] ?? $createdrepo['repo'])));
+        }
         $published = $client->publish($xmlcontent, $metadata);
 
         // Snapshot the versions represented by this category export after Hub acceptance.
@@ -451,6 +462,20 @@ $templatedata = [
     'level_ff' => ($ownedpackage['subject_category'] ?? 'GF') === 'FF',
     'preview_checked' => $ownedpackage ? !empty($ownedpackage['preview_enabled']) : true,
     'default_github_repo' => $_SERVER['REQUEST_METHOD'] === 'POST' ? optional_param('package_github_repo', '', PARAM_RAW_TRIMMED) : '',
+    'default_github_new' => $_SERVER['REQUEST_METHOD'] === 'POST'
+        ? optional_param('package_github_new', $defaultslug, PARAM_RAW_TRIMMED) : $defaultslug,
+    'github_mode_new_checked' => optional_param('github_mode', 'none', PARAM_ALPHA) === 'new',
+    'github_mode_existing_checked' => optional_param('github_mode', 'none', PARAM_ALPHA) === 'existing',
+    'github_mode_none_checked' => !in_array(optional_param('github_mode', 'none', PARAM_ALPHA), ['new', 'existing'], true),
+    // New versions of a linked package also go to GitHub; editors only know that it is linked.
+    'github_push_note' => !$ownedpackage ? '' : (!empty($ownedpackage['github_repo'])
+        ? get_string('github_push_linked', 'qbank_questionhub', $ownedpackage['github_repo'])
+        : (!empty($ownedpackage['github_linked'])
+            ? get_string('github_push_linked_unknown', 'qbank_questionhub')
+            : get_string('github_push_unlinked', 'qbank_questionhub'))),
+    'github_push_linked' => !empty($ownedpackage['github_repo']) || !empty($ownedpackage['github_linked']),
+] + ($ownedpackage ? [] : (new \qbank_questionhub\api_client(null, null, 30, true))->github_template_data(
+    rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/'))) + [
     'is_private' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') === 'private') : false,
     'is_public' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') !== 'private') : true,
 ];

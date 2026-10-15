@@ -36,6 +36,11 @@
             {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
             <input type="hidden" name="categoryid" value="{{categoryid}}">
             <input type="hidden" name="updatepackageid" value="{{update_package_id}}">
+            {{#github_push_note}}
+            <div class="alert {{#github_push_linked}}alert-info{{/github_push_linked}}{{^github_push_linked}}alert-secondary{{/github_push_linked}} small mb-3">
+                <i class="fa fa-github mr-1 me-1" aria-hidden="true"></i>{{github_push_note}}
+            </div>
+            {{/github_push_note}}
             <div class="form-group mb-3">
                 <label for="release_notes" class="font-weight-bold">{{#str}} release_notes_label, qbank_questionhub {{/str}}</label>
                 <textarea id="release_notes" name="release_notes" class="form-control" rows="3" required

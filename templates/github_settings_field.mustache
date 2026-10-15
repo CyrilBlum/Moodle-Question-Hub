@@ -1,0 +1,20 @@
+{{!
+    @template qbank_questionhub/github_settings_field
+
+    GitHub link field inside a package settings form: change or clear the linked repository.
+    Without a GitHub connection of the Hub account, a hint links to the Hub's GitHub settings.
+
+    Context variables required for this template:
+    * github_repo - Linked repository (git@github.com:owner/repo.git) or empty.
+    * github_connected - Whether the Hub account has a GitHub token.
+    * github_connect_html - Hint with a link to the Hub's GitHub settings (HTML).
+
+    Example context (json):
+    {"github_repo": "git@github.com:konto/fragen.git", "github_connected": true, "github_connect_html": ""}
+}}
+<div class="form-group"><label>{{#str}} github_repo_label, qbank_questionhub {{/str}}</label>
+    <input type="text" name="github_repo" class="form-control text-monospace font-monospace" value="{{github_repo}}" placeholder="git@github.com:konto/repository.git">
+    <input type="hidden" name="github_repo_orig" value="{{github_repo}}">
+    {{#github_connected}}<small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small>{{/github_connected}}
+    {{^github_connected}}<div class="alert alert-info small mt-2 mb-0">{{{github_connect_html}}}</div>{{/github_connected}}
+</div>

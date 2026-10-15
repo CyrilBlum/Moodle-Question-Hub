@@ -110,12 +110,32 @@
                 <div class="text-muted small">{{#str}} package_preview_help, qbank_questionhub {{/str}}</div>
             </div>
 
-            <div class="form-group mb-3">
-                <label for="package_github_repo" class="font-weight-bold">{{#str}} github_repo_label, qbank_questionhub {{/str}}:</label>
-                <input type="text" id="package_github_repo" name="package_github_repo" class="form-control text-monospace font-monospace"
-                       value="{{default_github_repo}}" placeholder="git@github.com:konto/repository.git">
+            <fieldset class="form-group mb-3">
+                <legend class="font-weight-bold col-form-label pt-0" style="font-size: inherit;">{{#str}} github_repo_label, qbank_questionhub {{/str}}</legend>
+                {{^github_connected}}<div class="alert alert-info small mb-0">{{{github_connect_html}}}</div>{{/github_connected}}
+                {{#github_connected}}
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" name="github_mode" value="none" id="gh_mode_none" {{#github_mode_none_checked}}checked{{/github_mode_none_checked}}>
+                    <label class="form-check-label" for="gh_mode_none">{{#str}} github_mode_none, qbank_questionhub {{/str}}</label>
+                </div>
+                <div class="form-check mt-1">
+                    <input type="radio" class="form-check-input" name="github_mode" value="new" id="gh_mode_new" {{#github_mode_new_checked}}checked{{/github_mode_new_checked}}>
+                    <label class="form-check-label" for="gh_mode_new">{{#str}} github_mode_new, qbank_questionhub, {{github_login}} {{/str}}</label>
+                    <div class="d-flex align-items-center mt-1">
+                        <span class="text-monospace font-monospace small mr-1 me-1">{{github_login}}/</span>
+                        <input type="text" name="package_github_new" class="form-control form-control-sm w-auto flex-grow-1" value="{{default_github_new}}"
+                               pattern="[A-Za-z0-9_.\-]{1,100}" aria-label="{{#str}} github_new_repo_label, qbank_questionhub {{/str}}">
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input type="radio" class="form-check-input" name="github_mode" value="existing" id="gh_mode_existing" {{#github_mode_existing_checked}}checked{{/github_mode_existing_checked}}>
+                    <label class="form-check-label" for="gh_mode_existing">{{#str}} github_mode_existing, qbank_questionhub {{/str}}</label>
+                    <input type="text" name="package_github_repo" class="form-control form-control-sm text-monospace font-monospace mt-1"
+                           value="{{default_github_repo}}" placeholder="git@github.com:konto/repository.git" aria-label="{{#str}} github_repo_label, qbank_questionhub {{/str}}">
+                </div>
                 <small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small>
-            </div>
+                {{/github_connected}}
+            </fieldset>
 
             <hr class="my-4">
 
