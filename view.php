@@ -129,6 +129,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_capability('moodle/question:managecategory', $bankcontext);
         $categoryid = required_param('categoryid', PARAM_INT);
         $category = $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $bankcontext->id], '*', MUST_EXIST);
+        if (!\qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid)) {
+            // A subcategory only inherits its parent's link; it stays part of that package either way.
+            $inherited = \qbank_questionhub\publication_tracker::find_local_publication_for_category(
+                $categoryid, (int)$COURSE->id);
+            if ($inherited && (int)$inherited->categoryid !== $categoryid) {
+                \core\notification::error(get_string('error_unlink_inherited', 'qbank_questionhub'));
+                redirect($thispageurl);
+            }
+        }
         $unlinked = 0;
         foreach (\qbank_questionhub\publication_tracker::category_ids($categoryid) as $scopedcategoryid) {
             // Resolve inherited parent links as well, so disconnecting a parent makes every
@@ -788,6 +797,8 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'is_withdrawn_on_hub' => $islinked && $missingonhub === 'withdrawn',
                 'can_republish' => $islinked && $missingonhub !== false && $linkaction === 'publish',
                 'link_category_id' => $linkcategoryid,
+                // Subcategory of a package category: Hub actions belong to the category holding the link.
+                'is_inherited_link' => $islinked && $linkcategoryid > 0 && $linkcategoryid !== (int)$cat->id,
                 'link_action' => $linkaction,
                 'link_title' => $linktitle,
                 'package_id' => $pkgid,

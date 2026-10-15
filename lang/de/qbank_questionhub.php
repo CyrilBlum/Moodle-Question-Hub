@@ -265,6 +265,7 @@ $string['category_naming_note'] = '<strong>Achtung bei Kategorien, die mit dem Q
 <li>Ist eine Umbenennung nötig: zuerst in der Quellkategorie ändern, neue Version veröffentlichen und dieselbe Änderung in allen importierten Kopien vornehmen, bevor diese aktualisiert werden.</li>
 <li>Verwenden Sie kurze, eindeutige und dauerhafte Namen ohne Zusätze wie Kürzel, «alt», «neu» oder Versionsnummern (die Version verwaltet der Hub).</li>
 <li>Vermeiden Sie gleichnamige Kategorien auf derselben Ebene.</li>
+<li>Unterkategorie abspalten: aus der Paketkategorie verschieben und separat veröffentlichen. Bei der nächsten Version des Pakets erscheinen ihre Fragen als entfernt; Moodles, die das Paket importiert haben, behalten sie.</li>
 </ul>';
 $string['import_conflicts_found'] = 'Einige Fragen wurden im Hub und hier geändert. Entscheiden Sie pro Frage, welche Fassung gelten soll.';
 $string['import_preview_conflicts'] = 'Konflikte';
@@ -294,3 +295,6 @@ $string['push_settings_note'] = 'Titel, Beschreibung, Lizenz und weitere Einstel
 $string['push_submit'] = 'Version veröffentlichen';
 $string['push_new_version_link'] = 'Neue Version veröffentlichen';
 $string['push_same_content'] = '{$a} weitere Frage(n) haben eine neue Versionsnummer, aber unveränderten Inhalt (z. B. rückgängig gemachte Änderung); sie werden nicht aufgeführt.';
+$string['inherited_link_status'] = 'Teil von «{$a}»';
+$string['inherited_link_status_help'] = 'Diese Unterkategorie gehört zum Paket ihrer übergeordneten Kategorie. Veröffentlichen, Holen und Verknüpfung aufheben erfolgen dort. Zum Abspalten verschieben Sie die Unterkategorie aus der Paketkategorie und veröffentlichen sie separat.';
+$string['error_unlink_inherited'] = 'Diese Unterkategorie gehört zum Paket ihrer übergeordneten Kategorie. Heben Sie die Verknüpfung dort auf oder verschieben Sie die Unterkategorie aus der Paketkategorie.';

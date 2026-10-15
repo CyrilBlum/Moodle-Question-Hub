@@ -265,6 +265,7 @@ $string['category_naming_note'] = '<strong>Caution with categories linked to the
 <li>If a rename is needed: change the source category first, publish a new version and make the same change in every imported copy before updating it.</li>
 <li>Use short, unique and stable names without additions such as initials, "old", "new" or version numbers (the Hub manages versions).</li>
 <li>Avoid categories with the same name on the same level.</li>
+<li>To split off a subcategory, move it out of the package category and publish it separately. The next version of the package lists its questions as removed; Moodles that imported the package keep them.</li>
 </ul>';
 $string['import_conflicts_found'] = 'Some questions were changed both on the Hub and here. Decide for each question which version applies.';
 $string['import_preview_conflicts'] = 'conflicts';
@@ -294,3 +295,6 @@ $string['push_settings_note'] = 'Change title, summary, licence and other settin
 $string['push_submit'] = 'Publish version';
 $string['push_new_version_link'] = 'Publish a new version';
 $string['push_same_content'] = '{$a} more question(s) have a new version number but unchanged content (e.g. an undone edit); they are not listed.';
+$string['inherited_link_status'] = 'Part of "{$a}"';
+$string['inherited_link_status_help'] = 'This subcategory belongs to the package of its parent category. Publishing, pulling and unlinking happen there. To split it off, move the subcategory out of the package category and publish it separately.';
+$string['error_unlink_inherited'] = 'This subcategory belongs to the package of its parent category. Unlink it there or move the subcategory out of the package category.';
