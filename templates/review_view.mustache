@@ -45,6 +45,26 @@
                 </button>
             </form>
             {{/can_accept_all}}
+            {{#added_count}}
+            <form method="post" action="{{action_url}}" class="d-inline" onsubmit="return window.confirm(this.dataset.confirm);"
+                  data-confirm="{{#str}} review_reject_added_all_confirm, qbank_questionhub, {{added_count}} {{/str}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="reject_added_all">
+                <button type="submit" class="btn btn-sm btn-outline-danger ml-1 ms-1">
+                    <i class="fa fa-trash mr-1" aria-hidden="true"></i>{{#str}} review_reject_added_all, qbank_questionhub, {{added_count}} {{/str}}
+                </button>
+            </form>
+            {{/added_count}}
+            {{#reject_count}}
+            <form method="post" action="{{action_url}}" class="d-inline" onsubmit="return window.confirm(this.dataset.confirm);"
+                  data-confirm="{{#str}} review_reject_all_confirm, qbank_questionhub, {{reject_count}} {{/str}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <input type="hidden" name="action" value="reject_all">
+                <button type="submit" class="btn btn-sm btn-danger ml-1 ms-1">
+                    <i class="fa fa-undo mr-1" aria-hidden="true"></i>{{#str}} review_reject_all, qbank_questionhub, {{reject_count}} {{/str}}
+                </button>
+            </form>
+            {{/reject_count}}
         </div>
     </div>
     {{/has_items}}

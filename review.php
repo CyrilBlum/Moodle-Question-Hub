@@ -74,6 +74,27 @@ $issource = \qbank_questionhub\local_changes::is_source($history);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_sesskey();
     $action = required_param('action', PARAM_ALPHAEXT);
+    if ($action === 'reject_added_all' || $action === 'reject_all') {
+        // The list is computed again here, so nothing is discarded that changed after the page was shown.
+        $statuses = $action === 'reject_all' ? ['added', 'modified'] : ['added'];
+        $current = \qbank_questionhub\local_changes::files($history,
+            new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id));
+        $counts = ['restored' => 0, 'deleted' => 0, 'failed' => 0];
+        foreach ($current['files'] ?? [] as $file) {
+            if (!in_array($file['status'], $statuses, true)) {
+                continue;
+            }
+            try {
+                $counts[\qbank_questionhub\local_changes::reject($history, (int)$file['entryid'], $context, $course)]++;
+            } catch (moodle_exception $e) {
+                // E.g. a question used in a quiz: the others are still processed.
+                $counts['failed']++;
+            }
+        }
+        $notify = $counts['failed'] ? 'warning' : 'success';
+        \core\notification::$notify(get_string('review_bulk_result', 'qbank_questionhub', (object)$counts));
+        redirect($thispageurl);
+    }
     $entryids = $action === 'accept_all' ? array_map('intval', optional_param_array('entryids', [], PARAM_INT)) :
         [required_param('entryid', PARAM_INT)];
     $done = 0;
@@ -109,6 +130,7 @@ foreach ($files as $file) {
         // A removed question cannot be restored here: its versions are gone with it.
         'can_accept' => !$issource && $file['status'] !== 'removed',
         'can_reject' => $file['status'] !== 'removed',
+        'is_added' => $file['status'] === 'added',
         'reject_confirm' => get_string($file['status'] === 'added' ? 'review_reject_added_confirm' :
             'review_reject_confirm', 'qbank_questionhub', $file['name']),
         'diff' => ['files' => [$file]],
@@ -131,6 +153,8 @@ $templatedata = [
     'has_items' => (bool)$items,
     'item_count' => count($items),
     'has_many' => count($items) > 1,
+    'added_count' => count(array_filter($items, static fn($item) => $item['is_added'])),
+    'reject_count' => count(array_filter($items, static fn($item) => $item['can_reject'])),
     'can_accept_all' => !$issource && count(array_filter($items, static fn($item) => $item['can_accept'])) > 1,
     'accept_all_ids' => array_values(array_map(static fn($item) => ['id' => $item['entryid']],
         array_filter($items, static fn($item) => $item['can_accept']))),
