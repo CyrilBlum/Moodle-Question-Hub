@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title = html_entity_decode($ownedpackage['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $summary = (string)($ownedpackage['summary'] ?? '');
         $subject = (string)($ownedpackage['subject'] ?? 'Informatik');
-        $level = (string)($ownedpackage['subject_category'] ?? 'SF');
+        $level = (string)($ownedpackage['subject_category'] ?? 'GF');
         $canton = (string)($ownedpackage['canton'] ?? 'ZH');
         $gradesraw = $ownedpackage['grades'] ?? ['GYM2', 'GYM3'];
         $license = (string)($ownedpackage['license'] ?? 'CC-BY-4.0');
@@ -436,10 +436,10 @@ $templatedata = [
     'categories' => $categoriesdata,
     'subjects' => $subjectsdata,
     'cantons' => $cantonsdata,
-    'level_gf' => ($ownedpackage['subject_category'] ?? 'SF') === 'GF',
-    'level_sf' => ($ownedpackage['subject_category'] ?? 'SF') === 'SF',
-    'level_ef' => ($ownedpackage['subject_category'] ?? 'SF') === 'EF',
-    'level_ff' => ($ownedpackage['subject_category'] ?? 'SF') === 'FF',
+    'level_gf' => ($ownedpackage['subject_category'] ?? 'GF') === 'GF',
+    'level_sf' => ($ownedpackage['subject_category'] ?? 'GF') === 'SF',
+    'level_ef' => ($ownedpackage['subject_category'] ?? 'GF') === 'EF',
+    'level_ff' => ($ownedpackage['subject_category'] ?? 'GF') === 'FF',
     'preview_checked' => $ownedpackage ? !empty($ownedpackage['preview_enabled']) : true,
     'is_private' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') === 'private') : false,
     'is_public' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') !== 'private') : true,
