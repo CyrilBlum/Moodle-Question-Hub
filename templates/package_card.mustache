@@ -3,17 +3,21 @@
         <div class="card-body d-flex flex-column">
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <span class="badge badge-primary bg-primary text-white">{{subject_badge}}</span>
-                {{#is_private}}<span class="badge badge-warning bg-warning text-dark">{{#str}} private_package_badge, qbank_questionhub {{/str}}</span>{{/is_private}}
+                {{#is_private}}<span class="badge badge-warning bg-warning text-dark">{{#str}} private_package_badge, qbank_questionhub {{/str}}</span>
+                    {{#can_access}}<span class="badge badge-secondary bg-secondary text-white">{{latest_version}}</span>{{/can_access}}
+                {{/is_private}}
                 {{^is_private}}<span class="badge badge-secondary bg-secondary text-white">{{latest_version}}</span>{{/is_private}}
             </div>
             <h5 class="card-title text-truncate" title="{{title}}">{{title}}</h5>
             <p class="card-text text-muted small flex-grow-1" style="max-height: 4.5rem; overflow: hidden;">
-                {{#is_private}}{{#str}} private_package_summary, qbank_questionhub {{/str}}{{/is_private}}
+                {{#is_private}}{{#can_access}}{{summary}}{{/can_access}}{{^can_access}}{{#str}} private_package_summary, qbank_questionhub {{/str}}{{/can_access}}{{/is_private}}
                 {{^is_private}}{{summary}}{{/is_private}}
             </p>
             <div class="mb-2">
                 {{#canton_badge}}<span class="badge badge-info bg-info text-dark mr-1">{{canton_badge}}</span>{{/canton_badge}}
                 {{#level_badge}}<span class="badge badge-dark bg-dark text-white mr-1">{{level_badge}}</span>{{/level_badge}}
+                {{#is_private}}{{#can_access}}<span class="badge badge-light border text-muted mr-1">{{stats.question_count}} Fragen</span>
+                <span class="badge badge-light border text-muted mr-1">{{license}}</span>{{/can_access}}{{/is_private}}
                 {{^is_private}}<span class="badge badge-light border text-muted mr-1">{{stats.question_count}} Fragen</span>
                 <span class="badge badge-light border text-muted mr-1">{{license}}</span>{{/is_private}}
                 {{#preview_enabled}}<span class="badge badge-info bg-info text-dark">Vorschau</span>{{/preview_enabled}}
@@ -31,10 +35,10 @@
                 {{/preview_enabled}}
                 {{^preview_enabled}}<span></span>{{/preview_enabled}}
                 {{#is_private}}{{^can_access}}<a class="btn btn-sm btn-outline-primary" href="{{request_access_url}}" target="_blank" rel="noopener">{{#str}} request_access, qbank_questionhub {{/str}}</a>{{/can_access}}{{/is_private}}
-                {{^is_private}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
+                {{^is_private}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}">
                     <i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren
                 </button>{{/is_private}}
-                {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren</button>{{/can_access}}{{/is_private}}
+                {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren</button>{{/can_access}}{{/is_private}}
             </div>
         </div>
     </div>

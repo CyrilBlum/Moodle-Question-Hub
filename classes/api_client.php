@@ -252,8 +252,7 @@ class api_client {
         }
         $curl = $this->get_curl();
         $curl->setHeader($this->get_headers(true));
-        $curl->setopt(['CURLOPT_CUSTOMREQUEST' => 'PATCH']);
-        $response = $curl->post($this->baseurl . '/api/v1/packages/' . rawurlencode($id), json_encode($patch));
+        $response = $curl->patch($this->baseurl . '/api/v1/packages/' . rawurlencode($id), json_encode($patch));
         $httpcode = (int)($curl->get_info()['http_code'] ?? 0);
         if ($curl->get_errno() !== 0) {
             throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);

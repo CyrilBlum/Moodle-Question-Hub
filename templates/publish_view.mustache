@@ -2,14 +2,30 @@
     <div class="card shadow-sm border-light p-4">
         <h4 class="card-title mb-4">
             <i class="fa fa-cloud-upload text-primary mr-2" aria-hidden="true"></i>
-            {{#str}} publish_title, qbank_questionhub {{/str}}
+            {{#is_update}}{{#str}} update_package_heading, qbank_questionhub {{/str}}{{/is_update}}
+            {{^is_update}}{{#str}} publish_title, qbank_questionhub {{/str}}{{/is_update}}
         </h4>
 
         <form method="post" action="{{action_url}}">
             <input type="hidden" name="sesskey" value="{{sesskey}}">
             <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
             {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
             {{#questionid}}<input type="hidden" name="questionid" value="{{questionid}}">{{/questionid}}
+            {{#is_update}}
+            <input type="hidden" name="updatepackageid" value="{{update_package_id}}">
+            <div class="alert alert-info d-flex align-items-center mb-4">
+                <i class="fa fa-info-circle fa-2x mr-3 text-info" aria-hidden="true"></i>
+                <div>
+                    <div><strong>{{default_title}}</strong> ({{update_package_id}} &middot; bisherige Version: v{{owned_version}})</div>
+                    {{#has_changes_count}}
+                    <div class="small mt-1 text-muted">
+                        {{#str}} changes_count, qbank_questionhub, {{changes_count}} {{/str}} {{#str}} changes_since_last_pub, qbank_questionhub, {{changes_count}} {{/str}}.
+                    </div>
+                    {{/has_changes_count}}
+                </div>
+            </div>
+            {{/is_update}}
 
             <!-- Source Category Selection -->
             <div class="form-group mb-3">
@@ -24,7 +40,7 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="package_id" class="font-weight-bold">{{#str}} package_id, qbank_questionhub {{/str}}:</label>
-                    <input type="text" id="package_id" name="package_id" class="form-control" value="{{default_package_id}}" required>
+                    <input type="text" id="package_id" name="package_id" class="form-control font-mono" value="{{default_package_id}}" required {{#is_update}}readonly{{/is_update}}>
                     <small class="form-text text-muted">Eindeutige ID im Format ch.gym.[fach].[thema] (z.B. ch.gym.inf.datenstrukturen)</small>
                 </div>
 
@@ -37,8 +53,8 @@
             <div class="form-group mb-3">
                 <label for="package_visibility" class="font-weight-bold">{{#str}} package_visibility_label, qbank_questionhub {{/str}}:</label>
                 <select id="package_visibility" name="package_visibility" class="custom-select form-control">
-                    <option value="public" selected>{{#str}} package_visibility_public, qbank_questionhub {{/str}}</option>
-                    <option value="private">{{#str}} package_visibility_private, qbank_questionhub {{/str}}</option>
+                    <option value="public" {{#is_public}}selected{{/is_public}}>{{#str}} package_visibility_public, qbank_questionhub {{/str}}</option>
+                    <option value="private" {{#is_private}}selected{{/is_private}}>{{#str}} package_visibility_private, qbank_questionhub {{/str}}</option>
                 </select>
             </div>
 
@@ -60,10 +76,10 @@
                 <div class="col-md-3 mb-3">
                     <label for="package_level" class="font-weight-bold">{{#str}} package_level_label, qbank_questionhub {{/str}}:</label>
                     <select id="package_level" name="package_level" class="custom-select form-control" required>
-                        <option value="GF">GF (Grundlagenfach)</option>
-                        <option value="SF" selected>SF (Schwerpunktfach)</option>
-                        <option value="EF">EF (Ergänzungsfach)</option>
-                        <option value="FF">FF (Freifach)</option>
+                        <option value="GF" {{#level_gf}}selected{{/level_gf}}>GF (Grundlagenfach)</option>
+                        <option value="SF" {{#level_sf}}selected{{/level_sf}}>SF (Schwerpunktfach)</option>
+                        <option value="EF" {{#level_ef}}selected{{/level_ef}}>EF (Ergänzungsfach)</option>
+                        <option value="FF" {{#level_ff}}selected{{/level_ff}}>FF (Freifach)</option>
                     </select>
                 </div>
 
@@ -90,7 +106,8 @@
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="package_version" class="font-weight-bold">{{#str}} package_version_label, qbank_questionhub {{/str}}:</label>
-                    <input type="text" id="package_version" name="package_version" class="form-control" value="1.0.0" pattern="^\d+\.\d+\.\d+$" required>
+                    <input type="text" id="package_version" name="package_version" class="form-control" value="{{default_version}}" pattern="^\d+\.\d+\.\d+$" required>
+                    {{#is_update}}<small class="form-text text-muted">Muss höher sein als bisherige Version v{{owned_version}}.</small>{{/is_update}}
                 </div>
 
                 <div class="col-md-6 mb-3">
@@ -104,7 +121,7 @@
             </div>
 
             <div class="form-check mb-3">
-                <input type="checkbox" class="form-check-input" id="package_preview" name="package_preview" value="1" checked>
+                <input type="checkbox" class="form-check-input" id="package_preview" name="package_preview" value="1" {{#preview_checked}}checked{{/preview_checked}}>
                 <label class="form-check-label font-weight-bold" for="package_preview">{{#str}} package_preview_label, qbank_questionhub {{/str}}</label>
                 <div class="text-muted small">{{#str}} package_preview_help, qbank_questionhub {{/str}}</div>
             </div>
@@ -120,7 +137,9 @@
                         <i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} download_xml_button, qbank_questionhub {{/str}}
                     </button>
                     <button type="submit" name="action" value="publish_hub" class="btn btn-primary mb-2 mb-md-0">
-                        <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} publish_button, qbank_questionhub {{/str}}
+                        <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>
+                        {{#is_update}}{{#str}} publish_update_button, qbank_questionhub {{/str}}{{/is_update}}
+                        {{^is_update}}{{#str}} publish_button, qbank_questionhub {{/str}}{{/is_update}}
                     </button>
                 </div>
             </div>

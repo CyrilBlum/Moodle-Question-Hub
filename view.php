@@ -32,6 +32,13 @@ require_login();
 // In Moodle 5.0, question_edit_setup() unconditionally requires cmid.
 // When navigating with courseid only (e.g. from tertiary menu or direct link),
 // resolve the default mod_qbank cmid for that course.
+if (!empty($_GET['cmid']) && !empty($_GET['courseid'])) {
+    $cmcheck = $DB->get_record('course_modules', ['id' => (int)$_GET['cmid']], 'id,course');
+    if ($cmcheck && (int)$cmcheck->course !== (int)$_GET['courseid']) {
+        unset($_GET['cmid']);
+    }
+}
+
 if (empty($_GET['cmid']) && empty($_POST['cmid'])) {
     $courseid = optional_param('courseid', 0, PARAM_INT);
     if ($courseid <= 0 && !empty($COURSE->id)) {
@@ -54,12 +61,19 @@ list($thispageurl, $contexts, $cmid, $cm, $module, $pagevars) =
 
 $coursecontext = $contexts->lowest();
 require_capability('qbank/questionhub:view', $coursecontext);
+$bankcontextid = optional_param('bankcontextid', 0, PARAM_INT);
+$bankcontexts = \qbank_questionhub\question_bank_context::available($COURSE);
+$bankcontext = \qbank_questionhub\question_bank_context::resolve($COURSE, $bankcontextid);
+$thispageurl->param('bankcontextid', $bankcontext->id);
 
 $PAGE->set_url($thispageurl);
 $PAGE->set_title(get_string('pluginname', 'qbank_questionhub'));
 $PAGE->set_heading($COURSE->fullname);
 
 // Handle POST actions (Save PAT, Import Package)
+$importpreview = null;
+$duplicatepreview = [];
+$duplicatecategoryid = 0;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_sesskey();
     $action = optional_param('action', '', PARAM_ALPHAEXT);
@@ -84,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'title' => required_param('title', PARAM_TEXT),
                 'summary' => required_param('summary', PARAM_TEXT),
                 'license' => required_param('license', PARAM_TEXT),
+                'subject_category' => required_param('subject_category', PARAM_ALPHA),
                 'grades' => array_values(array_intersect(['GYM1', 'GYM2', 'GYM3', 'GYM4'], $grades)),
                 'tags' => $tags,
                 'preview_enabled' => (bool)optional_param('preview_enabled', 0, PARAM_BOOL),
@@ -109,12 +124,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         redirect($thispageurl);
     } else if ($action === 'import_package') {
-        require_capability('qbank/questionhub:import', $coursecontext);
+        require_capability('qbank/questionhub:import', $bankcontext);
         $packageid = required_param('packageid', PARAM_RAW_TRIMMED);
         $version = required_param('version', PARAM_RAW_TRIMMED);
         $title = optional_param('title', 'Imported Package', PARAM_TEXT);
         $targetcatid = optional_param('targetcategoryid', 0, PARAM_INT);
-        $preservehierarchy = (bool)optional_param('preservehierarchy', 1, PARAM_BOOL);
+        $categorymode = optional_param('categorymode', 'keep', PARAM_ALPHA);
+        $updatechanged = (bool)optional_param('updatechanged', 0, PARAM_BOOL);
+        $dryrun = (bool)optional_param('dryrun', 0, PARAM_BOOL);
+        if (!in_array($categorymode, ['keep', 'rename'], true)) {
+            $categorymode = 'keep';
+        }
 
         try {
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
@@ -122,25 +142,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $importer = new \qbank_questionhub\package_importer(
                 (int)$COURSE->id,
-                $targetcatid > 0 ? $targetcatid : null
+                $targetcatid > 0 ? $targetcatid : null,
+                (int)$bankcontext->id
             );
 
-            $result = $importer->import_package(
-                $xmlcontent,
-                $preservehierarchy,
-                ['id' => $packageid, 'version' => $version, 'title' => $title]
-            );
-
-            \core\notification::success(get_string('import_success', 'qbank_questionhub', $result->questioncount));
+            $metadata = ['id' => $packageid, 'version' => $version, 'title' => $title];
+            if ($dryrun) {
+                $items = $importer->preview_package($xmlcontent, $metadata, $categorymode);
+                if (!$updatechanged) {
+                    foreach ($items as &$item) {
+                        $item['status'] = 'new';
+                    }
+                    unset($item);
+                }
+                $importpreview = [
+                    'title' => $title, 'packageid' => $packageid, 'version' => $version,
+                    'targetcategoryid' => $targetcatid, 'categorymode' => $categorymode,
+                    'updatechanged' => $updatechanged,
+                    'new' => array_values(array_filter($items, static function($item) {
+                        return $item['status'] === 'new';
+                    })),
+                    'update' => array_values(array_filter($items, static function($item) {
+                        return $item['status'] === 'update';
+                    })),
+                    'unchanged' => array_values(array_filter($items, static function($item) {
+                        return $item['status'] === 'unchanged';
+                    })),
+                ];
+                $importpreview['newcount'] = count($importpreview['new']);
+                $importpreview['updatecount'] = count($importpreview['update']);
+                $importpreview['unchangedcount'] = count($importpreview['unchanged']);
+            } else {
+                $result = $importer->import_package($xmlcontent, true, $metadata, $categorymode, $updatechanged);
+                \core\notification::success(get_string('import_result_summary', 'qbank_questionhub', (object)[
+                    'added' => $result->addedcount, 'updated' => $result->updatedcount,
+                    'unchanged' => $result->unchangedcount,
+                ]));
+            }
         } catch (\Exception $e) {
             \core\notification::error($e->getMessage());
         }
-
+        if (!$dryrun) {
+            redirect($thispageurl);
+        }
+    } else if ($action === 'review_duplicates') {
+        require_capability('qbank/questionhub:import', $bankcontext);
+        $duplicatecategoryid = optional_param('duplicatecategoryid', 0, PARAM_INT);
+        $duplicatepreview = \qbank_questionhub\duplicate_manager::find_removable($bankcontext, $duplicatecategoryid);
+    } else if ($action === 'delete_duplicates') {
+        require_capability('qbank/questionhub:import', $bankcontext);
+        $duplicatecategoryid = optional_param('duplicatecategoryid', 0, PARAM_INT);
+        $deleted = \qbank_questionhub\duplicate_manager::delete_removable($bankcontext, $duplicatecategoryid);
+        \core\notification::success(get_string('duplicates_deleted', 'qbank_questionhub', $deleted));
         redirect($thispageurl);
     }
 }
 
 // Prepare filter parameters
+$section = optional_param('section', 'browse', PARAM_ALPHANUMEXT);
+if (!in_array($section, ['browse', 'library', 'my_packages'], true)) {
+    $section = 'browse';
+}
+$showbrowse = ($section === 'browse');
+$showlibrary = ($section === 'library');
+$showmypackages = ($section === 'my_packages');
+$duplicategroups = \qbank_questionhub\duplicate_manager::find_removable($bankcontext);
+$duplicatecount = array_sum(array_map(static fn($group) => count($group['remove']), $duplicategroups));
+
 $query = optional_param('q', '', PARAM_TEXT);
 $subject = optional_param('subject', '', PARAM_TEXT);
 $level = optional_param('level', '', PARAM_ALPHA);
@@ -173,7 +241,9 @@ $taxonomy = [];
 $packageresult = ['packages' => [], 'pagination' => ['page' => 1, 'limit' => 12, 'total' => 0, 'total_pages' => 1]];
 
 try {
-    $taxonomy = $client->get_taxonomy();
+    if ($showbrowse) {
+        $taxonomy = $client->get_taxonomy();
+    }
 } catch (\Exception $e) {
     // Fallback default taxonomy if offline
     $taxonomy = [
@@ -197,10 +267,12 @@ try {
     ];
 }
 
-try {
-    $packageresult = $client->get_packages($filters);
-} catch (\Exception $e) {
-    \core\notification::warning(get_string('error_network', 'qbank_questionhub', $e->getMessage()));
+if ($showbrowse) {
+    try {
+        $packageresult = $client->get_packages($filters);
+    } catch (\Exception $e) {
+        \core\notification::warning(get_string('error_network', 'qbank_questionhub', $e->getMessage()));
+    }
 }
 
 // Format subjects for filter dropdown
@@ -256,6 +328,24 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
         'preview_enabled' => ($pkg['visibility'] ?? 'public') !== 'private' && !empty($pkg['preview_enabled']),
         'is_private' => ($pkg['visibility'] ?? 'public') === 'private',
         'can_access' => !empty($pkg['can_access']),
+        'package_root' => (function(array $paths): string {
+            $roots = [];
+            foreach ($paths as $path) {
+                $segments = array_values(array_filter(explode('/', trim((string)$path, '/')), static function($segment) {
+                    return $segment !== '';
+                }));
+                if (!empty($segments) && preg_match('/^\$[a-z]+\$$/i', $segments[0])) {
+                    array_shift($segments);
+                }
+                if (!empty($segments) && $segments[0] === 'top') {
+                    array_shift($segments);
+                }
+                if (!empty($segments)) {
+                    $roots[$segments[0]] = true;
+                }
+            }
+            return count($roots) === 1 ? (string)array_key_first($roots) : '';
+        })($pkg['categories'] ?? []),
         'request_access_url' => rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/')
                 . '/packages/' . rawurlencode($pkg['id']),
     ];
@@ -265,37 +355,124 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
 $userrecord = \qbank_questionhub\auth_manager::get_user_token_record((int)$USER->id);
 $hasaccount = !empty($userrecord) && !empty($userrecord->access_token);
 $accountname = $hasaccount ? ($userrecord->hub_name ?: ($userrecord->hub_email ?: 'Verbunden')) : '';
+$huburl = rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/');
+
+// Course categories in this question bank context.
+$categories = $DB->get_records('question_categories', ['contextid' => $bankcontext->id], 'sortorder, name');
 
 // Packages the linked account has published (for withdrawal) and categories to publish.
 $mypackages = [];
+$mypackagesbyid = [];
 if ($hasaccount) {
     try {
-        foreach ($client->get_my_packages() as $mp) {
+        $mypackagesraw = $client->get_my_packages();
+        foreach ($mypackagesraw as $mp) {
+            $mypackagesbyid[$mp['id']] = $mp;
             $versions = [];
             foreach ($mp['versions'] ?? [] as $v) {
                 $versions[] = ['version' => $v, 'can_withdraw' => count($mp['versions']) > 1];
             }
-            $mypackages[] = [
-                'id' => $mp['id'],
-                'domid' => md5($mp['id']),
-                'title' => html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-                'latest_version' => $mp['latest_version'],
-                'downloads' => (int)($mp['downloads_count'] ?? 0),
-                'preview_on' => !empty($mp['preview_enabled']),
-                'is_private' => ($mp['visibility'] ?? 'public') === 'private',
-                'is_public' => ($mp['visibility'] ?? 'public') !== 'private',
-                'visibility' => $mp['visibility'] ?? 'public',
-                'summary' => $mp['summary'] ?? '',
-                'tags' => implode(', ', $mp['tags'] ?? []),
-                'lic_by' => ($mp['license'] ?? '') === 'CC-BY-4.0',
-                'lic_bysa' => ($mp['license'] ?? '') === 'CC-BY-SA-4.0',
-                'lic_cc0' => ($mp['license'] ?? '') === 'CC0-1.0',
-                'g1' => in_array('GYM1', $mp['grades'] ?? [], true),
-                'g2' => in_array('GYM2', $mp['grades'] ?? [], true),
-                'g3' => in_array('GYM3', $mp['grades'] ?? [], true),
-                'g4' => in_array('GYM4', $mp['grades'] ?? [], true),
-                'versions' => $versions,
-            ];
+
+            // Find local publication history for this package to calculate changes and offer update.
+            $history = \qbank_questionhub\publication_tracker::latest_active_publication_by_package($mp['id'], (int)$COURSE->id);
+            if (!$history) {
+                $history = \qbank_questionhub\publication_tracker::latest_active_publication_by_package($mp['id'], 0);
+            }
+            $hascategory = false;
+            $changescount = 0;
+            $haschanges = false;
+            $changesknown = false;
+            $updateurl = '';
+
+            $catid = $history ? (int)$history->categoryid : 0;
+            if ($catid === 0) {
+                // Try matching course category by title or slug in current course.
+                $cleantitle = preg_replace('/[^a-z0-9]/', '', mb_strtolower(html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                foreach ($categories as $catcandidate) {
+                    if ((int)$catcandidate->parent === 0 && $catcandidate->name === 'top') {
+                        continue;
+                    }
+                    $cname = preg_replace('/[^a-z0-9]/', '', mb_strtolower($catcandidate->name));
+                    if ($cname !== '' && ($cname === $cleantitle || str_ends_with($mp['id'], $cname))) {
+                        $catid = (int)$catcandidate->id;
+                        break;
+                    }
+                }
+            }
+
+            if ($catid > 0) {
+                $category = $DB->get_record('question_categories', ['id' => $catid]);
+                if ($category) {
+                    $hascategory = true;
+                    if ($history) {
+                        $changes = \qbank_questionhub\publication_tracker::changes($catid, $history);
+                        if ($changes !== null) {
+                            $changescount = $changes['count'];
+                            $haschanges = ($changescount > 0);
+                            $changesknown = true;
+                        } else {
+                            $changesknown = false;
+                            $haschanges = true;
+                        }
+                    } else {
+                        $changesknown = false;
+                        $haschanges = true;
+                    }
+                    $targetcourseid = ($history && (int)$history->courseid > 0) ? (int)$history->courseid : (int)$COURSE->id;
+                    $updateparams = [
+                        'courseid' => $targetcourseid,
+                        'categoryid' => $catid,
+                        'updatepackageid' => $mp['id'],
+                    ];
+                    if (!empty($cmid) && $targetcourseid === (int)$COURSE->id) {
+                        $updateparams['cmid'] = $cmid;
+                    }
+                    $updateurl = (new moodle_url('/question/bank/questionhub/publish.php', $updateparams))->out(false);
+                }
+            }
+            if (!$updateurl) {
+                $updateparams = [
+                    'courseid' => (int)$COURSE->id,
+                    'updatepackageid' => $mp['id'],
+                ];
+                if (!empty($cmid)) {
+                    $updateparams['cmid'] = $cmid;
+                }
+                $updateurl = (new moodle_url('/question/bank/questionhub/publish.php', $updateparams))->out(false);
+            }
+
+            if ($showmypackages) {
+                $mypackages[] = [
+                    'id' => $mp['id'],
+                    'domid' => md5($mp['id']),
+                    'title' => html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                    'latest_version' => $mp['latest_version'],
+                    'downloads' => (int)($mp['downloads_count'] ?? 0),
+                    'preview_on' => !empty($mp['preview_enabled']),
+                    'is_private' => ($mp['visibility'] ?? 'public') === 'private',
+                    'is_public' => ($mp['visibility'] ?? 'public') !== 'private',
+                    'visibility' => $mp['visibility'] ?? 'public',
+                    'summary' => $mp['summary'] ?? '',
+                    'tags' => implode(', ', $mp['tags'] ?? []),
+                    'lic_by' => ($mp['license'] ?? '') === 'CC-BY-4.0',
+                    'lic_bysa' => ($mp['license'] ?? '') === 'CC-BY-SA-4.0',
+                    'lic_cc0' => ($mp['license'] ?? '') === 'CC0-1.0',
+                    'g1' => in_array('GYM1', $mp['grades'] ?? [], true),
+                    'g2' => in_array('GYM2', $mp['grades'] ?? [], true),
+                    'g3' => in_array('GYM3', $mp['grades'] ?? [], true),
+                    'g4' => in_array('GYM4', $mp['grades'] ?? [], true),
+                    'level_gf' => ($mp['subject_category'] ?? '') === 'GF',
+                    'level_sf' => ($mp['subject_category'] ?? '') === 'SF',
+                    'level_ef' => ($mp['subject_category'] ?? '') === 'EF',
+                    'level_ff' => ($mp['subject_category'] ?? '') === 'FF',
+                    'versions' => $versions,
+                    'has_category' => $hascategory,
+                    'has_changes' => $haschanges,
+                    'changes_known' => $changesknown,
+                    'changes_count' => $changescount,
+                    'update_url' => $updateurl,
+                ];
+            }
         }
     } catch (\Exception $e) {
         // The list is a convenience; the page works without it.
@@ -303,15 +480,62 @@ if ($hasaccount) {
     }
 }
 
+// Imported packages in this course form the current user's local library.
+$library = [];
+if ($showlibrary) {
+    $imports = $DB->get_records_select(
+        'qbank_questionhub_history',
+        'userid = :userid AND courseid = :courseid AND action = :action AND ' .
+            $DB->sql_isnotempty('qbank_questionhub_history', 'package_id', false, true),
+        ['userid' => (int)$USER->id, 'courseid' => (int)$COURSE->id, 'action' => 'import'],
+        'timecreated DESC, id DESC',
+        '*',
+        0,
+        100
+    );
+    foreach ($imports as $import) {
+        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', (string)$import->package_id)) {
+            continue;
+        }
+        $category = $DB->get_record('question_categories', ['id' => $import->categoryid], 'name');
+        $library[] = [
+            'title' => $import->package_title,
+            'package_id' => $import->package_id,
+            'version' => $import->package_version,
+            'question_count' => (int)$import->question_count,
+            'category_name' => $category ? $category->name : get_string('category_missing', 'qbank_questionhub'),
+            'imported_at' => userdate($import->timecreated, get_string('strftimedatetime', 'langconfig')),
+            'hub_package_url' => $huburl . '/packages/' . rawurlencode($import->package_id),
+        ];
+    }
+}
+
 // Course categories as a tree (import target dropdown and "publish a whole category" list).
-$categories = $DB->get_records('question_categories', ['contextid' => $coursecontext->id], 'sortorder, name');
+$categories = $DB->get_records('question_categories', ['contextid' => $bankcontext->id], 'sortorder, name');
+$rootcategory = null;
+foreach ($categories as $category) {
+    if ((int)$category->parent === 0 && $category->name === 'top') {
+        $rootcategory = $category;
+        break;
+    }
+}
 $children = [];
 foreach ($categories as $cat) {
     $children[(int)$cat->parent][] = $cat;
 }
 $owncounts = [];
 foreach ($categories as $cat) {
-    $owncounts[(int)$cat->id] = $DB->count_records('question_bank_entries', ['questioncategoryid' => $cat->id]);
+    $owncounts[(int)$cat->id] = (int)$DB->get_field_sql(
+        'SELECT COUNT(1)
+           FROM {question_bank_entries} qbe
+           JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
+           JOIN (SELECT questionbankentryid, MAX(version) AS maxversion
+                   FROM {question_versions} GROUP BY questionbankentryid) latest
+             ON latest.questionbankentryid = qv.questionbankentryid AND latest.maxversion = qv.version
+           JOIN {question} q ON q.id = qv.questionid
+          WHERE qbe.questioncategoryid = :categoryid AND q.parent = 0',
+        ['categoryid' => $cat->id]
+    );
 }
 $totalcount = function (int $id) use (&$totalcount, $children, $owncounts): int {
     $sum = $owncounts[$id] ?? 0;
@@ -320,30 +544,125 @@ $totalcount = function (int $id) use (&$totalcount, $children, $owncounts): int 
     }
     return $sum;
 };
+$duplicatecandidatesbycategory = [];
+foreach ($duplicategroups as $duplicategroup) {
+    foreach ($duplicategroup['remove'] as $duplicate) {
+        $categoryid = (int)$duplicate->categoryid;
+        $duplicatecandidatesbycategory[$categoryid] = ($duplicatecandidatesbycategory[$categoryid] ?? 0) + 1;
+    }
+}
+$duplicatecountforcategory = function (int $id) use (&$duplicatecountforcategory, $children, $duplicatecandidatesbycategory): int {
+    $count = $duplicatecandidatesbycategory[$id] ?? 0;
+    foreach ($children[$id] ?? [] as $child) {
+        $count += $duplicatecountforcategory((int)$child->id);
+    }
+    return $count;
+};
 
 $coursecategories = [];
 $publishcategories = [];
-$walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, &$coursecategories,
-        &$publishcategories, $COURSE, $cmid) {
+$walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
+        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
-        $name = format_string($cat->name);
+        $name = $cat->name;
         $level = $istop ? 0 : max(1, $depth);
         if (!$istop) {
             $isfirst = empty($coursecategories);
             $coursecategories[] = [
                 'id' => $cat->id,
                 'name' => str_repeat("\u{00A0}\u{00A0}\u{00A0}", max(0, $level - 1)) . ($level > 1 ? "\u{2514} " : '') . $name,
+                'display_name' => str_repeat("\u{00A0}\u{00A0}\u{00A0}", max(0, $level - 1)) . ($level > 1 ? "\u{2514} " : '') . $name . ' (' . get_string('questions_count', 'qbank_questionhub', $owncounts[(int)$cat->id] ?? 0) . ')',
+                'question_count' => $owncounts[(int)$cat->id] ?? 0,
+                'is_root' => false,
+                'can_rename' => ($owncounts[(int)$cat->id] ?? 0) === 0 && empty($children[(int)$cat->id]),
                 'selected' => $isfirst,
             ];
-            $publishparams = ['courseid' => $COURSE->id, 'categoryid' => $cat->id];
+            $publishparams = ['courseid' => $COURSE->id, 'categoryid' => $cat->id,
+                'bankcontextid' => $bankcontext->id];
+            // Core requires both category and context IDs, plus the question-bank activity ID.
+            $questionbankparams = ['cmid' => $cmid, 'cat' => $cat->id . ',' . $bankcontext->id];
             if (!empty($cmid)) {
                 $publishparams['cmid'] = $cmid;
             }
             $own = $owncounts[(int)$cat->id] ?? 0;
             $total = $totalcount((int)$cat->id);
+            $categoryduplicatecount = $duplicatecountforcategory((int)$cat->id);
+
+            $latestpub = \qbank_questionhub\publication_tracker::find_local_publication_for_category((int)$cat->id, (int)$COURSE->id);
+            $matchedpackage = null;
+            if ($latestpub && !empty($latestpub->package_id)) {
+                $matchedpackage = $mypackagesbyid[$latestpub->package_id] ?? null;
+            }
+            if (!$matchedpackage) {
+                // Try matching by category name or slug to an owned package in My Packages.
+                $cleanname = preg_replace('/[^a-z0-9]/', '', mb_strtolower($name));
+                foreach ($mypackagesbyid as $mp) {
+                    $mptitle = trim(mb_strtolower(html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                    $cleantitle = preg_replace('/[^a-z0-9]/', '', $mptitle);
+                    if ($cleanname !== '' && ($cleanname === $cleantitle || str_ends_with($mp['id'], $cleanname) || $mptitle === trim(mb_strtolower($name)))) {
+                        $matchedpackage = $mp;
+                        break;
+                    }
+                }
+            }
+
+            $ispublished = ($latestpub !== null) || ($matchedpackage !== null);
+            $ispackagesource = $latestpub && (int)$latestpub->categoryid === (int)$cat->id;
+            $changescount = 0;
+            $haschanges = false;
+            $changesknown = false;
+            $updateurl = '';
+            $pkgid = '';
+            $pkgversion = '';
+            $pkgdetails = null;
+
+            if ($ispublished) {
+                $pkgid = $latestpub ? $latestpub->package_id : $matchedpackage['id'];
+                $pkgversion = $latestpub ? $latestpub->package_version : $matchedpackage['latest_version'];
+                $mp = $matchedpackage ?: ($mypackagesbyid[$pkgid] ?? null);
+
+                if ($ispackagesource) {
+                    $changes = \qbank_questionhub\publication_tracker::changes((int)$cat->id, $latestpub);
+                    if ($changes !== null) {
+                        $changescount = $changes['count'];
+                        $haschanges = ($changescount > 0);
+                        $changesknown = true;
+                    } else {
+                        $changesknown = false;
+                        $haschanges = true;
+                    }
+                    $updateparams = array_merge($publishparams, ['updatepackageid' => $pkgid]);
+                    $updateurl = (new moodle_url('/question/bank/questionhub/publish.php', $updateparams))->out(false);
+
+                    $pkgdetails = [
+                    'packageid' => $pkgid,
+                    'domid' => md5($pkgid . '_' . $cat->id),
+                    'title' => $mp ? html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : ($latestpub->package_title ?: $name),
+                    'summary' => $mp['summary'] ?? '',
+                    'tags' => implode(', ', $mp['tags'] ?? []),
+                    'is_private' => ($mp['visibility'] ?? 'public') === 'private',
+                    'is_public' => ($mp['visibility'] ?? 'public') !== 'private',
+                    'lic_by' => ($mp['license'] ?? 'CC-BY-4.0') === 'CC-BY-4.0',
+                    'lic_bysa' => ($mp['license'] ?? '') === 'CC-BY-SA-4.0',
+                    'lic_cc0' => ($mp['license'] ?? '') === 'CC0-1.0',
+                    'preview_on' => !empty($mp['preview_enabled']),
+                    'g1' => in_array('GYM1', $mp['grades'] ?? [], true),
+                    'g2' => in_array('GYM2', $mp['grades'] ?? ['GYM2', 'GYM3'], true),
+                    'g3' => in_array('GYM3', $mp['grades'] ?? ['GYM2', 'GYM3'], true),
+                    'g4' => in_array('GYM4', $mp['grades'] ?? [], true),
+                    'level_gf' => ($mp['subject_category'] ?? '') === 'GF',
+                    'level_sf' => ($mp['subject_category'] ?? '') === 'SF',
+                    'level_ef' => ($mp['subject_category'] ?? '') === 'EF',
+                    'level_ff' => ($mp['subject_category'] ?? '') === 'FF',
+                    ];
+                }
+            }
+
             $publishcategories[] = [
+                'id' => $cat->id,
                 'name' => $name,
+                'question_bank_url' => (new moodle_url('/question/edit.php', $questionbankparams))->out(false),
                 'url' => (new moodle_url('/question/bank/questionhub/publish.php', $publishparams))->out(false),
                 'indent' => max(0, $level - 1) * 1.5,
                 'is_child' => $level > 1,
@@ -351,26 +670,53 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'own' => $own,
                 'total' => $total,
                 'has_sub_total' => $total !== $own,
+                'has_duplicates' => $categoryduplicatecount > 0,
+                'duplicate_count' => $categoryduplicatecount,
+                'is_published' => $ispublished,
+                'is_package_source' => $ispackagesource,
+                'package_id' => $pkgid,
+                'package_version' => $pkgversion,
+                'changes_count' => $changescount,
+                'has_changes' => $haschanges,
+                'changes_known' => $changesknown,
+                'update_url' => $updateurl,
+                'pkg_settings' => $pkgdetails,
             ];
         }
         $walk((int)$cat->id, $istop ? 1 : $depth + 1);
     }
 };
 $walk(0, 0);
+if ($rootcategory) {
+    array_unshift($coursecategories, [
+        'id' => $rootcategory->id,
+        'name' => get_string('questionbankroot', 'qbank_questionhub'),
+        'display_name' => get_string('questionbankroot', 'qbank_questionhub') . ' (' . get_string('questions_count', 'qbank_questionhub', $owncounts[(int)$rootcategory->id] ?? 0) . ')',
+        'question_count' => $owncounts[(int)$rootcategory->id] ?? 0,
+        'is_root' => true,
+        'can_rename' => false,
+        'selected' => false,
+    ]);
+}
 
 // Build URLs
 $reseturl = new moodle_url('/question/bank/questionhub/view.php', ['courseid' => $COURSE->id]);
+$reseturl->param('bankcontextid', $bankcontext->id);
 if (!empty($cmid)) {
     $reseturl->param('cmid', $cmid);
 }
+$browseurl = clone $reseturl;
+$browseurl->param('section', 'browse');
+$libraryurl = clone $reseturl;
+$libraryurl->param('section', 'library');
+$mypackagesurl = clone $reseturl;
+$mypackagesurl->param('section', 'my_packages');
 
 $connecturl = \qbank_questionhub\auth_manager::init_oauth_flow($thispageurl->out(false));
 $disconnecturl = new moodle_url('/question/bank/questionhub/disconnect.php', [
     'sesskey' => sesskey(),
     'returnurl' => $thispageurl->out_as_local_url(false),
 ]);
-
-$huburl = rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/');
 
 // Pagination URLs
 $pagination = $packageresult['pagination'] ?? ['page' => 1, 'total_pages' => 1];
@@ -380,6 +726,24 @@ $nexturl = clone $thispageurl;
 $nexturl->param('page', min($pagination['total_pages'] ?? 1, $page + 1));
 
 $templatedata = [
+    'bank_contexts' => array_values(array_map(static function($context) use ($COURSE, $cmid, $bankcontext) {
+        $url = new moodle_url('/question/bank/questionhub/view.php', [
+            'courseid' => $COURSE->id, 'bankcontextid' => $context->id,
+            'section' => optional_param('section', 'browse', PARAM_ALPHANUMEXT),
+        ]);
+        if ($cmid) {
+            $url->param('cmid', $cmid);
+        }
+        return [
+            'name' => get_string($context->contextlevel === CONTEXT_COURSECAT ?
+                'question_bank_course_category' : 'question_bank_course',
+                'qbank_questionhub', $context->get_context_name(false)),
+            'url' => $url->out(false),
+            'selected' => (int)$context->id === (int)$bankcontext->id,
+        ];
+    }, $bankcontexts)),
+    'has_multiple_bank_contexts' => count($bankcontexts) > 1,
+    'bankcontextid' => $bankcontext->id,
     'has_account' => $hasaccount,
     'account_name' => $accountname,
     'connect_url' => $connecturl,
@@ -387,6 +751,17 @@ $templatedata = [
     'browser_url' => (new moodle_url('/question/bank/questionhub/view.php'))->out(false),
     'action_url' => $thispageurl->out(false),
     'reset_url' => $reseturl->out(false),
+    'browse_tab_url' => $browseurl->out(false),
+    'library_tab_url' => $libraryurl->out(false),
+    'my_packages_tab_url' => $mypackagesurl->out(false),
+    'section_browse' => $showbrowse,
+    'section_library' => $showlibrary,
+    'section_my_packages' => $showmypackages,
+    'show_browse' => $showbrowse,
+    'show_library' => $showlibrary,
+    'show_my_packages' => $showmypackages,
+    'library' => $library,
+    'has_library' => !empty($library),
     'hub_url' => $huburl,
     'sesskey' => sesskey(),
     'courseid' => $COURSE->id,
@@ -407,6 +782,54 @@ $templatedata = [
     'pagination' => $pagination,
     'has_prev' => ($page > 1),
     'has_next' => ($page < ($pagination['total_pages'] ?? 1)),
+    'import_preview' => $importpreview,
+    'has_duplicates' => $duplicatecount > 0,
+    'duplicate_count' => $duplicatecount,
+    'duplicate_categories' => (function() use ($duplicatepreview, $bankcontext): array {
+        $categories = [];
+        $formatrow = static function($row, bool $keep, string $previewid) use ($bankcontext): array {
+            return [
+                'name' => $row->name,
+                'question_id' => $row->questionid,
+                'entry_id' => $row->entryid,
+                'question_version' => $row->questionversion,
+                'created_at' => userdate($row->timecreated, get_string('strftimedatetime', 'langconfig')),
+                'modified_at' => userdate($row->timemodified, get_string('strftimedatetime', 'langconfig')),
+                'package_id' => $row->packageid ?: '—',
+                'package_version' => $row->packageversion ?: '—',
+                'package_title' => $row->packagetitle ?: '—',
+                'package_action' => $row->packageaction ?: '—',
+                'package_at' => $row->packagetime ? userdate($row->packagetime, get_string('strftimedatetime', 'langconfig')) : '—',
+                'is_keep' => $keep,
+                'is_delete' => !$keep,
+                'preview_id' => $previewid,
+                'preview_html' => format_text($row->questiontext, FORMAT_HTML, ['context' => $bankcontext]),
+            ];
+        };
+        foreach ($duplicatepreview as $groupindex => $group) {
+            $categoryid = (int)$group['keep']->categoryid;
+            if (!isset($categories[$categoryid])) {
+                $categories[$categoryid] = [
+                    'id' => 'qh-duplicate-category-' . $categoryid,
+                    'name' => $group['keep']->categoryname,
+                    'groups' => [],
+                ];
+            }
+            $rows = [$formatrow($group['keep'], true, 'qh-duplicate-preview-' . $groupindex . '-keep')];
+            foreach ($group['remove'] as $rowindex => $row) {
+                $rows[] = $formatrow($row, false, 'qh-duplicate-preview-' . $groupindex . '-' . $rowindex);
+            }
+            $categories[$categoryid]['groups'][] = ['name' => $group['keep']->name, 'rows' => $rows];
+        }
+        $categories = array_values($categories);
+        foreach ($categories as $index => &$category) {
+            $category['expanded'] = $index === 0;
+        }
+        return $categories;
+    })(),
+    'has_duplicate_preview' => !empty($duplicatepreview),
+    'duplicate_preview_count' => array_sum(array_map(static fn($group) => count($group['remove']), $duplicatepreview)),
+    'duplicate_category_id' => $duplicatecategoryid,
     'prev_url' => $prevurl->out(false),
     'next_url' => $nexturl->out(false),
 ];

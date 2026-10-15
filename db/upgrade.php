@@ -35,6 +35,40 @@ function xmldb_qbank_questionhub_upgrade(int $oldversion): bool {
 
     $dbman = $DB->get_manager();
 
-    // Future upgrades will be handled here incrementally.
+    if ($oldversion < 2026101400) {
+        $table = new xmldb_table('qbank_questionhub_items');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $table->add_field('packagehash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        $table->add_field('targetcategoryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_field('sourcekey', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        $table->add_field('questionbankentryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_field('sourcehash', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('source_uniq', XMLDB_INDEX_UNIQUE, ['packagehash', 'targetcategoryid', 'sourcekey']);
+        $table->add_index('entry_ix', XMLDB_INDEX_NOTUNIQUE, ['questionbankentryid']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        upgrade_plugin_savepoint(true, 2026101400, 'qbank', 'questionhub');
+    }
+    if ($oldversion < 2026101401) {
+        $history = new xmldb_table('qbank_questionhub_history');
+        $field = new xmldb_field('snapshotted', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'timecreated');
+        if (!$dbman->field_exists($history, $field)) {
+            $dbman->add_field($history, $field);
+        }
+        $table = new xmldb_table('qbank_questionhub_published');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $table->add_field('historyid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_field('questionbankentryid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_field('questionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('history_entry_uniq', XMLDB_INDEX_UNIQUE, ['historyid', 'questionbankentryid']);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+        upgrade_plugin_savepoint(true, 2026101401, 'qbank', 'questionhub');
+    }
     return true;
 }

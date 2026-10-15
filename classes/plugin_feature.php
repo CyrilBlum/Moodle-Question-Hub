@@ -44,6 +44,24 @@ class plugin_feature extends plugin_features_base {
     }
 
     /**
+     * Question bank columns provided by Question Hub.
+     *
+     * @param view $qbank
+     * @return array|null
+     */
+    public function get_question_columns(view $qbank): ?array {
+        $context = $qbank->get_most_specific_context();
+        if (!has_capability('qbank/questionhub:view', $context) &&
+                !has_capability('moodle/question:viewall', $context) &&
+                !is_siteadmin()) {
+            return [];
+        }
+        return [
+            new question_sync_column($qbank),
+        ];
+    }
+
+    /**
      * Question row action menu items.
      *
      * @param view $qbank

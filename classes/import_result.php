@@ -34,6 +34,15 @@ class import_result {
     /** @var int Total number of imported questions. */
     public int $questioncount;
 
+    /** @var int New questions added. */
+    public int $addedcount = 0;
+
+    /** @var int Existing questions given a new version. */
+    public int $updatedcount = 0;
+
+    /** @var int Unchanged questions skipped. */
+    public int $unchangedcount = 0;
+
     /** @var array Non-blocking warnings encountered. */
     public array $warnings;
 

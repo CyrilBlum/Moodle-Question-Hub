@@ -31,7 +31,9 @@ require_login();
 $courseid = optional_param('courseid', 0, PARAM_INT);
 $cmid = optional_param('cmid', 0, PARAM_INT);
 $categoryid = optional_param('categoryid', 0, PARAM_INT);
+$bankcontextid = optional_param('bankcontextid', 0, PARAM_INT);
 $questionid = optional_param('questionid', 0, PARAM_INT);
+$updatepackageid = optional_param('updatepackageid', '', PARAM_RAW_TRIMMED);
 
 // Resolve course and cmid bidirectionally across Moodle 4.5 and 5.0.
 if ($courseid <= 0 && $cmid > 0) {
@@ -45,6 +47,14 @@ if ($courseid > 0) {
     $course = $COURSE;
 }
 
+// Validate that cmid belongs to this course to prevent coding_exception in $PAGE->set_cm.
+if ($cmid > 0) {
+    $cmrecord = $DB->get_record('course_modules', ['id' => $cmid], 'id,course');
+    if (!$cmrecord || (int)$cmrecord->course !== (int)$course->id) {
+        $cmid = 0;
+    }
+}
+
 if ($cmid <= 0 && class_exists('\core_question\local\bank\question_bank_helper')) {
     $qbank = \core_question\local\bank\question_bank_helper::get_default_open_instance_system_type($course, true);
     if ($qbank) {
@@ -52,10 +62,24 @@ if ($cmid <= 0 && class_exists('\core_question\local\bank\question_bank_helper')
     }
 }
 
-$context = \qbank_questionhub\package_exporter::resolve_course_question_context($course);
+$availablecontexts = \qbank_questionhub\question_bank_context::available($course);
+if ($bankcontextid === 0 && $categoryid === 0 && $questionid > 0) {
+    $categoryid = (int)$DB->get_field_sql(
+        'SELECT qbe.questioncategoryid FROM {question_bank_entries} qbe ' .
+        'JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id WHERE qv.questionid = ?',
+        [$questionid]
+    );
+}
+if ($bankcontextid === 0 && $categoryid > 0) {
+    $sourcecategory = $DB->get_record('question_categories', ['id' => $categoryid], 'id,contextid');
+    if ($sourcecategory && isset($availablecontexts[$sourcecategory->contextid])) {
+        $bankcontextid = (int)$sourcecategory->contextid;
+    }
+}
+$context = \qbank_questionhub\question_bank_context::resolve($course, $bankcontextid);
 require_capability('qbank/questionhub:publish', $context);
 
-$pageparams = ['courseid' => $course->id];
+$pageparams = ['courseid' => $course->id, 'bankcontextid' => $context->id];
 if ($cmid > 0) {
     $pageparams['cmid'] = $cmid;
 }
@@ -65,9 +89,21 @@ if ($categoryid > 0) {
 if ($questionid > 0) {
     $pageparams['questionid'] = $questionid;
 }
+if ($updatepackageid !== '') {
+    $pageparams['updatepackageid'] = $updatepackageid;
+}
 
 $thispageurl = new moodle_url('/question/bank/questionhub/publish.php', $pageparams);
 $PAGE->set_url($thispageurl);
+if ((int)$course->id !== (int)SITEID) {
+    $PAGE->set_course($course);
+}
+if ($cmid > 0) {
+    list($module, $cm) = get_module_from_cmid($cmid);
+    if ((int)$cm->course === (int)$course->id) {
+        $PAGE->set_cm($cm, $course);
+    }
+}
 $PAGE->set_title(get_string('publishtohub', 'qbank_questionhub'));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_context($context);
@@ -88,6 +124,70 @@ if ($questionid > 0) {
 } else if ($categoryid === 0) {
     $defaultcat = question_get_default_category($context->id, true);
     $categoryid = $defaultcat ? (int)$defaultcat->id : 0;
+}
+if ($categoryid > 0) {
+    $selectedcategory = $DB->get_record('question_categories', ['id' => $categoryid], 'id,contextid', MUST_EXIST);
+    if ((int)$selectedcategory->contextid !== (int)$context->id) {
+        throw new moodle_exception('invalidcategory', 'question');
+    }
+}
+
+$ownedpackage = null;
+$changescount = null;
+if ($updatepackageid !== '') {
+    if ($questionid > 0) {
+        throw new moodle_exception('error_update_source', 'qbank_questionhub');
+    }
+    // Verify user owns this package on the Hub.
+    $accountclient = new \qbank_questionhub\api_client(null, null, 30, true);
+    foreach ($accountclient->get_my_packages() as $candidate) {
+        if ($candidate['id'] === $updatepackageid) {
+            $ownedpackage = $candidate;
+            break;
+        }
+    }
+    if (!$ownedpackage) {
+        throw new moodle_exception('error_update_source', 'qbank_questionhub');
+    }
+
+    if ($categoryid === 0) {
+        $hist = \qbank_questionhub\publication_tracker::latest_active_publication_by_package($updatepackageid, (int)$course->id);
+        if ($hist && (int)$hist->categoryid > 0) {
+            $categoryid = (int)$hist->categoryid;
+        } else {
+            // Try matching course category by title or slug.
+            $cleantitle = preg_replace('/[^a-z0-9]/', '', mb_strtolower($ownedpackage['title']));
+            $allcats = $DB->get_records('question_categories', ['contextid' => $context->id]);
+            foreach ($allcats as $c) {
+                if ((int)$c->parent === 0 && $c->name === 'top') {
+                    continue;
+                }
+                $cname = preg_replace('/[^a-z0-9]/', '', mb_strtolower($c->name));
+                if ($cname !== '' && ($cname === $cleantitle || str_ends_with($updatepackageid, $cname))) {
+                    $categoryid = (int)$c->id;
+                    break;
+                }
+            }
+        }
+    }
+
+    $latestpublication = null;
+    if ($categoryid > 0) {
+        $latestpublication = \qbank_questionhub\publication_tracker::latest((int)$course->id, $categoryid);
+        if ($latestpublication && $latestpublication->action !== 'publish') {
+            $latestpublication = null;
+        }
+    }
+    if (!$latestpublication) {
+        $latestpublication = \qbank_questionhub\publication_tracker::latest_active_publication_by_package($updatepackageid, (int)$course->id);
+    }
+
+    if ($categoryid > 0 && $latestpublication) {
+        $changes = \qbank_questionhub\publication_tracker::changes($categoryid, $latestpublication);
+        if ($changes !== null) {
+            $changescount = $changes['count'];
+        }
+    }
 }
 
 // Handle Form Submissions (Download XML or Direct Publish)
@@ -110,9 +210,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Checkbox: absent when unchecked. Default in the form is checked.
     $previewenabled = (bool)optional_param('package_preview', 0, PARAM_BOOL);
+    if ($ownedpackage && ($packageid !== $updatepackageid ||
+            version_compare($version, $ownedpackage['latest_version'], '<='))) {
+        throw new moodle_exception('error_update_version', 'qbank_questionhub', '', $ownedpackage['latest_version']);
+    }
 
     try {
-        $exporter = new \qbank_questionhub\package_exporter((int)$course->id);
+        $exporter = new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id);
+        $publishedquestions = $questionid > 0 ? [] : \qbank_questionhub\publication_tracker::current($categoryid);
 
         if ($questionid > 0) {
             $xmlcontent = $exporter->export_questions_xml([$questionid]);
@@ -156,6 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $client = new \qbank_questionhub\api_client(null, null, 30, true);
         $published = $client->publish($xmlcontent, $metadata);
 
+        // Snapshot the versions represented by this category export after Hub acceptance.
         // Audit log in history table
         try {
             $history = new stdClass();
@@ -165,15 +271,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $history->package_version = $version;
             $history->package_title = $title;
             $history->courseid = (int)$course->id;
-            $history->categoryid = (int)$categoryid;
+            $history->categoryid = $questionid > 0 ? 0 : (int)$categoryid;
             $history->question_count = $published['stats']['question_count'] ?? 1;
             $history->timecreated = time();
-            $DB->insert_record('qbank_questionhub_history', $history);
-        } catch (\Throwable $t) {}
+            $historyid = $DB->insert_record('qbank_questionhub_history', $history);
+            if ($questionid === 0) {
+                \qbank_questionhub\publication_tracker::save((int)$historyid, $publishedquestions);
+            }
+        } catch (\Throwable $t) {
+            debugging($t->getMessage(), DEBUG_DEVELOPER);
+            \core\notification::warning(get_string('publication_tracking_failed', 'qbank_questionhub'));
+        }
 
         \core\notification::success(get_string('export_success', 'qbank_questionhub', $version));
 
-        $returnparams = ['courseid' => $course->id];
+        $returnparams = ['courseid' => $course->id, 'bankcontextid' => $context->id];
         if ($cmid > 0) {
             $returnparams['cmid'] = $cmid;
         }
@@ -213,7 +325,7 @@ $subjectsdata = [];
 foreach ($taxonomy['subjects'] ?? [] as $sub) {
     $subjectsdata[] = [
         'name_de' => $sub['name_de'],
-        'selected' => ($sub['name_de'] === 'Informatik'),
+        'selected' => ($sub['name_de'] === ($ownedpackage['subject'] ?? 'Informatik')),
     ];
 }
 
@@ -225,7 +337,7 @@ $cantonlist = $taxonomy['cantons'] ?? [
 foreach ($cantonlist as $c) {
     $cantonsdata[] = [
         'code' => $c['code'],
-        'selected' => ($c['code'] === 'ZH'),
+        'selected' => ($c['code'] === ($ownedpackage['canton'] ?? 'ZH')),
     ];
 }
 
@@ -236,18 +348,20 @@ foreach ($allcategories as $cat) {
     $childmap[(int)$cat->parent][] = $cat;
 }
 $categoriesdata = [];
-$defaulttitle = 'Fragensammlung';
-$defaultslug = 'ch.gym.inf.collection.' . time();
+$defaulttitle = $ownedpackage ? html_entity_decode($ownedpackage['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : 'Fragensammlung';
+$defaultslug = $ownedpackage ? $ownedpackage['id'] : ('ch.gym.inf.collection.' . time());
+$defaultsummary = $ownedpackage ? ($ownedpackage['summary'] ?? '') : 'Fragensammlung für Schweizer Gymnasien.';
+$defaultversion = $ownedpackage ? \qbank_questionhub\publication_tracker::next_version($ownedpackage['latest_version']) : '1.0.0';
 
 $walkcats = function (int $parentid, int $depth) use (&$walkcats, $childmap, $DB, $categoryid, &$categoriesdata,
-        &$defaulttitle, &$defaultslug) {
+        &$defaulttitle, &$defaultslug, $ownedpackage) {
     foreach ($childmap[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         if (!$istop) {
             $qcount = $DB->count_records('question_bank_entries', ['questioncategoryid' => $cat->id]);
             $isselected = ((int)$cat->id === (int)$categoryid);
             $plainname = format_string($cat->name, true, ['escape' => false]);
-            if ($isselected) {
+            if ($isselected && !$ownedpackage) {
                 $defaulttitle = $plainname;
                 $clean = preg_replace('/[^a-z0-9]/', '', strtolower($cat->name));
                 $defaultslug = 'ch.gym.inf.' . ($clean ?: 'questions');
@@ -264,7 +378,7 @@ $walkcats = function (int $parentid, int $depth) use (&$walkcats, $childmap, $DB
 };
 $walkcats(0, 0);
 
-$cancelparams = ['courseid' => $course->id];
+$cancelparams = ['courseid' => $course->id, 'bankcontextid' => $context->id];
 if ($cmid > 0) {
     $cancelparams['cmid'] = $cmid;
 }
@@ -275,15 +389,29 @@ $templatedata = [
     'cancel_url' => $cancelurl->out(false),
     'sesskey' => sesskey(),
     'courseid' => $course->id,
+    'bankcontextid' => $context->id,
     'cmid' => $cmid,
     'categoryid' => $categoryid,
     'questionid' => $questionid,
+    'is_update' => !empty($ownedpackage),
+    'update_package_id' => $updatepackageid,
+    'owned_version' => $ownedpackage['latest_version'] ?? '',
+    'changes_count' => $changescount,
+    'has_changes_count' => ($changescount !== null),
     'default_package_id' => $defaultslug,
     'default_title' => $defaulttitle,
-    'default_summary' => 'Fragensammlung für Schweizer Gymnasien.',
+    'default_summary' => $defaultsummary,
+    'default_version' => $defaultversion,
     'categories' => $categoriesdata,
     'subjects' => $subjectsdata,
     'cantons' => $cantonsdata,
+    'level_gf' => ($ownedpackage['subject_category'] ?? 'SF') === 'GF',
+    'level_sf' => ($ownedpackage['subject_category'] ?? 'SF') === 'SF',
+    'level_ef' => ($ownedpackage['subject_category'] ?? 'SF') === 'EF',
+    'level_ff' => ($ownedpackage['subject_category'] ?? 'SF') === 'FF',
+    'preview_checked' => $ownedpackage ? !empty($ownedpackage['preview_enabled']) : true,
+    'is_private' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') === 'private') : false,
+    'is_public' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') !== 'private') : true,
 ];
 
 echo $OUTPUT->header();

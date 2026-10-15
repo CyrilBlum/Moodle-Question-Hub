@@ -44,11 +44,12 @@ class package_exporter {
      * Constructor.
      *
      * @param int $courseid Target course ID.
+     * @param int $bankcontextid Selected question-bank context ID.
      */
-    public function __construct(int $courseid) {
+    public function __construct(int $courseid, int $bankcontextid = 0) {
         global $DB;
         $this->course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
-        $this->context = self::resolve_course_question_context($this->course);
+        $this->context = question_bank_context::resolve($this->course, $bankcontextid);
     }
 
     /**
@@ -81,6 +82,9 @@ class package_exporter {
         require_once($CFG->dirroot . '/question/format/xml/format.php');
 
         $category = $DB->get_record('question_categories', ['id' => $categoryid], '*', MUST_EXIST);
+        if ((int)$category->contextid !== (int)$this->context->id) {
+            throw new moodle_exception('invalidcategory', 'question');
+        }
 
         $qformat = new \qformat_xml();
         $contexts = new \core_question\local\bank\question_edit_contexts($this->context);
