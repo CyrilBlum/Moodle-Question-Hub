@@ -65,6 +65,39 @@ class publication_tracker {
         return $record && $record->action === 'unlink';
     }
 
+    /**
+     * Unlink every category whose current link is the given package, e.g. after withdrawing it.
+     *
+     * @return int Number of unlinked categories.
+     */
+    public static function unlink_package(string $packageid, int $userid): int {
+        global $DB;
+        if ($packageid === '') {
+            return 0;
+        }
+        $links = $DB->get_records_sql(
+            "SELECT DISTINCT courseid, categoryid
+               FROM {qbank_questionhub_history}
+              WHERE package_id = :packageid AND action IN ('publish', 'import') AND categoryid > 0",
+            ['packageid' => $packageid]
+        );
+        $unlinked = 0;
+        foreach ($links as $link) {
+            $latest = self::latest((int)$link->courseid, (int)$link->categoryid);
+            if (!$latest || $latest->package_id !== $packageid) {
+                continue;
+            }
+            $DB->insert_record('qbank_questionhub_history', (object)[
+                'userid' => $userid, 'action' => 'unlink', 'package_id' => $packageid,
+                'package_version' => $latest->package_version, 'package_title' => $latest->package_title,
+                'courseid' => (int)$link->courseid, 'categoryid' => (int)$link->categoryid, 'question_count' => 0,
+                'timecreated' => time(), 'snapshotted' => 0,
+            ]);
+            $unlinked++;
+        }
+        return $unlinked;
+    }
+
     /** Latest record for a package ID, or null. */
     public static function latest_by_package(string $packageid, int $courseid = 0): ?stdClass {
         global $DB;

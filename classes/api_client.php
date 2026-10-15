@@ -430,6 +430,8 @@ class api_client {
                 throw new moodle_exception('error_forbidden', 'qbank_questionhub', '', $message);
             case 404:
                 throw new moodle_exception('error_notfound', 'qbank_questionhub', '', $message);
+            case 410:
+                throw new moodle_exception('error_package_withdrawn', 'qbank_questionhub', '', $message);
             default:
                 $detail = !empty($message) ? $message : ("HTTP {$httpcode}: " . substr($body, 0, 300));
                 throw new moodle_exception('error_network', 'qbank_questionhub', '', $detail);

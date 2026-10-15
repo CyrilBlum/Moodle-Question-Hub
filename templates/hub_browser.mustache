@@ -247,46 +247,11 @@
                         {{/package_id}}
                     </span>
                     <span class="d-inline-flex align-items-center flex-wrap">
-                        {{#has_ahead}}<span class="badge badge-warning bg-warning text-dark mr-1" title="{{#str}} sync_ahead_help, qbank_questionhub {{/str}}"><i class="fa fa-arrow-up mr-1" aria-hidden="true"></i>{{#str}} local_changes_status, qbank_questionhub, {{ahead_count}} {{/str}}</span>{{/has_ahead}}
-                        {{#has_remote_update}}<span class="badge badge-info bg-info text-white mr-1" title="{{#str}} sync_behind_help, qbank_questionhub {{/str}}"><i class="fa fa-arrow-down mr-1" aria-hidden="true"></i>{{#str}} remote_update_status, qbank_questionhub, {{remote_version}} {{/str}}</span>{{/has_remote_update}}
-                        {{#is_in_sync}}<span class="badge badge-success bg-success text-white mr-1"><i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} sync_in_sync, qbank_questionhub {{/str}}</span>{{/is_in_sync}}
+                        {{> qbank_questionhub/sync_status }}
                         {{#has_duplicates}}
                         <form method="post" action="{{action_url}}" class="d-inline mr-1"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="review_duplicates"><input type="hidden" name="duplicatecategoryid" value="{{id}}"><button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-clone mr-1" aria-hidden="true"></i>{{#str}} review_duplicates_count, qbank_questionhub, {{duplicate_count}} {{/str}}</button></form>
                         {{/has_duplicates}}
-                        {{#is_package_source}}
-                            <a href="{{update_url}}" class="btn btn-sm {{#has_changes}}btn-primary{{/has_changes}}{{^has_changes}}btn-outline-secondary{{/has_changes}} mr-1" title="{{#str}} push_button_help, qbank_questionhub, {{package_id}} {{/str}}">
-                                <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} push_button, qbank_questionhub {{/str}}
-                            </a>
-                        {{/is_package_source}}
-                        {{#can_pull}}
-                        <form method="post" action="{{action_url}}#importPreview" class="d-inline-flex mr-1">
-                            <input type="hidden" name="sesskey" value="{{sesskey}}">
-                            <input type="hidden" name="action" value="import_package">
-                            <input type="hidden" name="courseid" value="{{courseid}}">
-                            <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
-                            {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
-                            <input type="hidden" name="packageid" value="{{package_id}}">
-                            <input type="hidden" name="version" value="{{remote_version}}">
-                            <input type="hidden" name="title" value="{{pull_title}}">
-                            <input type="hidden" name="targetcategoryid" value="{{pull_target_id}}">
-                            <input type="hidden" name="categorymode" value="keep">
-                            <input type="hidden" name="updatechanged" value="1">
-                            <button type="submit" class="btn btn-sm btn-info mr-1" title="{{#str}} pull_button_help, qbank_questionhub, {{remote_version}} {{/str}}">
-                                <i class="fa fa-cloud-download mr-1" aria-hidden="true"></i>{{#str}} pull_button, qbank_questionhub, {{remote_version}} {{/str}}
-                            </button>
-                            <button type="submit" name="dryrun" value="1" class="btn btn-sm btn-outline-info" title="{{#str}} pull_preview_help, qbank_questionhub {{/str}}">
-                                <i class="fa fa-eye mr-1" aria-hidden="true"></i>{{#str}} pull_preview_button, qbank_questionhub {{/str}}
-                            </button>
-                        </form>
-                        {{/can_pull}}
-                        {{#is_package_source}}
-                            {{#pkg_settings}}
-                            <button class="btn btn-sm btn-outline-secondary" type="button" data-toggle="collapse" data-bs-toggle="collapse"
-                                    data-target="#edit-cat-{{domid}}" data-bs-target="#edit-cat-{{domid}}" title="{{#str}} edit_settings, qbank_questionhub {{/str}}">
-                                <i class="fa fa-cog" aria-hidden="true"></i><span class="sr-only">{{#str}} edit_settings, qbank_questionhub {{/str}}</span>
-                            </button>
-                            {{/pkg_settings}}
-                        {{/is_package_source}}
+                        {{> qbank_questionhub/sync_actions }}
                         {{#is_published}}
                             <form method="post" action="{{action_url}}" class="d-inline ml-1"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="unlink_category"><input type="hidden" name="categoryid" value="{{id}}"><button type="submit" class="btn btn-sm btn-outline-secondary" title="{{#str}} unlink_category_button, qbank_questionhub {{/str}}"><i class="fa fa-chain-broken" aria-hidden="true"></i><span class="sr-only">{{#str}} unlink_category_button, qbank_questionhub {{/str}}</span></button></form>
                         {{/is_published}}
@@ -485,12 +450,22 @@
         <ul class="list-group list-group-flush">
             {{#library}}
             <li class="list-group-item d-flex justify-content-between align-items-start flex-wrap">
-                <div>
+                <div class="mr-2">
                     <strong>{{title}}</strong>
-                    <div class="small text-muted">{{package_id}} · v{{version}} · {{question_count}} Fragen</div>
-                    <div class="small text-muted">{{category_name}} · {{imported_at}}</div>
+                    <div class="small text-muted">
+                        <a href="{{hub_package_url}}" class="text-muted" target="_blank" rel="noopener" title="{{#str}} open_hub_package, qbank_questionhub {{/str}}"><code>{{package_id}}</code></a>
+                        {{#package_version}}<span class="badge badge-light border ml-1">v{{package_version}}</span>{{/package_version}}
+                    </div>
+                    <div class="small text-muted">
+                        <i class="fa fa-link mr-1" aria-hidden="true"></i>{{#str}} linked_to_category, qbank_questionhub {{/str}}
+                        <a href="{{question_bank_url}}" title="{{#str}} open_category_questions, qbank_questionhub {{/str}}">{{name}}</a>
+                        · {{#str}} questions_count, qbank_questionhub, {{total}} {{/str}}
+                    </div>
                 </div>
-                <a class="btn btn-sm btn-outline-secondary" href="{{hub_package_url}}" target="_blank" rel="noopener">{{#str}} open_hub_package, qbank_questionhub {{/str}}</a>
+                <span class="d-inline-flex align-items-center flex-wrap">
+                    {{> qbank_questionhub/sync_status }}
+                    {{> qbank_questionhub/sync_actions }}
+                </span>
             </li>
             {{/library}}
         </ul>
@@ -682,6 +657,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     targetCategorySelect.addEventListener('change', updateCategoryPlacementOptions);
+
+    // The settings form lives in the category list; bring it into view when opened from a Browse card.
+    document.querySelectorAll('.qh-settings-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var target = document.querySelector(this.getAttribute('data-target'));
+            if (target && !this.closest('.list-group-item')) {
+                setTimeout(function() { target.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 350);
+            }
+        });
+    });
 
     document.querySelectorAll('.qh-import-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {

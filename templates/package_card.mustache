@@ -27,18 +27,38 @@
                 <i class="fa fa-user mr-1" aria-hidden="true"></i>{{author_info}}
             </div>
             {{/author_info}}
-            <div class="d-flex justify-content-between mt-auto pt-2 border-top">
-                {{#preview_enabled}}
-                <button type="button" class="btn btn-sm btn-outline-secondary qh-preview-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#previewModal" data-bs-target="#previewModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
-                    <i class="fa fa-eye mr-1" aria-hidden="true"></i>Vorschau
-                </button>
-                {{/preview_enabled}}
-                {{^preview_enabled}}<span></span>{{/preview_enabled}}
-                {{#is_private}}{{^can_access}}<a class="btn btn-sm btn-outline-primary" href="{{request_access_url}}" target="_blank" rel="noopener">{{#str}} request_access, qbank_questionhub {{/str}}</a>{{/can_access}}{{/is_private}}
-                {{^is_private}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}">
-                    <i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren
-                </button>{{/is_private}}
-                {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren</button>{{/can_access}}{{/is_private}}
+            <div class="mt-auto pt-2 border-top">
+                {{#sync}}
+                <div class="small text-muted mb-2">
+                    <i class="fa fa-link mr-1" aria-hidden="true"></i>{{#str}} linked_to_category, qbank_questionhub {{/str}}
+                    <a href="{{question_bank_url}}" title="{{#str}} open_category_questions, qbank_questionhub {{/str}}">{{name}}</a>
+                    {{#package_version}}<span class="badge badge-light border ml-1">v{{package_version}}</span>{{/package_version}}
+                    {{#is_package_source}}<span class="ml-1">· {{#str}} sync_source_label, qbank_questionhub {{/str}}</span>{{/is_package_source}}
+                </div>
+                <div class="d-flex flex-wrap align-items-center mb-2">
+                    {{> qbank_questionhub/sync_status }}
+                </div>
+                {{/sync}}
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    {{#preview_enabled}}
+                    <button type="button" class="btn btn-sm btn-outline-secondary qh-preview-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#previewModal" data-bs-target="#previewModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
+                        <i class="fa fa-eye mr-1" aria-hidden="true"></i>Vorschau
+                    </button>
+                    {{/preview_enabled}}
+                    {{^preview_enabled}}<span></span>{{/preview_enabled}}
+                    {{#sync}}
+                    <span class="d-inline-flex align-items-center flex-wrap">
+                        {{> qbank_questionhub/sync_actions }}
+                    </span>
+                    {{/sync}}
+                    {{^sync}}
+                    {{#is_private}}{{^can_access}}<a class="btn btn-sm btn-outline-primary" href="{{request_access_url}}" target="_blank" rel="noopener">{{#str}} request_access, qbank_questionhub {{/str}}</a>{{/can_access}}{{/is_private}}
+                    {{^is_private}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}">
+                        <i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren
+                    </button>{{/is_private}}
+                    {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren</button>{{/can_access}}{{/is_private}}
+                    {{/sync}}
+                </div>
             </div>
         </div>
     </div>

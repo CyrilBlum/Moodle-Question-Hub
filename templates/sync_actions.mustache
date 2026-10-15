@@ -1,0 +1,45 @@
+{{!
+    @template qbank_questionhub/sync_actions
+
+    Sync actions: push (package source), publish again (withdrawn), pull (imported copy) and package settings toggle.
+    Shared by the category list and the Browse cards; expects a category sync row as context.
+}}
+{{#is_package_source}}
+    <a href="{{update_url}}" class="btn btn-sm {{#has_changes}}btn-primary{{/has_changes}}{{^has_changes}}btn-outline-secondary{{/has_changes}} mr-1" title="{{#str}} push_button_help, qbank_questionhub, {{package_id}} {{/str}}">
+        <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} push_button, qbank_questionhub {{/str}}
+    </a>
+{{/is_package_source}}
+{{#can_republish}}
+    <a href="{{url}}" class="btn btn-sm btn-outline-primary mr-1" title="{{#str}} republish_button_help, qbank_questionhub {{/str}}">
+        <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} republish_button, qbank_questionhub {{/str}}
+    </a>
+{{/can_republish}}
+{{#can_pull}}
+<form method="post" action="{{action_url}}#importPreview" class="d-inline-flex mr-1">
+    <input type="hidden" name="sesskey" value="{{sesskey}}">
+    <input type="hidden" name="action" value="import_package">
+    <input type="hidden" name="courseid" value="{{courseid}}">
+    <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
+    {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+    <input type="hidden" name="packageid" value="{{package_id}}">
+    <input type="hidden" name="version" value="{{remote_version}}">
+    <input type="hidden" name="title" value="{{pull_title}}">
+    <input type="hidden" name="targetcategoryid" value="{{pull_target_id}}">
+    <input type="hidden" name="categorymode" value="keep">
+    <input type="hidden" name="updatechanged" value="1">
+    <button type="submit" class="btn btn-sm btn-info mr-1" title="{{#str}} pull_button_help, qbank_questionhub, {{remote_version}} {{/str}}">
+        <i class="fa fa-cloud-download mr-1" aria-hidden="true"></i>{{#str}} pull_button, qbank_questionhub, {{remote_version}} {{/str}}
+    </button>
+    <button type="submit" name="dryrun" value="1" class="btn btn-sm btn-outline-info" title="{{#str}} pull_preview_help, qbank_questionhub {{/str}}">
+        <i class="fa fa-eye mr-1" aria-hidden="true"></i>{{#str}} pull_preview_button, qbank_questionhub {{/str}}
+    </button>
+</form>
+{{/can_pull}}
+{{#is_package_source}}
+    {{#pkg_settings}}
+    <button class="btn btn-sm btn-outline-secondary qh-settings-toggle" type="button" data-toggle="collapse" data-bs-toggle="collapse"
+            data-target="#edit-cat-{{domid}}" data-bs-target="#edit-cat-{{domid}}" title="{{#str}} edit_settings, qbank_questionhub {{/str}}">
+        <i class="fa fa-cog" aria-hidden="true"></i><span class="sr-only">{{#str}} edit_settings, qbank_questionhub {{/str}}</span>
+    </button>
+    {{/pkg_settings}}
+{{/is_package_source}}

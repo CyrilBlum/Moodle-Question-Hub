@@ -115,6 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $wpackage = required_param('packageid', PARAM_RAW_TRIMMED);
             if ($action === 'withdraw_package') {
                 $client->withdraw_package($wpackage);
+                // The Hub deletes the package; local categories must stop showing it as published.
+                \qbank_questionhub\publication_tracker::unlink_package($wpackage, (int)$USER->id);
             } else {
                 $client->withdraw_release($wpackage, required_param('version', PARAM_RAW_TRIMMED));
             }
@@ -508,36 +510,6 @@ if ($hasaccount) {
     }
 }
 
-// Imported packages in this course form the current user's local library.
-$library = [];
-if ($showlibrary) {
-    $imports = $DB->get_records_select(
-        'qbank_questionhub_history',
-        'userid = :userid AND courseid = :courseid AND action = :action AND ' .
-            $DB->sql_isnotempty('qbank_questionhub_history', 'package_id', false, true),
-        ['userid' => (int)$USER->id, 'courseid' => (int)$COURSE->id, 'action' => 'import'],
-        'timecreated DESC, id DESC',
-        '*',
-        0,
-        100
-    );
-    foreach ($imports as $import) {
-        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*$/', (string)$import->package_id)) {
-            continue;
-        }
-        $category = $DB->get_record('question_categories', ['id' => $import->categoryid], 'name');
-        $library[] = [
-            'title' => $import->package_title,
-            'package_id' => $import->package_id,
-            'version' => $import->package_version,
-            'question_count' => (int)$import->question_count,
-            'category_name' => $category ? $category->name : get_string('category_missing', 'qbank_questionhub'),
-            'imported_at' => userdate($import->timecreated, get_string('strftimedatetime', 'langconfig')),
-            'hub_package_url' => $huburl . '/packages/' . rawurlencode($import->package_id),
-        ];
-    }
-}
-
 // Course categories as a tree (import target dropdown and "publish a whole category" list).
 $categories = $DB->get_records('question_categories', ['contextid' => $bankcontext->id], 'sortorder, name');
 $rootcategory = null;
@@ -591,7 +563,9 @@ $coursecategories = [];
 $publishcategories = [];
 $remotepackages = [];
 $remotepackageerrors = [];
-$getremotepackage = static function(string $packageid) use (&$remotepackages, &$remotepackageerrors, $client): ?array {
+$remotepackagesmissing = [];
+$getremotepackage = static function(string $packageid) use (&$remotepackages, &$remotepackageerrors,
+        &$remotepackagesmissing, $client): ?array {
     if ($packageid === '') {
         return null;
     }
@@ -605,12 +579,18 @@ $getremotepackage = static function(string $packageid) use (&$remotepackages, &$
         return $remotepackages[$packageid] = $client->get_package($packageid);
     } catch (\Throwable $e) {
         $remotepackageerrors[$packageid] = true;
+        if ($e instanceof \moodle_exception && $e->errorcode === 'error_package_withdrawn') {
+            $remotepackagesmissing[$packageid] = 'withdrawn';
+        } else if ($e instanceof \moodle_exception && $e->errorcode === 'error_notfound') {
+            // Unknown ID: deleted before the Hub kept tombstones, or published to another Hub.
+            $remotepackagesmissing[$packageid] = 'notfound';
+        }
         return null;
     }
 };
 $canimport = has_capability('qbank/questionhub:import', $bankcontext);
 $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
-        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl) {
+        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl, &$remotepackagesmissing) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = $cat->name;
@@ -678,9 +658,17 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $remotechecked = false;
             $pulltargetid = 0;
             $pulltitle = '';
+            $missingonhub = false;
+            $linkcategoryid = 0;
+            $linkaction = '';
+            $linktitle = '';
 
             if ($ispublished) {
                 $linkhistory = $directlink ?: $latestpub;
+                $linkcategoryid = $linkhistory ? (int)$linkhistory->categoryid : 0;
+                $linkaction = $linkhistory ? (string)$linkhistory->action : '';
+                $linktitle = $linkhistory ? html_entity_decode((string)$linkhistory->package_title,
+                    ENT_QUOTES | ENT_HTML5, 'UTF-8') : '';
                 $pkgid = $linkhistory ? $linkhistory->package_id : $matchedpackage['id'];
                 $pkgversion = $linkhistory ? $linkhistory->package_version : $matchedpackage['latest_version'];
                 $mp = $matchedpackage ?: ($mypackagesbyid[$pkgid] ?? null);
@@ -699,6 +687,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                         $hasremoteupdate = $remoteversion !== '' && $pkgversion !== '' &&
                             version_compare($remoteversion, $pkgversion, '>');
                     }
+                    $missingonhub = $remotepackagesmissing[$pkgid] ?? false;
                     // Pull into the category that received the earlier import, so the importer's
                     // item tracking (keyed by target category) updates the existing questions.
                     // Own publications are excluded: an import record would end their push link.
@@ -774,7 +763,14 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'can_pull' => $pulltargetid > 0,
                 'pull_target_id' => $pulltargetid,
                 'pull_title' => $pulltitle,
-                'is_package_source' => $ispackagesource,
+                // A withdrawn package can no longer be updated; offer a new publication instead.
+                'is_package_source' => $ispackagesource && !$missingonhub,
+                'is_missing_on_hub' => $islinked && $missingonhub !== false,
+                'is_withdrawn_on_hub' => $islinked && $missingonhub === 'withdrawn',
+                'can_republish' => $islinked && $missingonhub !== false && $linkaction === 'publish',
+                'link_category_id' => $linkcategoryid,
+                'link_action' => $linkaction,
+                'link_title' => $linktitle,
                 'package_id' => $pkgid,
                 'package_version' => $pkgversion,
                 'hub_package_url' => $pkgid !== '' ? $huburl . '/packages/' . rawurlencode($pkgid) : '',
@@ -787,6 +783,41 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
     }
 };
 $walk(0, 0);
+
+// Browse cards of packages already linked to a category here show that category's sync status and
+// actions instead of "Import" (a second import would create a separate copy). Subcategories inherit
+// the link, so prefer the row of the category that holds it.
+$syncrowsbypackage = [];
+foreach ($publishcategories as $row) {
+    if (!$row['is_linked'] || $row['package_id'] === '') {
+        continue;
+    }
+    $current = $syncrowsbypackage[$row['package_id']] ?? null;
+    if ($current === null || ((int)$current['link_category_id'] !== (int)$current['id']
+            && (int)$row['link_category_id'] === (int)$row['id'])) {
+        $syncrowsbypackage[$row['package_id']] = $row;
+    }
+}
+foreach ($packagesdata as &$packagecard) {
+    $packagecard['sync'] = $syncrowsbypackage[$packagecard['id']] ?? null;
+}
+unset($packagecard);
+
+// The library lists the Hub packages imported into this course that are still synced with a local
+// category, i.e. the Browse packages that show sync status instead of "Import". Plain file imports
+// (CLI, no package ID), removed links and own publications are not part of it.
+$library = [];
+if ($showlibrary) {
+    foreach ($syncrowsbypackage as $packageid => $row) {
+        if ($row['link_action'] !== 'import') {
+            continue;
+        }
+        $remote = $getremotepackage($packageid);
+        $title = html_entity_decode((string)($remote['title'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $library[] = $row + ['title' => $title !== '' ? $title : ($row['link_title'] ?: $packageid)];
+    }
+    usort($library, static fn(array $a, array $b): int => strcasecmp($a['title'], $b['title']));
+}
 if ($rootcategory) {
     array_unshift($coursecategories, [
         'id' => $rootcategory->id,
