@@ -433,9 +433,11 @@ if ($hasaccount) {
         $mypackagesraw = $client->get_my_packages();
         foreach ($mypackagesraw as $mp) {
             $mypackagesbyid[$mp['id']] = $mp;
+            // Older Hubs list only created packages (no my_role): those are admin.
+            $ispackageadmin = ($mp['my_role'] ?? 'admin') === 'admin';
             $versions = [];
             foreach ($mp['versions'] ?? [] as $v) {
-                $versions[] = ['version' => $v, 'can_withdraw' => count($mp['versions']) > 1];
+                $versions[] = ['version' => $v, 'can_withdraw' => $ispackageadmin && count($mp['versions']) > 1];
             }
 
             // Find local publication history for this package to calculate changes and offer update.
@@ -513,6 +515,9 @@ if ($hasaccount) {
                     'level_ff' => ($mp['subject_category'] ?? '') === 'FF',
                     'versions' => $versions,
                     'update_url' => $updateurl,
+                    'is_package_admin' => $ispackageadmin,
+                    'shared_role' => empty($mp['is_creator']) && isset($mp['my_role'])
+                        ? get_string('package_role_' . ($ispackageadmin ? 'admin' : 'editor'), 'qbank_questionhub') : '',
                     // Settings forms of the category list are not on this tab; the package has its own.
                     'hide_settings_toggle' => true,
                 ];
@@ -670,7 +675,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
 
             $ispublished = ($directlink !== null) || ($latestpub !== null) || ($matchedpackage !== null);
             $islinked = $directlink !== null || $latestpub !== null;
-            $ispackagesource = $latestpub && (int)$latestpub->categoryid === (int)$cat->id;
+            $ispackagesource = false;
             $changescount = 0;
             $haschanges = false;
             $changesknown = false;
@@ -700,6 +705,11 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 $pkgid = $linkhistory ? $linkhistory->package_id : $matchedpackage['id'];
                 $pkgversion = $linkhistory ? $linkhistory->package_version : $matchedpackage['latest_version'];
                 $mp = $matchedpackage ?: ($mypackagesbyid[$pkgid] ?? null);
+                // Push belongs to the category holding the link, and only for accounts that may publish
+                // versions of the package on the Hub (creator, editor or admin); settings only for admins.
+                $mprole = $mp ? (string)($mp['my_role'] ?? 'admin') : '';
+                $ispackagesource = $linkhistory && (int)$linkhistory->categoryid === (int)$cat->id &&
+                    in_array($mprole, ['admin', 'editor'], true);
                 $statushistory = $linkhistory;
                 if ($statushistory) {
                     $linkchanges = \qbank_questionhub\publication_tracker::changes_in_scope((int)$cat->id, $statushistory);
@@ -727,7 +737,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 }
 
                 if ($ispackagesource) {
-                    $changes = \qbank_questionhub\publication_tracker::changes((int)$cat->id, $latestpub);
+                    $changes = \qbank_questionhub\publication_tracker::changes((int)$cat->id, $linkhistory);
                     if ($changes !== null) {
                         $changescount = $changes['count'];
                         $haschanges = ($changescount > 0);
@@ -739,10 +749,10 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                     $updateparams = array_merge($publishparams, ['updatepackageid' => $pkgid]);
                     $updateurl = (new moodle_url('/question/bank/questionhub/publish.php', $updateparams))->out(false);
 
-                    $pkgdetails = [
+                    $pkgdetails = $mprole !== 'admin' ? null : [
                     'packageid' => $pkgid,
                     'domid' => md5($pkgid . '_' . $cat->id),
-                    'title' => $mp ? html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : ($latestpub->package_title ?: $name),
+                    'title' => $mp ? html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : ($linkhistory->package_title ?: $name),
                     'summary' => $mp['summary'] ?? '',
                     'tags' => implode(', ', $mp['tags'] ?? []),
                     'is_private' => ($mp['visibility'] ?? 'public') === 'private',
@@ -854,8 +864,18 @@ if ($showlibrary) {
     foreach ($syncrowsbypackage as $packageid => $row) {
         $remote = $getremotepackage($packageid);
         $title = html_entity_decode((string)($remote['title'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Older releases on the Hub can be imported again into the linked category (preview first).
+        $restoreversions = [];
+        if ($canimport && (int)$row['link_category_id'] === (int)$row['id'] && $row['package_version'] !== '') {
+            foreach ($remote['versions'] ?? [] as $v) {
+                if (version_compare((string)$v, $row['package_version'], '<')) {
+                    $restoreversions[] = ['version' => (string)$v];
+                }
+            }
+            usort($restoreversions, static fn(array $a, array $b): int => version_compare($b['version'], $a['version']));
+        }
         $library[] = $row + ['title' => $title !== '' ? $title : ($row['link_title'] ?: $packageid),
-            'hide_settings_toggle' => true];
+            'hide_settings_toggle' => true, 'restore_versions' => $restoreversions, 'can_restore' => !empty($restoreversions)];
     }
     usort($library, static fn(array $a, array $b): int => strcasecmp($a['title'], $b['title']));
 }

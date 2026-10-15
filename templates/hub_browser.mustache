@@ -384,6 +384,7 @@
                 <div class="d-flex justify-content-between align-items-start flex-wrap">
                     <div>
                         <strong>{{title}}</strong>
+                        {{#shared_role}}<span class="badge badge-light border ml-1">{{shared_role}}</span>{{/shared_role}}
                         <div class="small text-muted">
                             {{id}} · v{{latest_version}} · {{downloads}} Downloads ·
                             {{#preview_on}}{{#str}} preview_on, qbank_questionhub {{/str}}{{/preview_on}}{{^preview_on}}{{#str}} preview_off, qbank_questionhub {{/str}}{{/preview_on}}
@@ -412,6 +413,8 @@
                             <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} update_package_button, qbank_questionhub {{/str}}
                         </a>
                         {{/update_url}}{{/sync}}
+                        {{! Settings and withdrawal: package admins only (editors publish versions). }}
+                        {{#is_package_admin}}
                         <button class="btn btn-sm btn-outline-secondary mr-1" type="button" data-toggle="collapse" data-bs-toggle="collapse"
                                 data-target="#edit-{{domid}}" data-bs-target="#edit-{{domid}}">{{#str}} edit_settings, qbank_questionhub {{/str}}</button>
                         <form method="post" action="{{action_url}}" class="d-inline"
@@ -421,6 +424,7 @@
                             <input type="hidden" name="packageid" value="{{id}}">
                             <button type="submit" class="btn btn-sm btn-outline-danger">{{#str}} withdraw_package, qbank_questionhub {{/str}}</button>
                         </form>
+                        {{/is_package_admin}}
                     </div>
                 </div>
                 <div class="collapse mt-3" id="edit-{{domid}}">
@@ -506,6 +510,32 @@
                     {{> qbank_questionhub/sync_status }}
                     {{> qbank_questionhub/sync_actions }}
                 </span>
+                {{#can_restore}}
+                {{! Import an older release into the linked category again; the preview shows what changes. }}
+                <details class="w-100 mt-1 small">
+                    <summary class="text-muted" title="{{#str}} library_restore_help, qbank_questionhub {{/str}}">{{#str}} library_restore, qbank_questionhub {{/str}}</summary>
+                    <form method="post" action="{{action_url}}#importPreview" class="form-inline d-flex align-items-center flex-wrap mt-1">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="action" value="import_package">
+                        <input type="hidden" name="courseid" value="{{courseid}}">
+                        <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
+                        {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+                        <input type="hidden" name="packageid" value="{{package_id}}">
+                        <input type="hidden" name="title" value="{{title}}">
+                        <input type="hidden" name="targetcategoryid" value="{{link_category_id}}">
+                        <input type="hidden" name="categorymode" value="keep">
+                        <input type="hidden" name="updatechanged" value="1">
+                        <input type="hidden" name="dryrun" value="1">
+                        <label class="sr-only" for="restore-{{id}}">{{#str}} library_restore_version, qbank_questionhub {{/str}}</label>
+                        <select name="version" id="restore-{{id}}" class="custom-select custom-select-sm form-select form-select-sm w-auto mr-1 me-1">
+                            {{#restore_versions}}<option value="{{version}}">v{{version}}</option>{{/restore_versions}}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="fa fa-history mr-1" aria-hidden="true"></i>{{#str}} library_restore_button, qbank_questionhub {{/str}}
+                        </button>
+                    </form>
+                </details>
+                {{/can_restore}}
             </li>
             {{/library}}
         </ul>

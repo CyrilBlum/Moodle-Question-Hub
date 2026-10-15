@@ -173,7 +173,9 @@ if ($updatepackageid !== '') {
     $latestpublication = null;
     if ($categoryid > 0) {
         $latestpublication = \qbank_questionhub\publication_tracker::latest((int)$course->id, $categoryid);
-        if ($latestpublication && $latestpublication->action !== 'publish') {
+        // An editor's category may hold an import of the package: its snapshot is the base of the update.
+        if ($latestpublication && !($latestpublication->action === 'publish' ||
+                ($latestpublication->action === 'import' && $latestpublication->package_id === $updatepackageid))) {
             $latestpublication = null;
         }
     }
