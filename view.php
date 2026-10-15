@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
             $grades = optional_param_array('grades', [], PARAM_ALPHANUM);
             $tags = array_values(array_filter(array_map('trim', explode(',', optional_param('tags', '', PARAM_TEXT)))));
-            $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), [
+            $patch = [
                 'title' => required_param('title', PARAM_TEXT),
                 'summary' => required_param('summary', PARAM_TEXT),
                 'license' => required_param('license', PARAM_TEXT),
@@ -103,8 +103,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'tags' => $tags,
                 'preview_enabled' => (bool)optional_param('preview_enabled', 0, PARAM_BOOL),
                 'visibility' => optional_param('visibility', 'public', PARAM_ALPHA),
-            ]);
+            ];
+            // Only a changed link is sent: the Hub checks it against the saving user's GitHub connection.
+            $githubrepo = optional_param('github_repo', '', PARAM_RAW_TRIMMED);
+            if ($githubrepo !== optional_param('github_repo_orig', '', PARAM_RAW_TRIMMED)) {
+                $patch['github_repo'] = $githubrepo;
+            }
+            $updated = $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), $patch);
             \core\notification::success(get_string('settings_saved', 'qbank_questionhub'));
+            \qbank_questionhub\api_client::notify_github_result($updated['github_sync'] ?? null);
         } catch (\Exception $e) {
             \core\notification::error($e->getMessage());
         }
@@ -502,6 +509,7 @@ if ($hasaccount) {
                     'visibility' => $mp['visibility'] ?? 'public',
                     'summary' => $mp['summary'] ?? '',
                     'tags' => implode(', ', $mp['tags'] ?? []),
+                    'github_repo' => (string)($mp['github_repo'] ?? ''),
                     'lic_by' => ($mp['license'] ?? '') === 'CC-BY-4.0',
                     'lic_bysa' => ($mp['license'] ?? '') === 'CC-BY-SA-4.0',
                     'lic_cc0' => ($mp['license'] ?? '') === 'CC0-1.0',
@@ -755,6 +763,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                     'title' => $mp ? html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : ($linkhistory->package_title ?: $name),
                     'summary' => $mp['summary'] ?? '',
                     'tags' => implode(', ', $mp['tags'] ?? []),
+                    'github_repo' => (string)($mp['github_repo'] ?? ''),
                     'is_private' => ($mp['visibility'] ?? 'public') === 'private',
                     'is_public' => ($mp['visibility'] ?? 'public') !== 'private',
                     'lic_by' => ($mp['license'] ?? 'CC-BY-4.0') === 'CC-BY-4.0',

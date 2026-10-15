@@ -207,6 +207,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $visibility = ($ownedpackage['visibility'] ?? 'public') === 'private' ? 'private' : 'public';
         $previewenabled = !empty($ownedpackage['preview_enabled']);
         $tags = $ownedpackage['tags'] ?? [];
+        // The GitHub link stays as set in the package settings.
+        $githubrepo = '';
         if ($action !== 'publish_hub') {
             // Downloading the XML needs neither a release note nor a new version.
         } else if ($releasenotes === '') {
@@ -235,6 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $previewenabled = (bool)optional_param('package_preview', 0, PARAM_BOOL);
         $releasenotes = '';
         $tags = [];
+        $githubrepo = optional_param('package_github_repo', '', PARAM_RAW_TRIMMED);
     }
 
     try {
@@ -285,6 +288,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($releasenotes !== '') {
             $metadata['release_notes'] = $releasenotes;
         }
+        if ($githubrepo !== '') {
+            $metadata['github_repo'] = $githubrepo;
+        }
         if ($ownedpackage) {
             // The Hub refuses the update if a newer release exists that this category has not pulled yet.
             $synced = \qbank_questionhub\publication_tracker::latest((int)$course->id, $categoryid);
@@ -319,6 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         \core\notification::success(get_string('export_success', 'qbank_questionhub', $version));
+        \qbank_questionhub\api_client::notify_github_result($published['github'] ?? null);
 
         $returnparams = ['courseid' => $course->id, 'bankcontextid' => $context->id];
         if ($cmid > 0) {
@@ -443,6 +450,7 @@ $templatedata = [
     'level_ef' => ($ownedpackage['subject_category'] ?? 'GF') === 'EF',
     'level_ff' => ($ownedpackage['subject_category'] ?? 'GF') === 'FF',
     'preview_checked' => $ownedpackage ? !empty($ownedpackage['preview_enabled']) : true,
+    'default_github_repo' => $_SERVER['REQUEST_METHOD'] === 'POST' ? optional_param('package_github_repo', '', PARAM_RAW_TRIMMED) : '',
     'is_private' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') === 'private') : false,
     'is_public' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') !== 'private') : true,
 ];

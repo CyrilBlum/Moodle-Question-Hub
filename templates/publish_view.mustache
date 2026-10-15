@@ -110,6 +110,13 @@
                 <div class="text-muted small">{{#str}} package_preview_help, qbank_questionhub {{/str}}</div>
             </div>
 
+            <div class="form-group mb-3">
+                <label for="package_github_repo" class="font-weight-bold">{{#str}} github_repo_label, qbank_questionhub {{/str}}:</label>
+                <input type="text" id="package_github_repo" name="package_github_repo" class="form-control text-monospace font-monospace"
+                       value="{{default_github_repo}}" placeholder="git@github.com:konto/repository.git">
+                <small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small>
+            </div>
+
             <hr class="my-4">
 
             <div class="d-flex justify-content-between align-items-center flex-wrap">

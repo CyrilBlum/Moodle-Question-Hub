@@ -349,6 +349,10 @@
                             </select></div>
                         <div class="form-group"><label>Tags</label>
                             <input type="text" name="tags" class="form-control" value="{{tags}}"></div>
+                        <div class="form-group"><label>{{#str}} github_repo_label, qbank_questionhub {{/str}}</label>
+                            <input type="text" name="github_repo" class="form-control text-monospace font-monospace" value="{{github_repo}}" placeholder="git@github.com:konto/repository.git">
+                            <input type="hidden" name="github_repo_orig" value="{{github_repo}}">
+                            <small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small></div>
                         <div class="form-check mb-3">
                             <input type="checkbox" name="preview_enabled" value="1" class="form-check-input" id="prev-cat-{{domid}}" {{#preview_on}}checked{{/preview_on}}>
                             <label class="form-check-label font-weight-bold" for="prev-cat-{{domid}}">{{#str}} package_preview_label, qbank_questionhub {{/str}}</label>
@@ -451,6 +455,10 @@
                             </select></div>
                         <div class="form-group"><label>Tags</label>
                             <input type="text" name="tags" class="form-control" value="{{tags}}"></div>
+                        <div class="form-group"><label>{{#str}} github_repo_label, qbank_questionhub {{/str}}</label>
+                            <input type="text" name="github_repo" class="form-control text-monospace font-monospace" value="{{github_repo}}" placeholder="git@github.com:konto/repository.git">
+                            <input type="hidden" name="github_repo_orig" value="{{github_repo}}">
+                            <small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small></div>
                         <div class="form-check mb-3">
                             <input type="checkbox" class="form-check-input" name="preview_enabled" value="1" id="pv-{{domid}}" {{#preview_on}}checked{{/preview_on}}>
                             <label class="form-check-label" for="pv-{{domid}}">{{#str}} package_preview_label, qbank_questionhub {{/str}}</label>

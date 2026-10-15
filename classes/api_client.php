@@ -244,9 +244,10 @@ class api_client {
      *
      * @param string $id Package id.
      * @param array $patch Fields to change.
+     * @return array The updated package; `github_sync` holds the first GitHub commit of a newly linked repository.
      * @throws moodle_exception On error.
      */
-    public function update_package(string $id, array $patch): void {
+    public function update_package(string $id, array $patch): array {
         if (empty($this->token)) {
             throw new moodle_exception('error_unauthorized', 'qbank_questionhub');
         }
@@ -259,6 +260,28 @@ class api_client {
         }
         if ($httpcode >= 400) {
             $this->handle_http_error($httpcode, (string)$response);
+        }
+        $decoded = json_decode((string)$response, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Shows the outcome of the Hub's GitHub commit (publish response `github`, settings response `github_sync`).
+     * Nothing is shown when the package has no linked repository (null).
+     *
+     * @param array|null $result { status: ok, commit_url, warning } or { status: error, message }.
+     */
+    public static function notify_github_result(?array $result): void {
+        if (empty($result['status'])) {
+            return;
+        }
+        if ($result['status'] === 'ok') {
+            \core\notification::info(get_string('github_commit_done', 'qbank_questionhub', s($result['commit_url'] ?? '')));
+            if (!empty($result['warning'])) {
+                \core\notification::warning(s($result['warning']));
+            }
+        } else {
+            \core\notification::warning(get_string('github_commit_failed', 'qbank_questionhub', s($result['message'] ?? '')));
         }
     }
 
