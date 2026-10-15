@@ -240,5 +240,10 @@ $string['review_duplicates_count'] = 'Review {$a} duplicates';
 $string['open_category_questions'] = 'Open this category in the question bank';
 
 $string['unlink_category_button'] = 'Verknüpfung aufheben';
-$string['category_unlinked'] = 'Die Verknüpfung für «{$a}» wurde aufgehoben.';
+$string['categories_unlinked'] = 'Die Verknüpfung für «{$a->name}» und {$a->count} Kategorie(n) wurde aufgehoben.';
 $string['category_unlinked_status'] = 'Keine aktive Hub-Verknüpfung';
+
+$string['local_changes_status'] = '{$a} lokale Änderungen';
+$string['local_up_to_date_status'] = 'Lokal aktuell';
+$string['remote_update_status'] = 'Remote v{$a} verfügbar';
+$string['remote_up_to_date_status'] = 'Remote aktuell';

@@ -127,15 +127,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_capability('moodle/question:managecategory', $bankcontext);
         $categoryid = required_param('categoryid', PARAM_INT);
         $category = $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $bankcontext->id], '*', MUST_EXIST);
-        $link = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid);
-        if ($link && !empty($link->package_id)) {
+        $unlinked = 0;
+        foreach (\qbank_questionhub\publication_tracker::category_ids($categoryid) as $scopedcategoryid) {
+            // Resolve inherited parent links as well, so disconnecting a parent makes every
+            // category in its tree independently publishable again.
+            $link = \qbank_questionhub\publication_tracker::find_publication_for_category(
+                $scopedcategoryid, (int)$COURSE->id);
+            if (!$link || empty($link->package_id) ||
+                    \qbank_questionhub\publication_tracker::is_unlinked((int)$COURSE->id, $scopedcategoryid)) {
+                continue;
+            }
             $DB->insert_record('qbank_questionhub_history', (object)[
                 'userid' => (int)$USER->id, 'action' => 'unlink', 'package_id' => $link->package_id,
                 'package_version' => $link->package_version, 'package_title' => $link->package_title,
-                'courseid' => (int)$COURSE->id, 'categoryid' => $categoryid, 'question_count' => 0,
+                'courseid' => (int)$COURSE->id, 'categoryid' => $scopedcategoryid, 'question_count' => 0,
                 'timecreated' => time(), 'snapshotted' => 0,
             ]);
-            \core\notification::success(get_string('category_unlinked', 'qbank_questionhub', $category->name));
+            $unlinked++;
+        }
+        if ($unlinked) {
+            \core\notification::success(get_string('categories_unlinked', 'qbank_questionhub', (object)[
+                'name' => $category->name, 'count' => $unlinked,
+            ]));
         }
         redirect($thispageurl);
     } else if ($action === 'import_package') {
@@ -576,8 +589,27 @@ $duplicatecountforcategory = function (int $id) use (&$duplicatecountforcategory
 
 $coursecategories = [];
 $publishcategories = [];
+$remotepackages = [];
+$remotepackageerrors = [];
+$getremotepackage = static function(string $packageid) use (&$remotepackages, &$remotepackageerrors, $client): ?array {
+    if ($packageid === '') {
+        return null;
+    }
+    if (array_key_exists($packageid, $remotepackages)) {
+        return $remotepackages[$packageid];
+    }
+    if (isset($remotepackageerrors[$packageid])) {
+        return null;
+    }
+    try {
+        return $remotepackages[$packageid] = $client->get_package($packageid);
+    } catch (\Throwable $e) {
+        $remotepackageerrors[$packageid] = true;
+        return null;
+    }
+};
 $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
-        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid) {
+        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = $cat->name;
@@ -607,6 +639,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $total = $totalcount((int)$cat->id);
             $categoryduplicatecount = $duplicatecountforcategory((int)$cat->id);
 
+            $directlink = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, (int)$cat->id);
             $latestpub = \qbank_questionhub\publication_tracker::find_local_publication_for_category((int)$cat->id, (int)$COURSE->id);
             $isunlinked = \qbank_questionhub\publication_tracker::is_unlinked((int)$COURSE->id, (int)$cat->id);
             $matchedpackage = null;
@@ -626,7 +659,8 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 }
             }
 
-            $ispublished = ($latestpub !== null) || ($matchedpackage !== null);
+            $ispublished = ($directlink !== null) || ($latestpub !== null) || ($matchedpackage !== null);
+            $islinked = $directlink !== null || $latestpub !== null;
             $ispackagesource = $latestpub && (int)$latestpub->categoryid === (int)$cat->id;
             $changescount = 0;
             $haschanges = false;
@@ -635,11 +669,34 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $pkgid = '';
             $pkgversion = '';
             $pkgdetails = null;
+            $localstatus = '';
+            $haslocalchanges = false;
+            $localchangesknown = false;
+            $remoteversion = '';
+            $hasremoteupdate = false;
+            $remotechecked = false;
 
             if ($ispublished) {
-                $pkgid = $latestpub ? $latestpub->package_id : $matchedpackage['id'];
-                $pkgversion = $latestpub ? $latestpub->package_version : $matchedpackage['latest_version'];
+                $linkhistory = $directlink ?: $latestpub;
+                $pkgid = $linkhistory ? $linkhistory->package_id : $matchedpackage['id'];
+                $pkgversion = $linkhistory ? $linkhistory->package_version : $matchedpackage['latest_version'];
                 $mp = $matchedpackage ?: ($mypackagesbyid[$pkgid] ?? null);
+                $statushistory = $linkhistory;
+                if ($statushistory) {
+                    $linkchanges = \qbank_questionhub\publication_tracker::changes_in_scope((int)$cat->id, $statushistory);
+                    if ($linkchanges !== null) {
+                        $localchangesknown = true;
+                        $haslocalchanges = $linkchanges['count'] > 0;
+                        $localstatus = $haslocalchanges ? (string)$linkchanges['count'] : '0';
+                    }
+                    $remote = $getremotepackage($pkgid);
+                    if ($remote) {
+                        $remotechecked = true;
+                        $remoteversion = (string)($remote['latest_version'] ?? '');
+                        $hasremoteupdate = $remoteversion !== '' && $pkgversion !== '' &&
+                            version_compare($remoteversion, $pkgversion, '>');
+                    }
+                }
 
                 if ($ispackagesource) {
                     $changes = \qbank_questionhub\publication_tracker::changes((int)$cat->id, $latestpub);
@@ -692,7 +749,16 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'has_duplicates' => $categoryduplicatecount > 0,
                 'duplicate_count' => $categoryduplicatecount,
                 'is_published' => $ispublished,
+                'is_linked' => $islinked,
                 'is_unlinked' => $isunlinked,
+                'local_changes_known' => $localchangesknown,
+                'has_local_changes' => $haslocalchanges,
+                'local_changes_count' => $localstatus,
+                'is_local_up_to_date' => $islinked && $localchangesknown && !$haslocalchanges,
+                'remote_checked' => $remotechecked,
+                'remote_version' => $remoteversion,
+                'has_remote_update' => $hasremoteupdate,
+                'is_remote_up_to_date' => $islinked && $remotechecked && !$hasremoteupdate,
                 'is_package_source' => $ispackagesource,
                 'package_id' => $pkgid,
                 'package_version' => $pkgversion,

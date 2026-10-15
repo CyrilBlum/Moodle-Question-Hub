@@ -257,6 +257,16 @@
                             </span>
                             {{/changes_known}}
                         {{/is_package_source}}
+                        {{#is_linked}}
+                            {{#local_changes_known}}
+                                {{#has_local_changes}}<span class="badge badge-warning bg-warning text-dark ml-2">{{#str}} local_changes_status, qbank_questionhub, {{local_changes_count}} {{/str}}</span>{{/has_local_changes}}
+                                {{#is_local_up_to_date}}<span class="badge badge-success bg-success text-white ml-2">{{#str}} local_up_to_date_status, qbank_questionhub {{/str}}</span>{{/is_local_up_to_date}}
+                            {{/local_changes_known}}
+                            {{#remote_checked}}
+                                {{#has_remote_update}}<span class="badge badge-info bg-info text-white ml-2">{{#str}} remote_update_status, qbank_questionhub, {{remote_version}} {{/str}}</span>{{/has_remote_update}}
+                                {{#is_remote_up_to_date}}<span class="badge badge-light border ml-2">{{#str}} remote_up_to_date_status, qbank_questionhub {{/str}}</span>{{/is_remote_up_to_date}}
+                            {{/remote_checked}}
+                        {{/is_linked}}
                     </span>
                     <span class="d-inline-flex align-items-center">
                         {{#has_duplicates}}

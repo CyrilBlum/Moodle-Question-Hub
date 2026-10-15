@@ -183,6 +183,9 @@ class publication_tracker {
             if (!$cat || ($cat->name === 'top' && (int)$cat->parent === 0)) {
                 break;
             }
+            if (self::is_unlinked($courseid, $currentid)) {
+                return null;
+            }
             $history = self::latest($courseid, $currentid);
             if ($history) {
                 return $history;
@@ -217,6 +220,9 @@ class publication_tracker {
             $cat = $DB->get_record('question_categories', ['id' => $currentid], 'id,parent,name');
             if (!$cat || ($cat->name === 'top' && (int)$cat->parent === 0)) {
                 break;
+            }
+            if (self::is_unlinked($courseid, $currentid)) {
+                return null;
             }
             $history = self::latest($courseid, $currentid);
             if ($history && $history->action === 'publish') {
@@ -331,6 +337,26 @@ class publication_tracker {
         } else {
             $DB->set_field('qbank_questionhub_history', 'snapshotted', 1, ['id' => $history->id]);
         }
+    }
+
+    /** Changes for one category tree, using a package-level snapshot where necessary. */
+    public static function changes_in_scope(int $categoryid, stdClass $history): ?array {
+        $previous = self::snapshot((int)$history->id);
+        if ($previous === null) {
+            return null;
+        }
+        $current = self::current($categoryid);
+        // A parent release snapshots all descendants. Only entries currently in this
+        // category tree belong to its row; entries removed from another branch must not
+        // make this child look outdated.
+        $previous = array_intersect_key($previous, $current);
+        $changed = [];
+        foreach ($current as $entryid => $questionid) {
+            if (!isset($previous[$entryid]) || $previous[$entryid] !== $questionid) {
+                $changed[$entryid] = true;
+            }
+        }
+        return ['count' => count($changed), 'entries' => $changed, 'removed' => []];
     }
 
     /** Number of added, edited, or removed entries since the latest release. */
