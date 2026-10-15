@@ -408,10 +408,6 @@ if ($hasaccount) {
             if (!$history) {
                 $history = \qbank_questionhub\publication_tracker::latest_active_publication_by_package($mp['id'], 0);
             }
-            $hascategory = false;
-            $changescount = 0;
-            $haschanges = false;
-            $changesknown = false;
             $updateurl = '';
 
             $catid = $history ? (int)$history->categoryid : 0;
@@ -433,21 +429,6 @@ if ($hasaccount) {
             if ($catid > 0) {
                 $category = $DB->get_record('question_categories', ['id' => $catid]);
                 if ($category) {
-                    $hascategory = true;
-                    if ($history) {
-                        $changes = \qbank_questionhub\publication_tracker::changes($catid, $history);
-                        if ($changes !== null) {
-                            $changescount = $changes['count'];
-                            $haschanges = ($changescount > 0);
-                            $changesknown = true;
-                        } else {
-                            $changesknown = false;
-                            $haschanges = true;
-                        }
-                    } else {
-                        $changesknown = false;
-                        $haschanges = true;
-                    }
                     $targetcourseid = ($history && (int)$history->courseid > 0) ? (int)$history->courseid : (int)$COURSE->id;
                     $updateparams = [
                         'courseid' => $targetcourseid,
@@ -496,11 +477,9 @@ if ($hasaccount) {
                     'level_ef' => ($mp['subject_category'] ?? '') === 'EF',
                     'level_ff' => ($mp['subject_category'] ?? '') === 'FF',
                     'versions' => $versions,
-                    'has_category' => $hascategory,
-                    'has_changes' => $haschanges,
-                    'changes_known' => $changesknown,
-                    'changes_count' => $changescount,
                     'update_url' => $updateurl,
+                    // Settings forms of the category list are not on this tab; the package has its own.
+                    'hide_settings_toggle' => true,
                 ];
             }
         }
@@ -688,10 +667,10 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                             version_compare($remoteversion, $pkgversion, '>');
                     }
                     $missingonhub = $remotepackagesmissing[$pkgid] ?? false;
-                    // Pull into the category that received the earlier import, so the importer's
-                    // item tracking (keyed by target category) updates the existing questions.
-                    // Own publications are excluded: an import record would end their push link.
-                    if ($hasremoteupdate && $canimport && $statushistory->action === 'import') {
+                    // Pull into the linked category (import target or own package source), so the
+                    // existing questions are updated. A pull into the source keeps it the source
+                    // (publication_tracker::is_own_link()).
+                    if ($hasremoteupdate && $canimport) {
                         $pulltargetid = (int)$statushistory->categoryid;
                         $pulltitle = html_entity_decode((string)($remote['title'] ?? $statushistory->package_title),
                             ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -802,6 +781,11 @@ foreach ($packagesdata as &$packagecard) {
     $packagecard['sync'] = $syncrowsbypackage[$packagecard['id']] ?? null;
 }
 unset($packagecard);
+// My packages uses the same sync row, so status and push/pull follow the same rules everywhere.
+foreach ($mypackages as &$mypackage) {
+    $mypackage['sync'] = $syncrowsbypackage[$mypackage['id']] ?? null;
+}
+unset($mypackage);
 
 // The library lists the Hub packages imported into this course that are still synced with a local
 // category, i.e. the Browse packages that show sync status instead of "Import". Plain file imports
@@ -809,12 +793,14 @@ unset($packagecard);
 $library = [];
 if ($showlibrary) {
     foreach ($syncrowsbypackage as $packageid => $row) {
-        if ($row['link_action'] !== 'import') {
+        // A pull into an own package source is an import record too, but the package is not borrowed.
+        if ($row['link_action'] !== 'import' || $row['is_package_source']) {
             continue;
         }
         $remote = $getremotepackage($packageid);
         $title = html_entity_decode((string)($remote['title'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $library[] = $row + ['title' => $title !== '' ? $title : ($row['link_title'] ?: $packageid)];
+        $library[] = $row + ['title' => $title !== '' ? $title : ($row['link_title'] ?: $packageid),
+            'hide_settings_toggle' => true];
     }
     usort($library, static fn(array $a, array $b): int => strcasecmp($a['title'], $b['title']));
 }

@@ -1,14 +1,15 @@
 {{!
     @template qbank_questionhub/sync_actions
 
-    Sync actions: push (package source), publish again (withdrawn), pull (imported copy) and package settings toggle.
-    Shared by the category list and the Browse cards; expects a category sync row as context.
+    Sync actions: push (package source with local changes), publish again (withdrawn), pull (imported copy) and package settings toggle.
+    Shared by the category list, Browse cards, library and My packages; expects a category sync row as context.
+    hide_settings_toggle: set where the category list (which holds the settings forms) is not on the page.
 }}
-{{#is_package_source}}
-    <a href="{{update_url}}" class="btn btn-sm {{#has_changes}}btn-primary{{/has_changes}}{{^has_changes}}btn-outline-secondary{{/has_changes}} mr-1" title="{{#str}} push_button_help, qbank_questionhub, {{package_id}} {{/str}}">
+{{#is_package_source}}{{#has_changes}}
+    <a href="{{update_url}}" class="btn btn-sm btn-primary mr-1" title="{{#str}} push_button_help, qbank_questionhub, {{package_id}} {{/str}}">
         <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} push_button, qbank_questionhub {{/str}}
     </a>
-{{/is_package_source}}
+{{/has_changes}}{{/is_package_source}}
 {{#can_republish}}
     <a href="{{url}}" class="btn btn-sm btn-outline-primary mr-1" title="{{#str}} republish_button_help, qbank_questionhub {{/str}}">
         <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} republish_button, qbank_questionhub {{/str}}
@@ -35,11 +36,11 @@
     </button>
 </form>
 {{/can_pull}}
-{{#is_package_source}}
+{{^hide_settings_toggle}}{{#is_package_source}}
     {{#pkg_settings}}
     <button class="btn btn-sm btn-outline-secondary qh-settings-toggle" type="button" data-toggle="collapse" data-bs-toggle="collapse"
             data-target="#edit-cat-{{domid}}" data-bs-target="#edit-cat-{{domid}}" title="{{#str}} edit_settings, qbank_questionhub {{/str}}">
         <i class="fa fa-cog" aria-hidden="true"></i><span class="sr-only">{{#str}} edit_settings, qbank_questionhub {{/str}}</span>
     </button>
     {{/pkg_settings}}
-{{/is_package_source}}
+{{/is_package_source}}{{/hide_settings_toggle}}

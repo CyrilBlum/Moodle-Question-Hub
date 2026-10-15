@@ -151,6 +151,27 @@ class publication_tracker {
     }
 
     /**
+     * Whether a link record keeps the category the source of its own package.
+     *
+     * A publication does; so does a later pull of the same package into the category it was
+     * published from (e.g. a newer version published from another Moodle), since the category
+     * still holds the package's own questions and should keep offering updates.
+     */
+    public static function is_own_link(stdClass $history): bool {
+        global $DB;
+        if ($history->action === 'publish') {
+            return true;
+        }
+        if ($history->action !== 'import' || (string)$history->package_id === '') {
+            return false;
+        }
+        return $DB->record_exists_select('qbank_questionhub_history',
+            "action = 'publish' AND package_id = :packageid AND categoryid = :categoryid AND id < :id", [
+                'packageid' => $history->package_id, 'categoryid' => $history->categoryid, 'id' => $history->id,
+            ]);
+    }
+
+    /**
      * Latest publication whose category has not subsequently become an import target.
      *
      * An imported copy can itself be published. Once a newer import lands in that
@@ -175,6 +196,10 @@ class publication_tracker {
             $latest = self::latest($courseid, (int)$publication->categoryid);
             if ($latest && (int)$latest->id === (int)$publication->id) {
                 return $publication;
+            }
+            // Pulled a newer release of the same package back into its source category.
+            if ($latest && $latest->package_id === $packageid && self::is_own_link($latest)) {
+                return $latest;
             }
         }
         if ($courseid > 0) {
@@ -258,7 +283,7 @@ class publication_tracker {
                 return null;
             }
             $history = self::latest($courseid, $currentid);
-            if ($history && $history->action === 'publish') {
+            if ($history && self::is_own_link($history)) {
                 return $history;
             }
             $clean = preg_replace('/[^a-z0-9]/', '', mb_strtolower($cat->name));
@@ -272,8 +297,9 @@ class publication_tracker {
                 );
                 foreach ($historybyname as $publication) {
                     $latest = self::latest($courseid, (int)$publication->categoryid);
-                    if ($latest && (int)$latest->id === (int)$publication->id) {
-                        return $publication;
+                    if ($latest && ((int)$latest->id === (int)$publication->id ||
+                            ($latest->package_id === $publication->package_id && self::is_own_link($latest)))) {
+                        return $latest;
                     }
                 }
             }

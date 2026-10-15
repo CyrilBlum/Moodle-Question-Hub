@@ -333,20 +333,6 @@
                 <div class="d-flex justify-content-between align-items-start flex-wrap">
                     <div>
                         <strong>{{title}}</strong>
-                        {{#has_category}}
-                            {{#changes_known}}
-                                {{#has_changes}}
-                                <span class="badge badge-warning bg-warning text-dark ml-2" title="{{#str}} changes_since_last_pub, qbank_questionhub, {{changes_count}} {{/str}}">
-                                    {{#str}} changes_count, qbank_questionhub, {{changes_count}} {{/str}}
-                                </span>
-                                {{/has_changes}}
-                                {{^has_changes}}
-                                <span class="badge badge-success bg-success text-white ml-2" title="{{#str}} no_changes_since_last_pub, qbank_questionhub {{/str}}">
-                                    <i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} up_to_date, qbank_questionhub {{/str}}
-                                </span>
-                                {{/has_changes}}
-                            {{/changes_known}}
-                        {{/has_category}}
                         <div class="small text-muted">
                             {{id}} · v{{latest_version}} · {{downloads}} Downloads ·
                             {{#preview_on}}{{#str}} preview_on, qbank_questionhub {{/str}}{{/preview_on}}{{^preview_on}}{{#str}} preview_off, qbank_questionhub {{/str}}{{/preview_on}}
@@ -368,11 +354,13 @@
                         </div>
                     </div>
                     <div class="d-inline-flex align-items-center flex-wrap mt-2 mt-md-0">
-                        {{#update_url}}
-                        <a href="{{update_url}}" class="btn btn-sm btn-primary mr-1 {{#has_changes}}font-weight-bold{{/has_changes}}">
-                            <i class="fa fa-refresh mr-1" aria-hidden="true"></i>{{#str}} update_package_button, qbank_questionhub {{/str}}
+                        {{! Same status and push/pull rules as the category list, cards and library. }}
+                        {{#sync}}{{> qbank_questionhub/sync_status }}{{> qbank_questionhub/sync_actions }}{{/sync}}
+                        {{^sync}}{{#update_url}}
+                        <a href="{{update_url}}" class="btn btn-sm btn-outline-primary mr-1">
+                            <i class="fa fa-cloud-upload mr-1" aria-hidden="true"></i>{{#str}} update_package_button, qbank_questionhub {{/str}}
                         </a>
-                        {{/update_url}}
+                        {{/update_url}}{{/sync}}
                         <button class="btn btn-sm btn-outline-secondary mr-1" type="button" data-toggle="collapse" data-bs-toggle="collapse"
                                 data-target="#edit-{{domid}}" data-bs-target="#edit-{{domid}}">{{#str}} edit_settings, qbank_questionhub {{/str}}</button>
                         <form method="post" action="{{action_url}}" class="d-inline"
