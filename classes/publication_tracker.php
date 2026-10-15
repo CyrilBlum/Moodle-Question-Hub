@@ -270,6 +270,27 @@ class publication_tracker {
         return null;
     }
 
+    /**
+     * Link held by the nearest parent category (publish or import), for a subcategory without its own link.
+     * An explicitly removed link on the way up ends the search.
+     */
+    public static function parent_link(int $categoryid, int $courseid = 0): ?stdClass {
+        global $DB;
+        $parentid = (int)$DB->get_field('question_categories', 'parent', ['id' => $categoryid]);
+        while ($parentid > 0) {
+            $cat = $DB->get_record('question_categories', ['id' => $parentid], 'id,parent,name');
+            if (!$cat || ($cat->name === 'top' && (int)$cat->parent === 0) || self::is_unlinked($courseid, $parentid)) {
+                return null;
+            }
+            $history = self::latest($courseid, $parentid);
+            if ($history) {
+                return $history;
+            }
+            $parentid = (int)$cat->parent;
+        }
+        return null;
+    }
+
     /** Find a local publication for a category; imports must not make a category publishable as an update. */
     public static function find_local_publication_for_category(int $categoryid, int $courseid = 0): ?stdClass {
         global $DB;

@@ -715,6 +715,11 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $directlink = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, (int)$cat->id);
             $latestpub = \qbank_questionhub\publication_tracker::find_local_publication_for_category((int)$cat->id, (int)$COURSE->id);
             $isunlinked = \qbank_questionhub\publication_tracker::is_unlinked((int)$COURSE->id, (int)$cat->id);
+            if (!$directlink && !$latestpub && !$isunlinked) {
+                // A subcategory belongs to the package its parent is linked to, also when the parent was
+                // linked by an import (an own publication is found above).
+                $latestpub = \qbank_questionhub\publication_tracker::parent_link((int)$cat->id, (int)$COURSE->id);
+            }
             $matchedpackage = null;
             if ($latestpub && !empty($latestpub->package_id)) {
                 $matchedpackage = $mypackagesbyid[$latestpub->package_id] ?? null;
