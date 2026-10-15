@@ -702,6 +702,8 @@ class package_importer {
             if ($categorymode !== null) {
                 $packagehash = hash('sha256', (string)$packagemetadata['id']);
                 $nextid = 0;
+                // Local question bank entries that hold a package question after this import.
+                $packageentries = [];
                 foreach ($plan as $item) {
                     // Version last written from the Hub; a kept local edit keeps the old one, so the
                     // question stays a conflict until the teacher takes a Hub version.
@@ -709,6 +711,7 @@ class package_importer {
                     if ($item['status'] === 'unchanged' || $item['status'] === 'kept') {
                         $unchangedcount++;
                         $entryid = $item['entryid'];
+                        $packageentries[(int)$entryid] = true;
                         if ($item['status'] === 'kept') {
                             $hubquestionid = (int)$item['baselinequestionid'];
                             if (!$hubquestionid && !$item['trackingid']) {
@@ -740,6 +743,9 @@ class package_importer {
                             $addedcount--;
                         }
                     }
+                    // A separate copy ("keep both") is a local addition: the tracked local question holds the
+                    // package question.
+                    $packageentries[(int)$entryid] = true;
                     $tracking = (object)[
                         'questionbankentryid' => $entryid, 'sourcehash' => $item['sourcehash'], 'timemodified' => time(),
                     ];
@@ -777,7 +783,13 @@ class package_importer {
 
             try {
                 $importedquestions = publication_tracker::current((int)$this->targetcategory->id);
-                if (!empty($importedquestions)) {
+                if ($categorymode !== null) {
+                    // The sync state holds the package questions only: other questions in the category were
+                    // added here and count as local changes (badge "new"), not as synchronised.
+                    $importedquestions = array_intersect_key($importedquestions, $packageentries);
+                }
+                // Also an empty state is recorded: an unsaved one is backfilled with every question later.
+                if (!empty($importedquestions) || $categorymode !== null) {
                     publication_tracker::save((int)$historyid, $importedquestions);
                 }
             } catch (\Throwable $ignore) {

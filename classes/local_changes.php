@@ -40,9 +40,28 @@ class local_changes {
         return $history && (int)$history->categoryid === $categoryid ? $history : null;
     }
 
-    /** Whether the category is the source of its package (local changes are published by a push). */
+    /**
+     * Whether the category is the source of its package, i.e. its local changes are published by a push: it
+     * published the package, or the user may publish versions of it on the Hub (package admin or editor), as in
+     * the category list. Removed questions then count as changes too.
+     */
     public static function is_source(stdClass $history): bool {
-        return publication_tracker::is_own_link($history);
+        static $roles = null;
+        if (publication_tracker::is_own_link($history)) {
+            return true;
+        }
+        if ($roles === null) {
+            $roles = [];
+            try {
+                foreach ((new api_client(null, null, 30, true))->get_my_packages() as $package) {
+                    $roles[(string)$package['id']] = (string)($package['my_role'] ?? 'admin');
+                }
+            } catch (\Throwable $e) {
+                // Without a Hub connection only a publication from this category makes it the source.
+                debugging($e->getMessage(), DEBUG_DEVELOPER);
+            }
+        }
+        return in_array($roles[(string)$history->package_id] ?? '', ['admin', 'editor'], true);
     }
 
     /**

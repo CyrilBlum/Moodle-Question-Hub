@@ -78,5 +78,35 @@ function xmldb_qbank_questionhub_upgrade(int $oldversion): bool {
         }
         upgrade_plugin_savepoint(true, 2026101514, 'qbank', 'questionhub');
     }
+    if ($oldversion < 2026101525) {
+        // Import snapshots used to hold every question of the category, so questions added locally (e.g.
+        // local copies next to the imported Hub versions) showed as synchronised. Restrict the current import
+        // snapshot of each linked category to the questions the package tracks. Categories without tracking
+        // rows (imports from before tracking existed) are left unchanged.
+        $links = $DB->get_records_sql(
+            "SELECT h.id, h.package_id, h.categoryid
+               FROM {qbank_questionhub_history} h
+              WHERE h.action = 'import' AND h.snapshotted = 1
+                AND h.id = (SELECT MAX(h2.id) FROM {qbank_questionhub_history} h2
+                             WHERE h2.categoryid = h.categoryid AND h2.action IN ('publish', 'import', 'unlink'))");
+        foreach ($links as $link) {
+            if ((string)$link->package_id === '') {
+                continue;
+            }
+            $tracked = $DB->get_fieldset_select('qbank_questionhub_items', 'questionbankentryid',
+                'packagehash = ? AND targetcategoryid = ?', [hash('sha256', $link->package_id), $link->categoryid]);
+            if (!$tracked) {
+                continue;
+            }
+            $tracked = array_flip(array_map('intval', $tracked));
+            foreach ($DB->get_records('qbank_questionhub_published', ['historyid' => $link->id], '',
+                    'id, questionbankentryid') as $row) {
+                if (!isset($tracked[(int)$row->questionbankentryid])) {
+                    $DB->delete_records('qbank_questionhub_published', ['id' => $row->id]);
+                }
+            }
+        }
+        upgrade_plugin_savepoint(true, 2026101525, 'qbank', 'questionhub');
+    }
     return true;
 }
