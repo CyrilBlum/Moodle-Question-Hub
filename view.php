@@ -257,11 +257,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $diffexporter = new \qbank_questionhub\package_exporter((int)$COURSE->id, (int)$bankcontext->id);
                     $sides = [get_string('diff_side_local', 'qbank_questionhub'),
                         get_string('diff_side_hub', 'qbank_questionhub', $version)];
-                    $difffor = static function(array $item) use ($blocks, $diffexporter, $sides): array {
+                    $linkcontext = $bankcontext;
+                    $linkreturn = $PAGE->url->out_as_local_url(false);
+                    $linkcourseid = (int)$COURSE->id;
+                    $difffor = static function(array $item) use ($blocks, $diffexporter, $sides, $DB, $linkcontext,
+                            $linkreturn, $linkcourseid): array {
                         $file = \qbank_questionhub\release_diff::compare($item['name'],
                             \qbank_questionhub\release_diff::entry_lines($diffexporter, (int)$item['entryid']),
                             \qbank_questionhub\release_diff::xml_lines($blocks[$item['index']]));
-                        return \qbank_questionhub\release_diff::label_sides([$file], ...$sides)[0];
+                        if (!empty($item['renamed_from'])) {
+                            $file += ['renamed_from' => $item['renamed_from'], 'is_rename' => true];
+                        }
+                        if (!empty($item['moved_label'])) {
+                            $file += ['moved_label' => $item['moved_label'], 'is_rename' => true];
+                        }
+                        // Links go to the local question that the import would change.
+                        $file['questionid'] = (int)$DB->get_field_sql('SELECT questionid FROM {question_versions}
+                            WHERE questionbankentryid = ? ORDER BY version DESC', [(int)$item['entryid']], IGNORE_MULTIPLE);
+                        $file = \qbank_questionhub\release_diff::label_sides([$file], ...$sides)[0];
+                        return \qbank_questionhub\release_diff::add_links([$file], $linkcontext, $linkcourseid,
+                            $linkreturn)[0];
                     };
                     foreach ($importpreview['conflict'] as &$conflictitem) {
                         if ($conflictitem['entryid']) {

@@ -24,6 +24,7 @@ class release_diff {
      */
     public static function since(int $categoryid, \stdClass $history, package_exporter $exporter,
             bool $inscope = false): ?array {
+        global $DB;
         $changes = $inscope ? publication_tracker::changes_in_scope($categoryid, $history) :
             publication_tracker::changes($categoryid, $history);
         $previous = publication_tracker::snapshot((int)$history->id);
@@ -31,20 +32,30 @@ class release_diff {
             return null;
         }
         $current = publication_tracker::current($categoryid);
+        $moves = $inscope ? [] : self::moves($categoryid, $history, $previous, $current);
         $files = [];
         $samecontent = 0;
         foreach (array_keys($changes['entries']) as $entryid) {
             $file = self::file($previous[$entryid] ?? 0, $current[$entryid] ?? 0, $exporter);
-            if ($file['status'] === 'modified' && !$file['too_large'] && !$file['additions'] && !$file['deletions']) {
+            if ($file['status'] === 'modified' && !$file['too_large'] && !$file['additions'] && !$file['deletions'] &&
+                    !isset($moves[$entryid])) {
                 $samecontent++;
                 continue;
             }
-            $files[] = $file + ['entryid' => (int)$entryid];
+            $files[] = self::with_move($file, $moves[$entryid] ?? null) +
+                ['entryid' => (int)$entryid, 'questionid' => (int)($current[$entryid] ?? 0)];
+        }
+        // Moved without a new version: the content is unchanged, only the category differs from the release.
+        foreach (array_diff_key($moves, $changes['entries']) as $entryid => $move) {
+            $name = (string)$DB->get_field('question', 'name', ['id' => $current[$entryid]]);
+            $files[] = self::with_move(self::compare($name, [], [], 'moved'), $move) +
+                ['entryid' => (int)$entryid, 'questionid' => (int)$current[$entryid]];
         }
         $deleted = [];
         foreach ($changes['removed'] as $entryid => $questionid) {
             if (self::question_exists((int)$questionid)) {
-                $files[] = self::file((int)$questionid, 0, $exporter) + ['entryid' => (int)$entryid];
+                $files[] = self::file((int)$questionid, 0, $exporter) +
+                    ['entryid' => (int)$entryid, 'questionid' => (int)$questionid];
             } else {
                 $deleted[] = (int)$entryid;
             }
@@ -59,6 +70,155 @@ class release_diff {
     private static function question_exists(int $questionid): bool {
         global $DB;
         return $DB->record_exists('question', ['id' => $questionid]);
+    }
+
+    /** The published release from the Hub (downloaded once per request), '' if it is not available. */
+    private static function release_xml(\stdClass $history): string {
+        static $cache = [];
+        $key = $history->package_id . '@' . $history->package_version;
+        if (!isset($cache[$key])) {
+            try {
+                $cache[$key] = (new api_client(null, null, 30, true))->download_release((string)$history->package_id,
+                    (string)$history->package_version);
+            } catch (\Throwable $e) {
+                $cache[$key] = '';
+            }
+        }
+        return $cache[$key];
+    }
+
+    /**
+     * Questions whose category inside the package differs from the published release (moved into another
+     * subcategory). A question is identified in the release by the name of its published version; names that
+     * occur more than once are skipped.
+     *
+     * @return array entry ID => ['from' => path in the release, 'to' => current path]
+     */
+    private static function moves(int $categoryid, \stdClass $history, array $previous, array $current): array {
+        global $DB;
+        $kept = array_intersect_key($previous, $current);
+        if (!$kept) {
+            return [];
+        }
+        // Current path of every category below the package category.
+        $paths = [$categoryid => []];
+        $pending = [$categoryid];
+        while ($pending) {
+            $parent = array_shift($pending);
+            foreach ($DB->get_records('question_categories', ['parent' => $parent], '', 'id, name') as $child) {
+                $paths[(int)$child->id] = array_merge($paths[$parent], [trim($child->name)]);
+                $pending[] = (int)$child->id;
+            }
+        }
+        $entrycats = [];
+        foreach (array_chunk(array_keys($kept), 500) as $chunk) {
+            $entrycats += $DB->get_records_list('question_bank_entries', 'id', $chunk, '', 'id, questioncategoryid');
+        }
+        // Path of each published question in the release, by name; ambiguous names are dropped.
+        $xml = self::release_xml($history);
+        if ($xml === '') {
+            return [];
+        }
+        $released = self::release_paths($xml);
+        $names = [];
+        foreach (array_chunk(array_values($kept), 500) as $chunk) {
+            foreach ($DB->get_records_list('question', 'id', $chunk, '', 'id, name') as $question) {
+                $names[(int)$question->id] = trim($question->name);
+            }
+        }
+        $moves = [];
+        foreach ($kept as $entryid => $questionid) {
+            $name = $names[$questionid] ?? '';
+            $category = (int)($entrycats[$entryid]->questioncategoryid ?? 0);
+            if (!isset($released[$name]) || $released[$name] === false || !isset($paths[$category])) {
+                continue;
+            }
+            if ($released[$name] !== $paths[$category]) {
+                $moves[$entryid] = ['from' => self::path_label($released[$name]), 'to' => self::path_label($paths[$category])];
+            }
+        }
+        return $moves;
+    }
+
+    /**
+     * Category path (below the package root) of each question in a package XML, by question name.
+     *
+     * @return array name => string[] path, or false if the name occurs more than once
+     */
+    public static function release_paths(string $xml): array {
+        $paths = [];
+        $roots = [];
+        $current = [];
+        $entries = [];
+        preg_match_all('~<question type="([^"]*)">.*?</question>~s', $xml, $blocks, PREG_SET_ORDER);
+        foreach ($blocks as $block) {
+            $node = simplexml_load_string($block[0], 'SimpleXMLElement', LIBXML_NONET);
+            if (!$node) {
+                continue;
+            }
+            if ($block[1] === 'category') {
+                $segments = array_values(array_filter(explode('/', trim((string)$node->category->text, '/')),
+                    static fn($segment) => $segment !== ''));
+                if ($segments && preg_match('/^\$[a-z]+\$$/i', $segments[0])) {
+                    array_shift($segments);
+                }
+                if ($segments && $segments[0] === 'top') {
+                    array_shift($segments);
+                }
+                if ($segments) {
+                    $roots[$segments[0]] = true;
+                }
+                $current = $segments;
+                continue;
+            }
+            $entries[] = [trim((string)$node->name->text), $current];
+        }
+        $root = count($roots) === 1 ? (string)array_key_first($roots) : null;
+        foreach ($entries as [$name, $segments]) {
+            if ($root !== null && $segments && $segments[0] === $root) {
+                array_shift($segments);
+            }
+            $paths[$name] = array_key_exists($name, $paths) ? false : array_map('trim', $segments);
+        }
+        return $paths;
+    }
+
+    /** Readable category path below the package category. */
+    public static function path_label(array $segments): string {
+        return $segments ? implode(' / ', $segments) : get_string('diff_path_root', 'qbank_questionhub');
+    }
+
+    /** Adds a move (old and new category) to a file of the diff view. */
+    private static function with_move(array $file, ?array $move): array {
+        if ($move) {
+            $file['moved_label'] = get_string('diff_moved', 'qbank_questionhub', (object)$move);
+            $file['is_rename'] = true;
+        }
+        return $file;
+    }
+
+    /**
+     * Adds links to preview and edit the local question of each file (not for questions deleted here).
+     *
+     * @param array[] $files files with questionid (0 or missing: no local question)
+     * @param string $returnurl local URL to come back to after editing
+     */
+    public static function add_links(array $files, \context $context, int $courseid, string $returnurl): array {
+        // Question bank pages need the mod_qbank cmid on Moodle 5.0 and the course ID on 4.5 (course context).
+        $bankparams = (int)$context->contextlevel === CONTEXT_MODULE ? ['cmid' => $context->instanceid] :
+            ['courseid' => $courseid];
+        foreach ($files as &$file) {
+            $questionid = (int)($file['questionid'] ?? 0);
+            if (!$questionid || !self::question_exists($questionid)) {
+                continue;
+            }
+            $file['preview_url'] = (new \moodle_url('/question/bank/previewquestion/preview.php',
+                ['id' => $questionid] + $bankparams))->out(false);
+            $file['edit_url'] = (new \moodle_url('/question/bank/editquestion/question.php',
+                ['id' => $questionid, 'returnurl' => $returnurl] + $bankparams))->out(false);
+        }
+        unset($file);
+        return $files;
     }
 
     /**
@@ -78,12 +238,7 @@ class release_diff {
                 $known[trim($question->name)] = true;
             }
         }
-        try {
-            $xml = (new api_client(null, null, 30, true))->download_release((string)$history->package_id,
-                (string)$history->package_version);
-        } catch (\Throwable $e) {
-            $xml = '';
-        }
+        $xml = self::release_xml($history);
         $files = [];
         preg_match_all('~<question type="(?!category")[^"]*">.*?</question>~s', $xml, $matches);
         foreach ($matches[0] as $block) {
@@ -111,7 +266,29 @@ class release_diff {
         $name = (string)$DB->get_field('question', 'name', ['id' => $newid ?: $oldid]);
         $old = $oldid ? self::question_lines($exporter, $oldid) : [];
         $new = $newid ? self::question_lines($exporter, $newid) : [];
-        return self::compare($name, $old, $new, !$oldid ? 'added' : (!$newid ? 'removed' : 'modified'));
+        $status = !$oldid ? 'added' : (!$newid ? 'removed' : 'modified');
+        $oldname = $status === 'modified' ? (string)$DB->get_field('question', 'name', ['id' => $oldid]) : $name;
+        if (trim($oldname) === trim($name)) {
+            return self::compare($name, $old, $new, $status);
+        }
+        // Only the name changed: shown as a rename, like git does for a file with identical content.
+        $file = self::compare($name, $old, $new, self::same_except_name($old, $new) ? 'renamed' : 'modified');
+        return $file + ['renamed_from' => trim($oldname), 'is_rename' => true];
+    }
+
+    /** Whether two exported questions differ in their name only. */
+    public static function same_except_name(array $old, array $new): bool {
+        if (count($old) !== count($new)) {
+            return false;
+        }
+        foreach ($old as $index => $line) {
+            // The name text is the line after <name>.
+            $isname = $index > 0 && trim($old[$index - 1]) === '<name>';
+            if (!$isname && $line !== $new[$index]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -120,7 +297,7 @@ class release_diff {
      * @param string $name question name shown in the file header
      * @param string[] $old lines before (empty for an added question)
      * @param string[] $new lines after (empty for a removed question)
-     * @param string $status added, removed or modified
+     * @param string $status added, removed, modified, renamed (only the name differs) or moved (no new version)
      * @return array
      */
     public static function compare(string $name, array $old, array $new, string $status = 'modified'): array {

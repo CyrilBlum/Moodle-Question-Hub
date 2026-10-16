@@ -58,4 +58,26 @@ final class release_diff_test extends \advanced_testcase {
         $this->assertStringContainsString('Q2', $blocks[1]);
         $this->assertNull(release_diff::package_blocks($xml, 3));
     }
+
+    public function test_same_except_name_detects_pure_rename(): void {
+        $old = ['<question type="numerical">', '  <name>', '    <text>Anzahl Pixel</text>', '  </name>', '  <defaultgrade>1</defaultgrade>'];
+        $renamed = $old;
+        $renamed[2] = '    <text>K3 - Anzahl Pixel</text>';
+        $this->assertTrue(release_diff::same_except_name($old, $renamed));
+        $edited = $renamed;
+        $edited[4] = '  <defaultgrade>2</defaultgrade>';
+        $this->assertFalse(release_diff::same_except_name($old, $edited));
+        $this->assertFalse(release_diff::same_except_name($old, array_slice($old, 0, 4)));
+    }
+
+    public function test_release_paths_below_package_root(): void {
+        $xml = '<quiz><question type="category"><category><text>$course$/top/Paket</text></category></question>' .
+            '<question type="shortanswer"><name><text>Q1</text></name></question>' .
+            '<question type="category"><category><text>$course$/top/Paket/Teil A</text></category></question>' .
+            '<question type="shortanswer"><name><text>Q2</text></name></question>' .
+            '<question type="shortanswer"><name><text>Q2</text></name></question></quiz>';
+        $paths = release_diff::release_paths($xml);
+        $this->assertSame([], $paths['Q1']);
+        $this->assertFalse($paths['Q2']);
+    }
 }

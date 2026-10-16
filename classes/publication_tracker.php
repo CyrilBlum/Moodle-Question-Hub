@@ -329,7 +329,7 @@ class publication_tracker {
         return null;
     }
 
-    /** Current latest question IDs by question bank entry within a category tree. */
+    /** Current latest question IDs by question bank entry within a category tree (without cloze subquestions). */
     public static function current(int $categoryid): array {
         global $DB;
         $catids = self::category_ids($categoryid);
@@ -344,7 +344,8 @@ class publication_tracker {
                       GROUP BY questionbankentryid) newest ON newest.questionbankentryid = qbe.id
                   JOIN {question_versions} latest ON latest.questionbankentryid = newest.questionbankentryid
                        AND latest.version = newest.maxversion
-                 WHERE qbe.questioncategoryid $insql";
+                  JOIN {question} q ON q.id = latest.questionid
+                 WHERE qbe.questioncategoryid $insql AND q.parent = 0";
         $result = [];
         foreach ($DB->get_records_sql($sql, $params) as $entry) {
             $result[(int)$entry->id] = (int)$entry->questionid;
@@ -366,7 +367,20 @@ class publication_tracker {
         foreach ($DB->get_records('qbank_questionhub_published', ['historyid' => $historyid]) as $row) {
             $result[(int)$row->questionbankentryid] = (int)$row->questionid;
         }
-        return !empty($result) ? $result : null;
+        if (empty($result)) {
+            return null;
+        }
+        // Older snapshots also hold the subquestions of cloze questions; like current(), compare questions only.
+        foreach (array_chunk(array_values($result), 500) as $chunk) {
+            [$insql, $params] = $DB->get_in_or_equal($chunk);
+            $subquestions = array_flip($DB->get_fieldset_select('question', 'id', "id $insql AND parent <> 0", $params));
+            foreach ($result as $entryid => $questionid) {
+                if (isset($subquestions[$questionid])) {
+                    unset($result[$entryid]);
+                }
+            }
+        }
+        return $result;
     }
 
     /** Backfill snapshot for historical records created before tracking was enabled. */

@@ -128,6 +128,11 @@ class package_exporter {
         foreach ($questionids as $qid) {
             $qdata = \question_bank::load_question_data((int)$qid);
             if ($qdata) {
+                // Calculated question types load their datasets only for an export (as get_questions_category()
+                // does for a category export); without them a re-import loses the dataset definitions.
+                $qdata = clone($qdata);
+                $qdata->export_process = true;
+                get_question_options($qdata, true);
                 $hydratedquestions[] = $qdata;
             }
         }

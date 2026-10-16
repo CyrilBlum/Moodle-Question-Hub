@@ -120,16 +120,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $exporter = new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id);
 $diff = \qbank_questionhub\local_changes::files($history, $exporter);
 $items = [];
-$files = \qbank_questionhub\release_diff::label_sides($diff['files'] ?? [],
+$files = \qbank_questionhub\release_diff::add_links(\qbank_questionhub\release_diff::label_sides($diff['files'] ?? [],
     get_string('diff_side_synced', 'qbank_questionhub', $history->package_version),
-    get_string('diff_side_current', 'qbank_questionhub'));
+    get_string('diff_side_current', 'qbank_questionhub')), $context, (int)$course->id, $thispageurl->out_as_local_url(false));
 foreach ($files as $file) {
     $items[] = [
         'entryid' => $file['entryid'],
         'name' => $file['name'],
-        // A removed question cannot be restored here: its versions are gone with it.
+        // A removed question cannot be restored here: its versions are gone with it. A move has no version to undo.
         'can_accept' => !$issource && $file['status'] !== 'removed',
-        'can_reject' => $file['status'] !== 'removed',
+        'can_reject' => !in_array($file['status'], ['removed', 'moved'], true),
         'is_added' => $file['status'] === 'added',
         'reject_confirm' => get_string($file['status'] === 'added' ? 'review_reject_added_confirm' :
             'review_reject_confirm', 'qbank_questionhub', $file['name']),

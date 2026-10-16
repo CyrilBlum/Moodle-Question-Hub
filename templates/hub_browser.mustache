@@ -69,14 +69,14 @@
                 {{#conflictcount}}<span class="badge badge-danger bg-danger">{{conflictcount}} {{#str}} import_preview_conflicts, qbank_questionhub {{/str}}</span>{{/conflictcount}}
             </p>
             {{#new.0}}<h6>{{#str}} import_preview_new_heading, qbank_questionhub {{/str}}</h6><ul>{{#new}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}</li>{{/new}}</ul>{{/new.0}}
-            {{#update.0}}<h6>{{#str}} import_preview_updated_heading, qbank_questionhub {{/str}}</h6><ul>{{#update}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#uncertain}} <small class="text-warning">{{#str}} import_preview_uncertain, qbank_questionhub {{/str}}</small>{{/uncertain}}</li>{{/update}}</ul>{{/update.0}}
+            {{#update.0}}<h6>{{#str}} import_preview_updated_heading, qbank_questionhub {{/str}}</h6><ul>{{#update}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}{{#uncertain}} <small class="text-warning">{{#str}} import_preview_uncertain, qbank_questionhub {{/str}}</small>{{/uncertain}}</li>{{/update}}</ul>{{/update.0}}
             {{#update_diff}}
             <details class="mb-3">
                 <summary class="small text-primary" style="cursor:pointer">{{#str}} import_preview_show_update_diffs, qbank_questionhub {{/str}}</summary>
                 <div class="mt-2">{{> qbank_questionhub/diff_files }}</div>
             </details>
             {{/update_diff}}
-            {{#unchanged.0}}<h6>{{#str}} import_preview_unchanged_heading, qbank_questionhub {{/str}}</h6><ul>{{#unchanged}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}</li>{{/unchanged}}</ul>{{/unchanged.0}}
+            {{#unchanged.0}}<h6>{{#str}} import_preview_unchanged_heading, qbank_questionhub {{/str}}</h6><ul>{{#unchanged}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}</li>{{/unchanged}}</ul>{{/unchanged.0}}
             <form method="post" action="{{action_url}}" class="d-inline">
                 <input type="hidden" name="sesskey" value="{{sesskey}}">
                 <input type="hidden" name="action" value="import_package">
@@ -95,7 +95,7 @@
                     <p class="small text-muted">{{#str}} import_preview_conflicts_help, qbank_questionhub {{/str}}</p>
                     {{#conflict}}
                     <fieldset class="mb-2">
-                        <legend class="h6 mb-1">{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}</legend>
+                        <legend class="h6 mb-1">{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}</legend>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="resolution[{{sourcekey}}]" id="res-keep-{{sourcekey}}" value="keep" checked>
                             <label class="form-check-label" for="res-keep-{{sourcekey}}">{{#str}} conflict_keep, qbank_questionhub {{/str}}</label>

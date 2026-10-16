@@ -355,8 +355,10 @@ class package_importer {
                 'status' => $status, 'sourcekey' => $sourcekey, 'sourcehash' => $sourcehash,
                 'entryid' => $entryid, 'trackingid' => $tracking->id ?? 0, 'uncertain' => $uncertain,
                 'baselinequestionid' => $baselinequestionid, 'index' => count($items),
+                'loosehash' => self::loose_hash($node), 'path' => $relative,
             ];
         }
+        $this->match_renames($items, $packagehash, $history, $previoushashes);
         return $items;
     }
 
@@ -432,6 +434,100 @@ class package_importer {
     public static function source_key(array $relative, string $idnumber, string $type, string $name): string {
         $identity = $idnumber !== '' ? ['idnumber', $idnumber] : ['name', $type, $name];
         return hash('sha256', json_encode([$relative, $identity], JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Pairs package questions that look new with tracked questions missing from the package because they were
+     * renamed or moved into another subcategory on the Hub: the content apart from the name is identical to the
+     * tracked question in the previous release. Only unambiguous pairs are used. The tracked local question is
+     * then updated (or left unchanged) instead of importing a copy next to it.
+     *
+     * @param array[] $items preview items, changed in place
+     * @param array|null $previoushashes fingerprints of the previous release if already downloaded
+     */
+    private function match_renames(array &$items, string $packagehash, ?\stdClass $history,
+            ?array $previoushashes): void {
+        global $DB;
+        $candidates = [];
+        foreach ($items as $index => $item) {
+            if ($item['status'] === 'new' && !$item['trackingid'] && !$item['entryid']) {
+                $candidates[$item['loosehash']][] = $index;
+            }
+        }
+        if (!$candidates || !$history) {
+            return;
+        }
+        $keys = array_flip(array_column($items, 'sourcekey'));
+        $orphans = [];
+        $rows = $DB->get_records('qbank_questionhub_items', [
+            'packagehash' => $packagehash, 'targetcategoryid' => $this->targetcategory->id,
+        ]);
+        foreach ($rows as $row) {
+            if (!isset($keys[$row->sourcekey]) &&
+                    $DB->record_exists('question_bank_entries', ['id' => $row->questionbankentryid])) {
+                $orphans[$row->sourcekey] = $row;
+            }
+        }
+        if (!$orphans) {
+            return;
+        }
+        if ($previoushashes === null) {
+            try {
+                $client = new api_client(null, null, 30, true);
+                $previoushashes = $this->release_fingerprints(
+                    $client->download_release((string)$history->package_id, (string)$history->package_version));
+            } catch (\Throwable $e) {
+                // Without the previous release a rename cannot be told from a new question.
+                return;
+            }
+        }
+        $byloose = [];
+        foreach (array_keys($orphans) as $key) {
+            if (isset($previoushashes[$key]['loose'])) {
+                $byloose[$previoushashes[$key]['loose']][] = $key;
+            }
+        }
+        foreach ($byloose as $loose => $orphankeys) {
+            if (count($orphankeys) !== 1 || count($candidates[$loose] ?? []) !== 1) {
+                continue;
+            }
+            $row = $orphans[$orphankeys[0]];
+            $previous = $previoushashes[$orphankeys[0]];
+            $item = &$items[$candidates[$loose][0]];
+            $item['trackingid'] = (int)$row->id;
+            $item['entryid'] = (int)$row->questionbankentryid;
+            $item['baselinequestionid'] = (int)($row->questionid ?? 0);
+            // Only moved: the question itself (name included) is the one last pulled.
+            $item['status'] = $row->sourcehash === $item['sourcehash'] ? 'unchanged' : 'update';
+            if ($item['status'] === 'update' && $item['baselinequestionid'] &&
+                    $this->latest_questionid($item['entryid']) !== $item['baselinequestionid']) {
+                // Renamed on the Hub and edited here: never overwrite silently.
+                $item['status'] = 'conflict';
+            }
+            if ($previous['name'] !== $item['name']) {
+                $item['renamed_from'] = $previous['name'];
+            }
+            if ($previous['path'] !== $item['path']) {
+                $item['moved_label'] = get_string('diff_moved', 'qbank_questionhub', (object)[
+                    'from' => release_diff::path_label($previous['path']),
+                    'to' => release_diff::path_label($item['path']),
+                ]);
+            }
+            unset($item);
+        }
+    }
+
+    /** Hash of a package question without its name: equal for a question that was only renamed. */
+    private static function loose_hash(\SimpleXMLElement $node): string {
+        $doc = new \DOMDocument();
+        $copy = $doc->importNode(dom_import_simplexml($node), true);
+        $doc->appendChild($copy);
+        foreach (iterator_to_array($copy->childNodes) as $child) {
+            if ($child instanceof \DOMElement && $child->tagName === 'name') {
+                $copy->removeChild($child);
+            }
+        }
+        return hash('sha256', $copy->C14N());
     }
 
     /** Question ID of the latest version of a question bank entry. */
@@ -548,6 +644,7 @@ class package_importer {
             $hashes[$key] = [
                 'hash' => hash('sha256', dom_import_simplexml($node)->C14N()),
                 'text' => (string)($node->questiontext->text ?? ''),
+                'loose' => self::loose_hash($node), 'name' => $name, 'path' => $relative,
             ];
         }
         return $hashes;
@@ -738,7 +835,15 @@ class package_importer {
                             $hubquestionid = (int)$item['baselinequestionid'];
                         } else if ($item['status'] === 'update') {
                             $entryid = $item['entryid'];
+                            // Category the package places the question in (its temporary entry is removed below).
+                            $packagecategoryid = (int)$DB->get_field('question_bank_entries', 'questioncategoryid',
+                                ['id' => $newentryid]);
                             self::attach_as_version($questionid, (int)$entryid, $this->context);
+                            if (!empty($item['moved_label']) && $packagecategoryid) {
+                                // Moved into another subcategory on the Hub: follow it here.
+                                $DB->set_field('question_bank_entries', 'questioncategoryid', $packagecategoryid,
+                                    ['id' => $entryid]);
+                            }
                             $updatedcount++;
                             $addedcount--;
                         }
@@ -754,6 +859,8 @@ class package_importer {
                     }
                     if ($item['trackingid']) {
                         $tracking->id = $item['trackingid'];
+                        // A question renamed or moved on the Hub keeps its tracking row under the new key.
+                        $tracking->sourcekey = $item['sourcekey'];
                         $DB->update_record('qbank_questionhub_items', $tracking);
                     } else if ($entryid) {
                         $tracking->packagehash = $packagehash;

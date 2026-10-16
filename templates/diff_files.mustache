@@ -10,6 +10,8 @@
     * has_toolbar: show the buttons to open or close all questions
     * files[].label: optional note next to the name
     * files[].old_label, files[].new_label: where the removed (−) and added (+) lines come from, shown as a legend
+    * files[].is_rename, renamed_from, moved_label: renamed or moved question (badge R, previous name/path)
+    * files[].preview_url, files[].edit_url: links to the local question
 }}
 <style>
 .qh-diffs .qh-file { border: 1px solid #d0d7de; border-radius: 6px; margin-bottom: .75rem; background: #fff; }
@@ -53,6 +55,9 @@
     border-radius: 3px; }
 .qh-diffs .qh-side-old b { background: #ffd7d5; color: #cf222e; }
 .qh-diffs .qh-side-new b { background: #ccffd8; color: #1a7f37; }
+.qh-diffs .qh-rename { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; color: #1a7f37;
+    border: 1px solid #1a7f37; border-radius: 3px; padding: 0 .3rem; font-size: .75rem; }
+.qh-diffs .qh-actions .btn { padding: .05rem .4rem; font-size: .75rem; }
 </style>
 <div class="qh-diffs" data-qh-diffs>
     {{#has_toolbar}}
@@ -72,8 +77,18 @@
             {{#is_added}}<span class="badge badge-success bg-success">{{#str}} push_status_added, qbank_questionhub {{/str}}</span>{{/is_added}}
             {{#is_modified}}<span class="badge badge-warning bg-warning text-dark">{{#str}} push_status_modified, qbank_questionhub {{/str}}</span>{{/is_modified}}
             {{#is_removed}}<span class="badge badge-danger bg-danger">{{#str}} push_status_removed, qbank_questionhub {{/str}}</span>{{/is_removed}}
-            <span class="qh-fname">{{name}}</span>
+            {{#is_renamed}}<span class="badge badge-success bg-success">{{#str}} push_status_renamed, qbank_questionhub {{/str}}</span>{{/is_renamed}}
+            {{#is_moved}}<span class="badge badge-success bg-success">{{#str}} push_status_moved, qbank_questionhub {{/str}}</span>{{/is_moved}}
+            {{#is_rename}}<span class="qh-rename" title="{{#str}} diff_rename_help, qbank_questionhub {{/str}}">R</span>{{/is_rename}}
+            <span class="qh-fname">{{name}}
+                {{#renamed_from}}<span class="small text-muted font-weight-normal fw-normal d-block">{{#str}} diff_renamed_from, qbank_questionhub, {{renamed_from}} {{/str}}</span>{{/renamed_from}}
+                {{#moved_label}}<span class="small text-muted font-weight-normal fw-normal d-block">{{moved_label}}</span>{{/moved_label}}
+            </span>
             {{#label}}<span class="small text-muted">{{label}}</span>{{/label}}
+            {{#preview_url}}<span class="qh-actions text-nowrap">
+                <a href="{{preview_url}}" target="_blank" rel="noopener" class="btn btn-outline-secondary" title="{{#str}} duplicate_preview, qbank_questionhub {{/str}}"><i class="fa fa-search" aria-hidden="true"></i><span class="sr-only visually-hidden">{{#str}} duplicate_preview, qbank_questionhub {{/str}}</span></a>
+                <a href="{{edit_url}}" class="btn btn-outline-secondary" title="{{#str}} edit {{/str}}"><i class="fa fa-pencil" aria-hidden="true"></i><span class="sr-only visually-hidden">{{#str}} edit {{/str}}</span></a>
+            </span>{{/preview_url}}
             <span class="qh-stat">
                 <span class="qh-stat-add">+{{additions}}</span> <span class="qh-stat-del">−{{deletions}}</span>
                 <span class="qh-bar" aria-hidden="true">{{#bar}}<span class="{{#add}}qh-b-add{{/add}}{{#del}}qh-b-del{{/del}}"></span>{{/bar}}</span>
@@ -88,7 +103,8 @@
             {{/old_label}}
             {{#too_large}}<p class="text-muted small p-3 mb-0">{{#str}} push_diff_too_large, qbank_questionhub {{/str}}</p>{{/too_large}}
             {{#no_content}}<p class="text-muted small p-3 mb-0">{{#str}} diff_removed_no_content, qbank_questionhub {{/str}}</p>{{/no_content}}
-            {{^too_large}}
+            {{#is_moved}}<p class="text-muted small p-3 mb-0">{{#str}} diff_moved_only, qbank_questionhub {{/str}}</p>{{/is_moved}}
+            {{^too_large}}{{#hunks.0}}
             <table class="qh-diff">
                 <colgroup><col style="width:3.25rem"><col style="width:3.25rem"><col style="width:1.25rem"><col></colgroup>
                 {{#hunks}}
@@ -114,7 +130,7 @@
                 {{/has_tail}}
                 {{/hunks}}
             </table>
-            {{/too_large}}
+            {{/hunks.0}}{{/too_large}}
         </div>
     </details>
     {{/files}}
