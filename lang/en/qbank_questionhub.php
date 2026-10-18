@@ -405,3 +405,22 @@ $string['review_reject_added_all_confirm'] = 'Delete all {$a} questions added he
 $string['review_reject_all'] = 'Discard all local changes ({$a})';
 $string['review_reject_all_confirm'] = 'Discard all {$a} local changes? Changed questions get the linked version back as a new version (yours stays in the version history); questions added here are deleted. Questions used in a quiz are not deleted.';
 $string['review_bulk_result'] = '{$a->restored} question(s) restored to the linked version, {$a->deleted} deleted, {$a->failed} not possible (e.g. used in a quiz).';
+
+// Forks and licence.
+$string['fork_button'] = 'Fork';
+$string['fork_button_help'] = 'Create your own copy of this package on the Hub. This category is then linked to the copy: you publish your changes there and can propose them to the original with a merge request.';
+$string['fork_intro'] = 'Creates your own copy of version {$a} on the Hub and links this category to it. Your local changes stay; Push then publishes them to the fork. The original is not changed.';
+$string['fork_id_label'] = 'Package ID of the fork (optional)';
+$string['fork_id_help'] = 'Lowercase letters, digits, dot, hyphen and underscore (3 to 100 characters)';
+$string['fork_title_label'] = 'Title (optional)';
+$string['fork_title_placeholder'] = 'Title of the original + "(Fork)"';
+$string['fork_private_note'] = 'The original is private, so the fork stays private.';
+$string['fork_license_note'] = 'The fork keeps the licence of the original and names it as its source.';
+$string['fork_submit'] = 'Create fork';
+$string['fork_done'] = 'Fork {$a->id} (version {$a->version}) created. This category is now linked to it.';
+$string['error_fork_link'] = 'This category is no longer linked to the package.';
+$string['fork_mr_button'] = 'Merge request';
+$string['fork_mr_button_help'] = 'Open the fork on the Hub: propose your changes to {$a} with a merge request, or take over its new versions';
+$string['fork_of_status'] = 'Fork of {$a}';
+$string['fork_of_help'] = 'This package is a fork of {$a}. Changes reach the original only through a merge request on the Hub.';
+$string['open_content_notice'] = 'By publishing, you place the questions under the chosen Creative Commons licence. Public packages become open educational resources: anyone may download, use, fork, change and share them, with attribution (except CC0) and, for CC BY-SA, under the same licence. Private packages carry the licence too but are only visible to people you approve. Only publish content you hold the rights to.';

@@ -333,6 +333,17 @@ class api_client {
     }
 
     /**
+     * Forks a package into the linked account.
+     *
+     * @param string $id Package id of the original.
+     * @param array $data version (of the original), optional id, title, visibility.
+     * @return array { package_id, version, forked_from_id, forked_from_version }.
+     */
+    public function fork_package(string $id, array $data): array {
+        return $this->post('/api/v1/packages/' . rawurlencode($id) . '/forks', $data, true);
+    }
+
+    /**
      * Withdraws a whole package (all versions) from the Hub.
      *
      * @param string $id Package id.

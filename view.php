@@ -181,6 +181,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]));
         }
         redirect($thispageurl);
+    } else if ($action === 'fork_package') {
+        // Fork the package linked to this category on the Hub (same version as here) and link the category to the
+        // fork: local changes stay local changes, Push then publishes to the fork.
+        require_capability('qbank/questionhub:publish', $bankcontext);
+        $categoryid = required_param('categoryid', PARAM_INT);
+        $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $bankcontext->id], 'id', MUST_EXIST);
+        $link = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid);
+        if (!$link || $link->package_id !== required_param('packageid', PARAM_RAW_TRIMMED)) {
+            \core\notification::error(get_string('error_fork_link', 'qbank_questionhub'));
+            redirect($thispageurl);
+        }
+        try {
+            $client = new \qbank_questionhub\api_client(null, null, 30, true);
+            $request = [
+                'version' => (string)$link->package_version,
+                'visibility' => optional_param('visibility', 'public', PARAM_ALPHA) === 'private' ? 'private' : 'public',
+            ];
+            $forkid = core_text::strtolower(optional_param('forkid', '', PARAM_RAW_TRIMMED));
+            if ($forkid !== '') {
+                $request['id'] = $forkid;
+            }
+            $forktitle = trim(optional_param('forktitle', '', PARAM_TEXT));
+            if ($forktitle !== '') {
+                $request['title'] = $forktitle;
+            }
+            $created = $client->fork_package((string)$link->package_id, $request);
+            $fork = $client->get_package((string)$created['package_id']);
+            \qbank_questionhub\publication_tracker::relink_to_fork($link, (int)$COURSE->id, (string)$created['package_id'],
+                (string)$created['version'], html_entity_decode((string)($fork['title'] ?? $created['package_id']),
+                ENT_QUOTES | ENT_HTML5, 'UTF-8'), (int)$USER->id);
+            \core\notification::success(get_string('fork_done', 'qbank_questionhub', (object)[
+                'id' => s($created['package_id']), 'version' => s($created['version']),
+            ]));
+        } catch (\Exception $e) {
+            \core\notification::error($e->getMessage());
+        }
+        redirect($thispageurl);
     } else if ($action === 'delete_category') {
         require_capability('moodle/question:managecategory', $bankcontext);
         require_capability('moodle/question:editall', $bankcontext);
@@ -684,6 +721,7 @@ $getremotepackage = static function(string $packageid) use (&$remotepackages, &$
 $canimport = has_capability('qbank/questionhub:import', $bankcontext);
 $canmanagecategories = has_capability('moodle/question:managecategory', $bankcontext);
 $candeletecategories = $canmanagecategories && has_capability('moodle/question:editall', $bankcontext);
+$canpublish = has_capability('qbank/questionhub:publish', $bankcontext);
 $categorymanager = new \core_question\category_manager();
 $subcategorycount = function (int $id) use (&$subcategorycount, $children): int {
     $count = 0;
@@ -694,7 +732,7 @@ $subcategorycount = function (int $id) use (&$subcategorycount, $children): int 
 };
 $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
         &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl, &$remotepackagesmissing,
-        $canmanagecategories, $candeletecategories, $categorymanager, $subcategorycount) {
+        $canmanagecategories, $candeletecategories, $categorymanager, $subcategorycount, $canpublish, $hasaccount) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = $cat->name;
@@ -774,6 +812,9 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $linkcategoryid = 0;
             $linkaction = '';
             $linktitle = '';
+            $canfork = false;
+            $forkprivatesource = false;
+            $mp = null;
 
             if ($ispublished) {
                 $linkhistory = $directlink ?: $latestpub;
@@ -805,6 +846,11 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                             version_compare($remoteversion, $pkgversion, '>');
                     }
                     $missingonhub = $remotepackagesmissing[$pkgid] ?? false;
+                    // An imported package the account may not publish to: offer a fork in the own account, which
+                    // the category is then linked to (push goes to the fork, a merge request back to the original).
+                    $canfork = $canpublish && $hasaccount && $remote && !$missingonhub && !$ispackagesource &&
+                        (int)$statushistory->categoryid === (int)$cat->id && $pkgversion !== '';
+                    $forkprivatesource = ($remote['visibility'] ?? 'public') === 'private';
                     // Pull into the linked category (import target or own package source), so the
                     // existing questions are updated. A pull into the source keeps it the source
                     // (publication_tracker::is_own_link()).
@@ -892,6 +938,12 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 // Subcategory of a package category: Hub actions belong to the category holding the link.
                 'is_inherited_link' => $islinked && $linkcategoryid > 0 && $linkcategoryid !== (int)$cat->id,
                 'link_action' => $linkaction,
+                'can_fork' => $canfork,
+                'fork_private_source' => $forkprivatesource,
+                // A fork of the account: the Hub page of the fork offers "sync with the original" and merge requests.
+                'fork_of' => $islinked && $mp && !empty($mp['forked_from_id']) ? (string)$mp['forked_from_id'] : '',
+                'fork_hub_url' => $islinked && $mp && !empty($mp['forked_from_id']) && $ispackagesource
+                    ? $huburl . '/packages/' . rawurlencode($pkgid) : '',
                 'link_title' => $linktitle,
                 'package_id' => $pkgid,
                 'package_version' => $pkgversion,

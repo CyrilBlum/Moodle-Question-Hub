@@ -2,8 +2,8 @@
     @template qbank_questionhub/sync_actions
 
     Sync actions: review local changes (accept or reject), push (package source with local changes, unless a newer
-    Hub release must be pulled first), publish again (withdrawn), pull (imported copy or own package) and package
-    settings toggle.
+    Hub release must be pulled first), publish again (withdrawn), pull (imported copy or own package), fork (imported
+    package the account cannot publish to), merge request link (own fork) and package settings toggle.
     Shared by the category list, Browse cards, library and My packages; expects a category sync row as context.
     hide_settings_toggle: set where the category list (which holds the settings forms) is not on the page.
 }}
@@ -47,6 +47,49 @@
     </button>
 </form>
 {{/can_pull}}
+{{#fork_hub_url}}
+    <a href="{{fork_hub_url}}" class="btn btn-sm btn-outline-secondary mr-1" target="_blank" rel="noopener" title="{{#str}} fork_mr_button_help, qbank_questionhub, {{fork_of}} {{/str}}">
+        <i class="fa fa-code-fork mr-1" aria-hidden="true"></i>{{#str}} fork_mr_button, qbank_questionhub {{/str}}
+    </a>
+{{/fork_hub_url}}
+{{#can_fork}}
+    {{! details/summary: works without JS and without IDs, so the same row can appear in several lists. }}
+    <details class="d-inline-block mr-1 qh-fork" style="position: relative;">
+        <summary class="btn btn-sm btn-outline-secondary" style="list-style: none;" title="{{#str}} fork_button_help, qbank_questionhub {{/str}}">
+            <i class="fa fa-code-fork mr-1" aria-hidden="true"></i>{{#str}} fork_button, qbank_questionhub {{/str}}
+        </summary>
+        <form method="post" action="{{action_url}}" class="card card-body p-2 small text-left shadow-sm"
+              style="position: absolute; right: 0; z-index: 20; width: 22rem; max-width: 90vw;">
+            <input type="hidden" name="sesskey" value="{{sesskey}}">
+            <input type="hidden" name="action" value="fork_package">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
+            {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+            <input type="hidden" name="categoryid" value="{{link_category_id}}">
+            <input type="hidden" name="packageid" value="{{package_id}}">
+            <p class="mb-2">{{#str}} fork_intro, qbank_questionhub, {{package_version}} {{/str}}</p>
+            <label class="mb-1">{{#str}} fork_id_label, qbank_questionhub {{/str}}
+                <input type="text" name="forkid" class="form-control form-control-sm" placeholder="{{package_id}}-fork"
+                       pattern="[a-z0-9][a-z0-9._\-]{1,98}[a-z0-9]" title="{{#str}} fork_id_help, qbank_questionhub {{/str}}">
+            </label>
+            <label class="mb-1">{{#str}} fork_title_label, qbank_questionhub {{/str}}
+                <input type="text" name="forktitle" class="form-control form-control-sm" maxlength="200"
+                       placeholder="{{#str}} fork_title_placeholder, qbank_questionhub {{/str}}">
+            </label>
+            {{^fork_private_source}}
+            <label class="mb-1">{{#str}} package_visibility_label, qbank_questionhub {{/str}}
+                <select name="visibility" class="custom-select custom-select-sm form-control form-control-sm">
+                    <option value="public">{{#str}} package_visibility_public, qbank_questionhub {{/str}}</option>
+                    <option value="private">{{#str}} package_visibility_private, qbank_questionhub {{/str}}</option>
+                </select>
+            </label>
+            {{/fork_private_source}}
+            {{#fork_private_source}}<input type="hidden" name="visibility" value="private"><p class="text-muted mb-1">{{#str}} fork_private_note, qbank_questionhub {{/str}}</p>{{/fork_private_source}}
+            <p class="text-muted mb-2">{{#str}} fork_license_note, qbank_questionhub {{/str}}</p>
+            <button type="submit" class="btn btn-sm btn-primary">{{#str}} fork_submit, qbank_questionhub {{/str}}</button>
+        </form>
+    </details>
+{{/can_fork}}
 {{^hide_settings_toggle}}{{#is_package_source}}
     {{#pkg_settings}}
     <button class="btn btn-sm btn-outline-secondary qh-settings-toggle" type="button" data-toggle="collapse" data-bs-toggle="collapse"

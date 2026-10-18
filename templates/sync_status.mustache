@@ -1,7 +1,8 @@
 {{!
     @template qbank_questionhub/sync_status
 
-    Sync status badges (local changes, newer Hub version, withdrawn or missing on the Hub, linked without pending changes).
+    Sync status badges (local changes, newer Hub version, withdrawn or missing on the Hub, linked without pending changes,
+    fork of another package).
     Shared by the category list, Browse cards, library and My packages; expects a category sync row as context.
     A newer Hub version is shown as a badge only when the Pull button (sync_actions) is not available.
 }}
@@ -9,3 +10,4 @@
 {{#has_remote_update}}{{^can_pull}}<span class="badge badge-info bg-info text-white mr-1" title="{{#str}} sync_behind_help, qbank_questionhub {{/str}}"><i class="fa fa-arrow-down mr-1" aria-hidden="true"></i>{{#str}} remote_update_status, qbank_questionhub, {{remote_version}} {{/str}}</span>{{/can_pull}}{{/has_remote_update}}
 {{#is_missing_on_hub}}<span class="badge badge-danger bg-danger text-white mr-1" title="{{#str}} missing_on_hub_help, qbank_questionhub {{/str}}"><i class="fa fa-exclamation-triangle mr-1" aria-hidden="true"></i>{{#is_withdrawn_on_hub}}{{#str}} withdrawn_on_hub, qbank_questionhub {{/str}}{{/is_withdrawn_on_hub}}{{^is_withdrawn_on_hub}}{{#str}} missing_on_hub, qbank_questionhub {{/str}}{{/is_withdrawn_on_hub}}</span>{{/is_missing_on_hub}}
 {{#is_in_sync}}<span class="badge badge-success bg-success text-white mr-1" title="{{#str}} sync_in_sync_help, qbank_questionhub {{/str}}"><i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} sync_in_sync, qbank_questionhub {{/str}}</span>{{/is_in_sync}}
+{{#fork_of}}<span class="badge badge-light border text-muted mr-1" title="{{#str}} fork_of_help, qbank_questionhub, {{fork_of}} {{/str}}"><i class="fa fa-code-fork mr-1" aria-hidden="true"></i>{{#str}} fork_of_status, qbank_questionhub, {{fork_of}} {{/str}}</span>{{/fork_of}}

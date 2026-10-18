@@ -98,6 +98,36 @@ class publication_tracker {
         return $unlinked;
     }
 
+    /**
+     * Links a category to a fork of its package. The fork starts as a copy of the version the category holds, so
+     * the category keeps its sync state: the snapshot (local changes) and the tracked questions (pulls) move over.
+     *
+     * @return int ID of the new link record.
+     */
+    public static function relink_to_fork(stdClass $link, int $courseid, string $forkid, string $version, string $title,
+            int $userid): int {
+        global $DB;
+        $snapshot = self::snapshot((int)$link->id) ?? [];
+        $transaction = $DB->start_delegated_transaction();
+        $historyid = $DB->insert_record('qbank_questionhub_history', (object)[
+            'userid' => $userid, 'action' => 'import', 'package_id' => $forkid, 'package_version' => $version,
+            'package_title' => $title, 'courseid' => $courseid, 'categoryid' => (int)$link->categoryid,
+            'question_count' => count($snapshot), 'timecreated' => time(), 'snapshotted' => 0,
+        ]);
+        self::save((int)$historyid, $snapshot);
+        $newhash = hash('sha256', $forkid);
+        $rows = $DB->get_records('qbank_questionhub_items', [
+            'packagehash' => hash('sha256', (string)$link->package_id), 'targetcategoryid' => (int)$link->categoryid,
+        ]);
+        foreach ($rows as $row) {
+            unset($row->id);
+            $row->packagehash = $newhash;
+            $DB->insert_record('qbank_questionhub_items', $row);
+        }
+        $transaction->allow_commit();
+        return (int)$historyid;
+    }
+
     /** Latest record for a package ID, or null. */
     public static function latest_by_package(string $packageid, int $courseid = 0): ?stdClass {
         global $DB;
