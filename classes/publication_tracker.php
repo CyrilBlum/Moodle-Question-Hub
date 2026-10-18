@@ -120,24 +120,34 @@ class publication_tracker {
             if ($snapshot !== null) {
                 self::save((int)$historyid, $snapshot);
             }
-            $newhash = hash('sha256', $forkid);
-            $rows = $DB->get_records('qbank_questionhub_items', [
-                'packagehash' => hash('sha256', (string)$link->package_id), 'targetcategoryid' => (int)$link->categoryid,
-            ]);
-            foreach ($rows as $row) {
-                if ($DB->record_exists('qbank_questionhub_items', ['packagehash' => $newhash,
-                        'targetcategoryid' => $row->targetcategoryid, 'sourcekey' => $row->sourcekey])) {
-                    continue;
-                }
-                unset($row->id);
-                $row->packagehash = $newhash;
-                $DB->insert_record('qbank_questionhub_items', $row);
-            }
+            self::copy_tracking((int)$link->categoryid, (string)$link->package_id, $forkid);
             $transaction->allow_commit();
         } catch (\Throwable $e) {
             $transaction->rollback($e);
         }
         return (int)$historyid;
+    }
+
+    /**
+     * Copies the question tracking of a category from one package to another of the same family (original and
+     * variants identify their questions alike), so a pull of the other package updates the tracked questions
+     * instead of importing copies. Rows the other package already has are kept.
+     */
+    public static function copy_tracking(int $categoryid, string $frompackageid, string $topackageid): void {
+        global $DB;
+        $newhash = hash('sha256', $topackageid);
+        $rows = $DB->get_records('qbank_questionhub_items', [
+            'packagehash' => hash('sha256', $frompackageid), 'targetcategoryid' => $categoryid,
+        ]);
+        foreach ($rows as $row) {
+            if ($DB->record_exists('qbank_questionhub_items', ['packagehash' => $newhash,
+                    'targetcategoryid' => $row->targetcategoryid, 'sourcekey' => $row->sourcekey])) {
+                continue;
+            }
+            unset($row->id);
+            $row->packagehash = $newhash;
+            $DB->insert_record('qbank_questionhub_items', $row);
+        }
     }
 
     /** Latest record for a package ID, or null. */

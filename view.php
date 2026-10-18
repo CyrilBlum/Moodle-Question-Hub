@@ -78,6 +78,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_sesskey();
     $action = optional_param('action', '', PARAM_ALPHAEXT);
 
+    if ($action === 'switch_variant') {
+        // Switch a linked category to another variant of the same original, or back to the original: the question
+        // tracking is copied to the chosen package, then the usual pull preview shows what changes. Only importing
+        // the previewed changes moves the link.
+        require_capability('qbank/questionhub:import', $bankcontext);
+        $categoryid = required_param('categoryid', PARAM_INT);
+        $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $bankcontext->id], 'id', MUST_EXIST);
+        $targetid = required_param('targetpackageid', PARAM_RAW_TRIMMED);
+        $link = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid);
+        try {
+            if (!$link || (int)$link->categoryid !== $categoryid || (string)$link->package_id === $targetid) {
+                throw new moodle_exception('error_switch_variant', 'qbank_questionhub');
+            }
+            $client = new \qbank_questionhub\api_client(null, null, 30, true);
+            $current = $client->get_package((string)$link->package_id);
+            $target = $client->get_package($targetid);
+            if (empty($target['root_id']) || $target['root_id'] !== ($current['root_id'] ?? '') || empty($target['latest_version'])) {
+                throw new moodle_exception('error_switch_variant', 'qbank_questionhub');
+            }
+            \qbank_questionhub\publication_tracker::copy_tracking($categoryid, (string)$link->package_id, $targetid);
+            $targettitle = html_entity_decode((string)($target['title'] ?? $targetid), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            // Continue as a pull preview of the chosen package into this category.
+            $_POST = array_merge($_POST, [
+                'action' => 'import_package', 'packageid' => $targetid, 'version' => (string)$target['latest_version'],
+                'title' => $targettitle, 'targetcategoryid' => $categoryid, 'categorymode' => 'keep',
+                'updatechanged' => 1, 'dryrun' => 1,
+            ]);
+            $action = 'import_package';
+            \core\notification::info(get_string('switch_variant_preview', 'qbank_questionhub', s($targettitle)));
+        } catch (\Exception $e) {
+            \core\notification::error($e->getMessage());
+            redirect($thispageurl);
+        }
+    }
+
     if ($action === 'save_pat') {
         $pattoken = required_param('pat_token', PARAM_RAW_TRIMMED);
         if (!empty($pattoken)) {
@@ -763,9 +798,21 @@ $subcategorycount = function (int $id) use (&$subcategorycount, $children): int 
     }
     return $count;
 };
+// Variants of an original, for switching a linked category (loaded once per original).
+$variantcache = [];
+$getvariants = static function(string $rootid) use (&$variantcache, $client): array {
+    if (!array_key_exists($rootid, $variantcache)) {
+        try {
+            $variantcache[$rootid] = $client->get_variants($rootid);
+        } catch (\Throwable $e) {
+            $variantcache[$rootid] = [];
+        }
+    }
+    return $variantcache[$rootid];
+};
 $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
         &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl, &$remotepackagesmissing,
-        $canmanagecategories, $candeletecategories, $categorymanager, $subcategorycount, $canpublish, $hasaccount) {
+        $canmanagecategories, $candeletecategories, $categorymanager, $subcategorycount, $canpublish, $hasaccount, $getvariants) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = $cat->name;
@@ -849,6 +896,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $forkprivatesource = false;
             $mp = null;
             $remote = null;
+            $switchoptions = [];
 
             if ($ispublished) {
                 $linkhistory = $directlink ?: $latestpub;
@@ -885,6 +933,28 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                     $canfork = $canpublish && $hasaccount && $remote && !$missingonhub && !$ispackagesource &&
                         (int)$statushistory->categoryid === (int)$cat->id && $pkgversion !== '';
                     $forkprivatesource = ($remote['visibility'] ?? 'public') === 'private';
+                    // Other members of the package family (original and variants) this category can switch to.
+                    if ($canimport && $hasaccount && $remote && (int)$statushistory->categoryid === (int)$cat->id) {
+                        $rootid = (string)($remote['root_id'] ?? $pkgid);
+                        $root = $rootid === $pkgid ? $remote : $getremotepackage($rootid);
+                        if ($root && !empty($root['forks_count'])) {
+                            $candidates = [[
+                                'id' => $rootid,
+                                'label' => get_string('import_variant_original', 'qbank_questionhub') . ' ' . ($root['latest_version'] ?? ''),
+                            ]];
+                            foreach ($getvariants($rootid) as $variant) {
+                                $candidates[] = [
+                                    'id' => (string)$variant['id'],
+                                    'label' => get_string('import_variant_option', 'qbank_questionhub', (object)[
+                                        'name' => (string)($variant['author']['name'] ?? ''),
+                                        'version' => (string)($variant['latest_version'] ?? ''),
+                                    ]),
+                                ];
+                            }
+                            $switchoptions = array_values(array_filter($candidates,
+                                static fn(array $option): bool => $option['id'] !== $pkgid));
+                        }
+                    }
                     // Pull into the linked category (import target or own package source), so the
                     // existing questions are updated. A pull into the source keeps it the source
                     // (publication_tracker::is_own_link()).
@@ -973,6 +1043,8 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'is_inherited_link' => $islinked && $linkcategoryid > 0 && $linkcategoryid !== (int)$cat->id,
                 'link_action' => $linkaction,
                 'can_fork' => $canfork,
+                'switch_options' => $switchoptions,
+                'can_switch' => !empty($switchoptions),
                 'fork_private_source' => $forkprivatesource,
                 // A fork of the account: the Hub page of the fork offers "sync with the original" and merge requests.
                 'fork_of' => $islinked ? (string)(($mp['forked_from_id'] ?? '') ?: ($remote['forked_from_id'] ?? '')) : '',

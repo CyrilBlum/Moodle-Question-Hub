@@ -52,6 +52,29 @@
         <i class="fa fa-code-fork mr-1" aria-hidden="true"></i>{{#str}} fork_mr_button, qbank_questionhub {{/str}}
     </a>
 {{/fork_hub_url}}
+{{#can_switch}}
+    <details class="d-inline-block mr-1 qh-switch" style="position: relative;">
+        <summary class="btn btn-sm btn-outline-secondary" style="list-style: none;" title="{{#str}} switch_variant_help, qbank_questionhub {{/str}}">
+            <i class="fa fa-exchange mr-1" aria-hidden="true"></i>{{#str}} switch_variant_button, qbank_questionhub {{/str}}
+        </summary>
+        <form method="post" action="{{action_url}}#importPreview" class="card card-body p-2 small text-left shadow-sm"
+              style="position: absolute; right: 0; z-index: 20; width: 22rem; max-width: 90vw;">
+            <input type="hidden" name="sesskey" value="{{sesskey}}">
+            <input type="hidden" name="action" value="switch_variant">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="bankcontextid" value="{{bankcontextid}}">
+            {{#cmid}}<input type="hidden" name="cmid" value="{{cmid}}">{{/cmid}}
+            <input type="hidden" name="categoryid" value="{{link_category_id}}">
+            <p class="mb-2">{{#str}} switch_variant_intro, qbank_questionhub {{/str}}</p>
+            <label class="mb-2">{{#str}} import_variant_label, qbank_questionhub {{/str}}
+                <select name="targetpackageid" class="custom-select custom-select-sm form-control form-control-sm">
+                    {{#switch_options}}<option value="{{id}}">{{label}}</option>{{/switch_options}}
+                </select>
+            </label>
+            <button type="submit" class="btn btn-sm btn-primary">{{#str}} switch_variant_submit, qbank_questionhub {{/str}}</button>
+        </form>
+    </details>
+{{/can_switch}}
 {{#can_fork}}
     {{! details/summary: works without JS and without IDs, so the same row can appear in several lists. }}
     <details class="d-inline-block mr-1 qh-fork" style="position: relative;">
