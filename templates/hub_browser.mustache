@@ -616,6 +616,12 @@
                 <div class="modal-body">
                     <p>Möchten Sie das Paket <strong id="importModalTitleText"></strong> in diesen Kurs importieren?</p>
 
+                    <div class="form-group mb-3 d-none" id="importVariantGroup">
+                        <label for="importVariant">{{#str}} import_variant_label, qbank_questionhub {{/str}}</label>
+                        <select id="importVariant" class="custom-select form-control"></select>
+                        <small class="form-text text-muted">{{#str}} import_variant_help, qbank_questionhub {{/str}}</small>
+                    </div>
+
                     <div class="form-group mb-3">
                         <label for="importTargetCat">{{#str}} target_category, qbank_questionhub {{/str}}:
                             <span class="badge badge-light border rounded-circle" title="{{#str}} target_category_help, qbank_questionhub {{/str}}" aria-label="{{#str}} target_category_help, qbank_questionhub {{/str}}">?</span>
@@ -814,10 +820,32 @@ document.addEventListener('DOMContentLoaded', function() {
             var title = this.getAttribute('data-title');
             var version = this.getAttribute('data-version');
             packageRootName = this.getAttribute('data-packageroot') || '';
-            document.getElementById('importModalPackageId').value = this.getAttribute('data-packageid');
-            document.getElementById('importModalVersion').value = version;
-            document.getElementById('importModalTitle').value = title;
-            document.getElementById('importModalTitleText').textContent = title + ' (' + version + ')';
+            // The original first, then the variants the account may see; the choice sets what is imported.
+            var options = [{id: this.getAttribute('data-packageid'), version: version, title: title,
+                label: {{#quote}}{{#str}} import_variant_original, qbank_questionhub {{/str}}{{/quote}} + ' · v' + version}];
+            try {
+                options = options.concat(JSON.parse(this.getAttribute('data-variants') || '[]'));
+            } catch (e) {
+                // No variants.
+            }
+            var select = document.getElementById('importVariant');
+            select.innerHTML = '';
+            options.forEach(function(option, index) {
+                var element = document.createElement('option');
+                element.value = String(index);
+                element.textContent = option.label;
+                select.appendChild(element);
+            });
+            var apply = function() {
+                var chosen = options[Number(select.value) || 0];
+                document.getElementById('importModalPackageId').value = chosen.id;
+                document.getElementById('importModalVersion').value = chosen.version;
+                document.getElementById('importModalTitle').value = chosen.title;
+                document.getElementById('importModalTitleText').textContent = chosen.title + ' (' + chosen.version + ')';
+            };
+            select.onchange = apply;
+            document.getElementById('importVariantGroup').classList.toggle('d-none', options.length < 2);
+            apply();
             document.getElementById('packageRootName').textContent = packageRootName;
             updateCategoryPlacementOptions();
         });

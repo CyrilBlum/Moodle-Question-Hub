@@ -500,7 +500,27 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
         $author = implode(' · ', $parts);
     }
 
+    // Import choice: the original or one of its variants the account may see.
+    $variantoptions = [];
+    if (!empty($pkg['variants_count']) && !empty($pkg['can_access'])) {
+        try {
+            foreach ($client->get_variants((string)$pkg['id']) as $variant) {
+                $variantoptions[] = [
+                    'id' => (string)$variant['id'],
+                    'version' => (string)($variant['latest_version'] ?? ''),
+                    'title' => html_entity_decode((string)($variant['title'] ?? $variant['id']), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                    'label' => get_string('import_variant_option', 'qbank_questionhub', (object)[
+                        'name' => (string)($variant['author']['name'] ?? ''), 'version' => (string)($variant['latest_version'] ?? ''),
+                    ]) . (($variant['visibility'] ?? 'public') === 'private' ? ' · ' . get_string('package_visibility_private', 'qbank_questionhub') : ''),
+                ];
+            }
+        } catch (\Exception $e) {
+            debugging($e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
     $packagesdata[] = [
+        'variants_json' => $variantoptions ? json_encode($variantoptions, JSON_UNESCAPED_UNICODE) : '',
         'id' => $pkg['id'],
         'title' => html_entity_decode($pkg['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'),
         'summary' => $pkg['summary'] ?? '',
@@ -828,6 +848,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
             $canfork = false;
             $forkprivatesource = false;
             $mp = null;
+            $remote = null;
 
             if ($ispublished) {
                 $linkhistory = $directlink ?: $latestpub;
@@ -954,7 +975,7 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 'can_fork' => $canfork,
                 'fork_private_source' => $forkprivatesource,
                 // A fork of the account: the Hub page of the fork offers "sync with the original" and merge requests.
-                'fork_of' => $islinked && $mp && !empty($mp['forked_from_id']) ? (string)$mp['forked_from_id'] : '',
+                'fork_of' => $islinked ? (string)(($mp['forked_from_id'] ?? '') ?: ($remote['forked_from_id'] ?? '')) : '',
                 'fork_hub_url' => $islinked && $mp && !empty($mp['forked_from_id']) && $ispackagesource
                     ? $huburl . '/packages/' . rawurlencode($pkgid) : '',
                 'link_title' => $linktitle,

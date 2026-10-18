@@ -333,6 +333,17 @@ class api_client {
     }
 
     /**
+     * Variants (forks) of a package that the linked account may see: public ones, private ones it has access to, own ones.
+     *
+     * @param string $id Package id of the original.
+     * @return array List of { id, title, latest_version, parent_id, visibility, author: { name } }.
+     */
+    public function get_variants(string $id): array {
+        $result = $this->get('/api/v1/packages/' . rawurlencode($id) . '/forks');
+        return $result['data'] ?? [];
+    }
+
+    /**
      * Forks a package into the linked account.
      *
      * @param string $id Package id of the original.

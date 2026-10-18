@@ -68,14 +68,6 @@
             <input type="hidden" name="categoryid" value="{{link_category_id}}">
             <input type="hidden" name="packageid" value="{{package_id}}">
             <p class="mb-2">{{#str}} fork_intro, qbank_questionhub, {{package_version}} {{/str}}</p>
-            <label class="mb-1">{{#str}} fork_id_label, qbank_questionhub {{/str}}
-                <input type="text" name="forkid" class="form-control form-control-sm" placeholder="{{package_id}}-fork"
-                       pattern="[a-z0-9][a-z0-9._\-]{1,98}[a-z0-9]" title="{{#str}} fork_id_help, qbank_questionhub {{/str}}">
-            </label>
-            <label class="mb-1">{{#str}} fork_title_label, qbank_questionhub {{/str}}
-                <input type="text" name="forktitle" class="form-control form-control-sm" maxlength="200"
-                       placeholder="{{#str}} fork_title_placeholder, qbank_questionhub {{/str}}">
-            </label>
             {{^fork_private_source}}
             <label class="mb-1">{{#str}} package_visibility_label, qbank_questionhub {{/str}}
                 <select name="visibility" class="custom-select custom-select-sm form-control form-control-sm">

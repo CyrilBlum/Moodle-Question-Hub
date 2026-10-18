@@ -53,10 +53,10 @@
                     {{/sync}}
                     {{^sync}}
                     {{#is_private}}{{^can_access}}<a class="btn btn-sm btn-outline-primary" href="{{request_access_url}}" target="_blank" rel="noopener">{{#str}} request_access, qbank_questionhub {{/str}}</a>{{/can_access}}{{/is_private}}
-                    {{^is_private}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}">
+                    {{^is_private}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}" data-variants="{{variants_json}}">
                         <i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren
                     </button>{{/is_private}}
-                    {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren</button>{{/can_access}}{{/is_private}}
+                    {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}" data-variants="{{variants_json}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren</button>{{/can_access}}{{/is_private}}
                     {{/sync}}
                 </div>
             </div>
