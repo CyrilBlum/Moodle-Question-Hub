@@ -107,24 +107,36 @@ class publication_tracker {
     public static function relink_to_fork(stdClass $link, int $courseid, string $forkid, string $version, string $title,
             int $userid): int {
         global $DB;
-        $snapshot = self::snapshot((int)$link->id) ?? [];
+        // Without a snapshot (null) the new link is backfilled later like any old link; an empty one would mark
+        // every question as a local change.
+        $snapshot = self::snapshot((int)$link->id);
         $transaction = $DB->start_delegated_transaction();
-        $historyid = $DB->insert_record('qbank_questionhub_history', (object)[
-            'userid' => $userid, 'action' => 'import', 'package_id' => $forkid, 'package_version' => $version,
-            'package_title' => $title, 'courseid' => $courseid, 'categoryid' => (int)$link->categoryid,
-            'question_count' => count($snapshot), 'timecreated' => time(), 'snapshotted' => 0,
-        ]);
-        self::save((int)$historyid, $snapshot);
-        $newhash = hash('sha256', $forkid);
-        $rows = $DB->get_records('qbank_questionhub_items', [
-            'packagehash' => hash('sha256', (string)$link->package_id), 'targetcategoryid' => (int)$link->categoryid,
-        ]);
-        foreach ($rows as $row) {
-            unset($row->id);
-            $row->packagehash = $newhash;
-            $DB->insert_record('qbank_questionhub_items', $row);
+        try {
+            $historyid = $DB->insert_record('qbank_questionhub_history', (object)[
+                'userid' => $userid, 'action' => 'import', 'package_id' => $forkid, 'package_version' => $version,
+                'package_title' => $title, 'courseid' => $courseid, 'categoryid' => (int)$link->categoryid,
+                'question_count' => $snapshot === null ? 0 : count($snapshot), 'timecreated' => time(), 'snapshotted' => 0,
+            ]);
+            if ($snapshot !== null) {
+                self::save((int)$historyid, $snapshot);
+            }
+            $newhash = hash('sha256', $forkid);
+            $rows = $DB->get_records('qbank_questionhub_items', [
+                'packagehash' => hash('sha256', (string)$link->package_id), 'targetcategoryid' => (int)$link->categoryid,
+            ]);
+            foreach ($rows as $row) {
+                if ($DB->record_exists('qbank_questionhub_items', ['packagehash' => $newhash,
+                        'targetcategoryid' => $row->targetcategoryid, 'sourcekey' => $row->sourcekey])) {
+                    continue;
+                }
+                unset($row->id);
+                $row->packagehash = $newhash;
+                $DB->insert_record('qbank_questionhub_items', $row);
+            }
+            $transaction->allow_commit();
+        } catch (\Throwable $e) {
+            $transaction->rollback($e);
         }
-        $transaction->allow_commit();
         return (int)$historyid;
     }
 

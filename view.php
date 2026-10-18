@@ -207,10 +207,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $request['title'] = $forktitle;
             }
             $created = $client->fork_package((string)$link->package_id, $request);
-            $fork = $client->get_package((string)$created['package_id']);
-            \qbank_questionhub\publication_tracker::relink_to_fork($link, (int)$COURSE->id, (string)$created['package_id'],
-                (string)$created['version'], html_entity_decode((string)($fork['title'] ?? $created['package_id']),
-                ENT_QUOTES | ENT_HTML5, 'UTF-8'), (int)$USER->id);
+            $forktitlehub = $forktitle;
+            try {
+                $forktitlehub = (string)($client->get_package((string)$created['package_id'])['title'] ?? $forktitle);
+            } catch (\Exception $e) {
+                // The title is only shown locally; the link works without it.
+                debugging($e->getMessage(), DEBUG_DEVELOPER);
+            }
+            try {
+                \qbank_questionhub\publication_tracker::relink_to_fork($link, (int)$COURSE->id, (string)$created['package_id'],
+                    (string)$created['version'], html_entity_decode($forktitlehub !== '' ? $forktitlehub : (string)$created['package_id'],
+                    ENT_QUOTES | ENT_HTML5, 'UTF-8'), (int)$USER->id);
+            } catch (\Throwable $e) {
+                // The fork exists on the Hub: forking again with this ID links it (the Hub returns the unchanged fork).
+                \core\notification::error(get_string('error_fork_relink', 'qbank_questionhub', s($created['package_id'])) .
+                    ' ' . s($e->getMessage()));
+                redirect($thispageurl);
+            }
             \core\notification::success(get_string('fork_done', 'qbank_questionhub', (object)[
                 'id' => s($created['package_id']), 'version' => s($created['version']),
             ]));

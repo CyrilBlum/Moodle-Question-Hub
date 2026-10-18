@@ -408,7 +408,7 @@ $string['review_bulk_result'] = '{$a->restored} Frage(n) auf die verknüpfte Fas
 
 // Forks und Lizenz.
 $string['fork_button'] = 'Forken';
-$string['fork_button_help'] = 'Eigene Kopie dieses Pakets im Hub anlegen. Diese Kategorie ist danach mit der Kopie verknüpft: Sie veröffentlichen Ihre Änderungen dort und können sie dem Original mit einem Merge Request vorschlagen.';
+$string['fork_button_help'] = 'Eigene Kopie dieses Pakets im Hub anlegen. Diese Kategorie ist danach mit der Kopie verknüpft: Sie veröffentlichen Ihre Änderungen dort und können sie dem Original vorschlagen (Merge Request).';
 $string['fork_intro'] = 'Legt im Hub eine eigene Kopie der Version {$a} an und verknüpft diese Kategorie damit. Ihre lokalen Änderungen bleiben erhalten; Push veröffentlicht sie danach im Fork. Das Original bleibt unverändert.';
 $string['fork_id_label'] = 'Paket-ID des Forks (optional)';
 $string['fork_id_help'] = 'Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich (3 bis 100 Zeichen)';
@@ -419,8 +419,9 @@ $string['fork_license_note'] = 'Der Fork übernimmt die Lizenz des Originals und
 $string['fork_submit'] = 'Fork erstellen';
 $string['fork_done'] = 'Fork {$a->id} (Version {$a->version}) erstellt. Diese Kategorie ist jetzt damit verknüpft.';
 $string['error_fork_link'] = 'Diese Kategorie ist nicht mehr mit dem Paket verknüpft.';
-$string['fork_mr_button'] = 'Merge Request';
-$string['fork_mr_button_help'] = 'Fork im Hub öffnen: Änderungen mit einem Merge Request an {$a} vorschlagen oder dessen neue Versionen übernehmen';
+$string['error_fork_relink'] = 'Der Fork {$a} existiert im Hub, aber diese Kategorie konnte nicht damit verknüpft werden. Forken Sie erneut mit dieser Paket-ID, um sie zu verknüpfen:';
+$string['fork_mr_button'] = 'Änderungen vorschlagen';
+$string['fork_mr_button_help'] = 'Fork im Hub öffnen: Änderungen an {$a} vorschlagen (Merge Request) oder dessen neue Versionen übernehmen';
 $string['fork_of_status'] = 'Fork von {$a}';
-$string['fork_of_help'] = 'Dieses Paket ist ein Fork von {$a}. Änderungen gelangen nur über einen Merge Request im Hub ins Original.';
+$string['fork_of_help'] = 'Dieses Paket ist ein Fork von {$a}. Änderungen gelangen nur über einen Änderungsvorschlag im Hub ins Original.';
 $string['open_content_notice'] = 'Mit der Veröffentlichung stellen Sie die Fragen unter die gewählte Creative-Commons-Lizenz. Öffentliche Pakete werden damit zu offenen Bildungsmaterialien: Alle dürfen sie herunterladen, verwenden, forken, verändern und weitergeben, mit Nennung der Urheberschaft (ausser bei CC0) und bei CC BY-SA unter derselben Lizenz. Private Pakete tragen die Lizenz ebenfalls, sind aber nur für freigegebene Personen sichtbar. Veröffentlichen Sie nur Inhalte, an denen Sie die Rechte haben.';
