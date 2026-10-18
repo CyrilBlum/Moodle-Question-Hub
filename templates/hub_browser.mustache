@@ -822,7 +822,7 @@ document.addEventListener('DOMContentLoaded', function() {
             packageRootName = this.getAttribute('data-packageroot') || '';
             // The original first, then the variants the account may see; the choice sets what is imported.
             var options = [{id: this.getAttribute('data-packageid'), version: version, title: title,
-                label: {{#quote}}{{#str}} import_variant_original, qbank_questionhub {{/str}}{{/quote}} + ' · v' + version}];
+                label: {{#quote}}{{#str}} import_variant_original, qbank_questionhub {{/str}}{{/quote}} + ' ' + version}];
             try {
                 options = options.concat(JSON.parse(this.getAttribute('data-variants') || '[]'));
             } catch (e) {
