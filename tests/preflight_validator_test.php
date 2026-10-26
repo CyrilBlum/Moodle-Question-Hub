@@ -158,4 +158,14 @@ class preflight_validator_test extends \advanced_testcase {
         $this->assertStringContainsString('Text', $text);
         $this->assertSame('a<b', (string)$doc->question->answer->text);
     }
+
+    /** A DOCTYPE in UTF-16 without byte order mark is refused as well. */
+    public function test_xxe_doctype_utf16_without_bom_blocked(): void {
+        $xml = '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE quiz [<!ENTITY x "y">]><quiz></quiz>';
+        foreach (['UTF-16LE', 'UTF-16BE'] as $encoding) {
+            $report = preflight_validator::validate(mb_convert_encoding($xml, $encoding, 'UTF-8'));
+            $this->assertFalse($report->is_valid());
+            $this->assertEquals('ERR_XXE_DOCTYPE_FORBIDDEN', $report->get_errors()[0]['code']);
+        }
+    }
 }

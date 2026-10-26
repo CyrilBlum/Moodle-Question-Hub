@@ -71,6 +71,11 @@ class preflight_validator {
         // Normalize multi-byte encodings (e.g. UTF-16 BOM) to UTF-8 to prevent regex evasion.
         if (str_starts_with($xmlcontent, "\xFF\xFE") || str_starts_with($xmlcontent, "\xFE\xFF")) {
             $xmlcontent = mb_convert_encoding($xmlcontent, 'UTF-8', 'UTF-16');
+        } else if (str_starts_with($xmlcontent, "<\0")) {
+            // UTF-16 without BOM: libxml detects it from the first bytes, the regex checks below would not.
+            $xmlcontent = mb_convert_encoding($xmlcontent, 'UTF-8', 'UTF-16LE');
+        } else if (str_starts_with($xmlcontent, "\0<")) {
+            $xmlcontent = mb_convert_encoding($xmlcontent, 'UTF-8', 'UTF-16BE');
         }
 
         // 1. Empty payload check.
@@ -123,6 +128,15 @@ class preflight_validator {
         $errors = libxml_get_errors();
         libxml_clear_errors();
         libxml_use_internal_errors($prev);
+
+        // Second line of defence against encodings the regex checks miss: the parser saw a document type.
+        if ($doc !== false && dom_import_simplexml($doc)->ownerDocument->doctype !== null) {
+            $report->add_error(
+                'ERR_XXE_DOCTYPE_FORBIDDEN',
+                'Security Violation: DOCTYPE declarations are prohibited to prevent XML External Entity (XXE) attacks.'
+            );
+            return $report;
+        }
 
         if ($doc === false || !empty($errors)) {
             $errormsgs = [];
