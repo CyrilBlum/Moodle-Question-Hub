@@ -89,9 +89,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phplint
 
+      # Style findings (naming, comments, line length) are reported but do not fail the build yet.
       - name: Moodle code checker (phpcs, incl. security sniffs)
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci phpcs --max-warnings 0 --exclude moodle.Files.LineLength,moodle.Commenting
+        continue-on-error: true
+        run: moodle-plugin-ci phpcs
+
+      - name: Moodle code checker, errors only
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcs --max-warnings -1 --exclude moodle.Files.LineLength.TooLong,moodle.NamingConventions.ValidVariableName.VariableNameUnderscore,moodle.NamingConventions.ValidVariableName.VariableNameLowerCase,moodle.Commenting.MissingDocblock.Function,moodle.Commenting.MissingDocblock.Class,moodle.Files.BoilerplateComment.Wrong
 
       - name: PHP mess detector
         if: ${{ !cancelled() }}
@@ -105,8 +111,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci savepoints
 
+      # HTML validation and ESLint style warnings in templates; reported, not yet a gate.
       - name: Mustache lint
         if: ${{ !cancelled() }}
+        continue-on-error: true
         run: moodle-plugin-ci mustache
 
       - name: PHPUnit

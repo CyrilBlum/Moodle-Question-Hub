@@ -44,7 +44,7 @@ class api_client_test extends \advanced_testcase {
         $client = new api_client();
         $result = $client->get_packages(['limit' => 5]);
         $this->assertIsArray($result);
-        $this->assertArrayHasKey('packages', $result);
+        $this->assertArrayHasKey('data', $result);
         $this->assertArrayHasKey('pagination', $result);
     }
 }
