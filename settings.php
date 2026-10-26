@@ -24,9 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-if ($hassiteconfig) {
-    $settings = new admin_settingpage('qbank_questionhub', get_string('pluginname', 'qbank_questionhub'));
-
+// Core (plugininfo\qbank) creates the page $settings and adds it to the admin tree.
+if ($ADMIN->fulltree) {
     // Question Hub Base URL.
     $settings->add(new admin_setting_configtext(
         'qbank_questionhub/huburl',
@@ -68,6 +67,4 @@ if ($hassiteconfig) {
         get_string('stripactivecontent_desc', 'qbank_questionhub'),
         0
     ));
-
-    $ADMIN->add('qbanksettings', $settings);
 }
