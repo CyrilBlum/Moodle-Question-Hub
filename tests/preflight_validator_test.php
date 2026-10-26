@@ -123,4 +123,39 @@ class preflight_validator_test extends \advanced_testcase {
         $this->assertNotNull(\qbank_questionhub\preflight_validator::find_cloze_problem('x {1:=Antwort}'));
         $this->assertNull(\qbank_questionhub\preflight_validator::find_cloze_problem('{1:SHORTANSWER:=a\\}b~=c}'));
     }
+
+    /** Scripts and event handlers are reported, plain text with angle brackets is not. */
+    public function test_active_content_warned(): void {
+        $report = preflight_validator::validate('<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="shortanswer">
+    <name><text>Active</text></name>
+    <questiontext format="html"><text><![CDATA[<p onclick="alert(1)">Text</p><script>alert(2)</script><p>a &lt; b</p>]]></text></questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>ab</text></answer>
+  </question>
+</quiz>');
+        $this->assertContains('WARN_ACTIVE_CONTENT', array_column($report->get_warnings(), 'code'));
+        $this->assertSame(0, preg_match(preflight_validator::ACTIVE_CONTENT_PATTERN, '<p>x < y and one = 1</p>'));
+        $this->assertSame(1, preg_match(preflight_validator::ACTIVE_CONTENT_PATTERN, '<a href="javascript:alert(1)">x</a>'));
+        $this->assertSame(1, preg_match(preflight_validator::ACTIVE_CONTENT_PATTERN, '<IFRAME src="https://example.org">'));
+    }
+
+    /** Stripping cleans HTML texts only and leaves plain answers alone. */
+    public function test_strip_active_content(): void {
+        $this->resetAfterTest();
+        $xml = package_importer::strip_active_content('<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="shortanswer">
+    <name><text>Active</text></name>
+    <questiontext format="html"><text><![CDATA[<p onclick="alert(1)">Text</p><script>alert(2)</script><p>a &lt; b</p>]]></text></questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>a&lt;b</text></answer>
+  </question>
+</quiz>');
+        $doc = simplexml_load_string($xml);
+        $text = (string)$doc->question->questiontext->text;
+        $this->assertStringNotContainsString('script', $text);
+        $this->assertStringNotContainsString('onclick', $text);
+        $this->assertStringContainsString('Text', $text);
+        $this->assertSame('a<b', (string)$doc->question->answer->text);
+    }
 }

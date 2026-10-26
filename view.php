@@ -115,7 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_pat') {
         $pattoken = required_param('pat_token', PARAM_RAW_TRIMMED);
-        if (!empty($pattoken)) {
+        if (!\qbank_questionhub\auth_manager::linking_allowed()) {
+            \core\notification::error(get_string('error_linking_disabled', 'qbank_questionhub'));
+        } else if (!empty($pattoken)) {
             \qbank_questionhub\auth_manager::save_user_token(
                 (int)$USER->id,
                 $pattoken,
@@ -256,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (\Throwable $e) {
                 // The fork exists on the Hub: forking again with this ID links it (the Hub returns the unchanged fork).
                 \core\notification::error(get_string('error_fork_relink', 'qbank_questionhub', s($created['package_id'])) .
-                    ' ' . s($e->getMessage()));
+                    ' ' . $e->getMessage());
                 redirect($thispageurl);
             }
             \core\notification::success(get_string('fork_done', 'qbank_questionhub', (object)[
@@ -313,6 +315,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($dryrun) {
                 $items = $items ?? $importer->preview_package($xmlcontent, $metadata, $categorymode);
+                $activenames = array_column(array_filter($importer->run_diagnostics($xmlcontent)->get_warnings(),
+                    static fn($warning) => $warning['code'] === 'WARN_ACTIVE_CONTENT'), 'questionName');
+                if ($activenames) {
+                    \core\notification::warning(get_string(get_config('qbank_questionhub', 'stripactivecontent')
+                        ? 'import_active_content_stripped' : 'import_active_content', 'qbank_questionhub', (object)[
+                        'count' => count($activenames), 'names' => s(implode(', ', array_slice($activenames, 0, 10))),
+                    ]));
+                }
                 if (!$updatechanged) {
                     foreach ($items as &$item) {
                         $item['status'] = 'new';
@@ -1178,6 +1188,7 @@ $templatedata = [
     'has_multiple_bank_contexts' => count($bankcontexts) > 1,
     'bankcontextid' => $bankcontext->id,
     'has_account' => $hasaccount,
+    'linking_allowed' => \qbank_questionhub\auth_manager::linking_allowed(),
     'account_name' => $accountname,
     'connect_url' => $connecturl,
     'disconnect_url' => $disconnecturl->out(false),

@@ -61,5 +61,13 @@ if ($hassiteconfig) {
         1
     ));
 
+    // Clean HTML of imported packages (off: authors' scripts stay, as with Moodle's own XML import).
+    $settings->add(new admin_setting_configcheckbox(
+        'qbank_questionhub/stripactivecontent',
+        get_string('stripactivecontent', 'qbank_questionhub'),
+        get_string('stripactivecontent_desc', 'qbank_questionhub'),
+        0
+    ));
+
     $ADMIN->add('qbanksettings', $settings);
 }

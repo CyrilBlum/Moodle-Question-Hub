@@ -15,8 +15,10 @@
     <div class="alert alert-light border d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <div class="mb-2 mb-md-0">
             <i class="fa fa-info-circle mr-2 text-primary" aria-hidden="true"></i>
-            {{#str}} account_not_linked, qbank_questionhub {{/str}}
+            {{#linking_allowed}}{{#str}} account_not_linked, qbank_questionhub {{/str}}{{/linking_allowed}}
+            {{^linking_allowed}}{{#str}} account_linking_disabled, qbank_questionhub {{/str}}{{/linking_allowed}}
         </div>
+        {{#linking_allowed}}
         <div class="d-flex align-items-center">
             <a href="{{connect_url}}" class="btn btn-sm btn-outline-primary mr-2">
                 <i class="fa fa-sign-in mr-1" aria-hidden="true"></i>
@@ -26,7 +28,9 @@
                 PAT
             </button>
         </div>
+        {{/linking_allowed}}
     </div>
+    {{#linking_allowed}}
     <div class="collapse mb-4" id="patEntryForm">
         <div class="card card-body bg-light">
             <form method="post" action="{{action_url}}" class="form-inline">
@@ -38,6 +42,7 @@
             </form>
         </div>
     </div>
+    {{/linking_allowed}}
     {{/has_account}}
 
     <nav aria-label="Question Hub">

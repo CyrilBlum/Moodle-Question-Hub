@@ -182,7 +182,7 @@ class api_client {
         $httpcode = (int)($info['http_code'] ?? 0);
 
         if ($curl->get_errno() !== 0) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', s($curl->error));
         }
 
         if ($httpcode >= 400) {
@@ -256,7 +256,7 @@ class api_client {
         $response = $curl->patch($this->baseurl . '/api/v1/packages/' . rawurlencode($id), json_encode($patch));
         $httpcode = (int)($curl->get_info()['http_code'] ?? 0);
         if ($curl->get_errno() !== 0) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', s($curl->error));
         }
         if ($httpcode >= 400) {
             $this->handle_http_error($httpcode, (string)$response);
@@ -422,7 +422,7 @@ class api_client {
         $httpcode = (int)($info['http_code'] ?? 0);
 
         if ($curl->get_errno() !== 0) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', s($curl->error));
         }
 
         if ($httpcode >= 400) {
@@ -431,7 +431,7 @@ class api_client {
 
         $decoded = json_decode($response, true);
         if ($decoded === null && !empty($response)) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', 'Invalid JSON response from Hub: ' . substr($response, 0, 200));
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', 'Invalid JSON response from Hub: ' . s(substr($response, 0, 200)));
         }
 
         return $decoded ?? [];
@@ -461,7 +461,7 @@ class api_client {
         $httpcode = (int)($info['http_code'] ?? 0);
 
         if ($curl->get_errno() !== 0) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', s($curl->error));
         }
 
         if ($httpcode >= 400) {
@@ -470,7 +470,7 @@ class api_client {
 
         $decoded = json_decode($response, true);
         if ($decoded === null && !empty($response)) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', 'Invalid JSON response from Hub: ' . substr($response, 0, 200));
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', 'Invalid JSON response from Hub: ' . s(substr($response, 0, 200)));
         }
 
         return $decoded ?? [];
@@ -492,7 +492,7 @@ class api_client {
         $httpcode = (int)($curl->get_info()['http_code'] ?? 0);
 
         if ($curl->get_errno() !== 0) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', $curl->error);
+            throw new moodle_exception('error_network', 'qbank_questionhub', '', s($curl->error));
         }
         if ($httpcode >= 400) {
             $this->handle_http_error($httpcode, (string)$response);
@@ -515,6 +515,8 @@ class api_client {
                 $message .= ' ' . json_encode($decoded['diagnostics']);
             }
         }
+        // Callers show exception messages in notifications, which Moodle renders as HTML: the Hub is not trusted markup.
+        $message = s((string)$message);
 
         switch ($httpcode) {
             case 401:
@@ -530,7 +532,7 @@ class api_client {
                 // A refused request (validation, name taken), not a network problem.
                 throw new moodle_exception('error_hub_rejected', 'qbank_questionhub', '', $message ?: "HTTP {$httpcode}");
             default:
-                $detail = !empty($message) ? $message : ("HTTP {$httpcode}: " . substr($body, 0, 300));
+                $detail = !empty($message) ? $message : ("HTTP {$httpcode}: " . s(substr($body, 0, 300)));
                 throw new moodle_exception('error_network', 'qbank_questionhub', '', $detail);
         }
     }

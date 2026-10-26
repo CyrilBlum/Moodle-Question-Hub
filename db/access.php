@@ -35,6 +35,7 @@ $capabilities = [
         ],
     ],
     'qbank/questionhub:import' => [
+        'riskbitmask' => RISK_XSS | RISK_DATALOSS,
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [
@@ -63,6 +64,7 @@ $capabilities = [
         'clonepermissionsfrom' => 'moodle/question:editall',
     ],
     'qbank/questionhub:manage' => [
+        'riskbitmask' => RISK_CONFIG,
         'captype' => 'write',
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => [

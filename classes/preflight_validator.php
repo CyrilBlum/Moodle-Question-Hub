@@ -33,6 +33,9 @@ class preflight_validator {
     /** Maximum allowed package size in bytes (50 MB). */
     public const MAX_PACKAGE_BYTES = 52428800;
 
+    /** Script elements, frames, plugins, event-handler attributes and script URLs. */
+    public const ACTIVE_CONTENT_PATTERN = '/<\s*(?:script|iframe|frame|object|embed|applet|base|meta)\b|<[a-z][^>]*\son[a-z]+\s*=|(?:href|src|action|formaction)\s*=\s*["\']?\s*(?:javascript|vbscript|data:text\/html)/i';
+
     /** Maximum allowed single media file in bytes (10 MB). */
     public const MAX_MEDIA_FILE_BYTES = 10485760;
 
@@ -217,6 +220,16 @@ class preflight_validator {
 
             // Embedded media validation within this question.
             self::validate_embedded_media($q, $qindex, $qname, $report);
+
+            // Moodle displays question text without HTML cleaning, so scripts in a package run in the importing Moodle.
+            if (self::has_active_content($q)) {
+                $report->add_warning(
+                    'WARN_ACTIVE_CONTENT',
+                    "Question '{$qname}' contains active HTML content (script, event handler, embedded frame or javascript: link).",
+                    $qindex,
+                    $qname
+                );
+            }
         }
 
         if ($realquestioncount === 0) {
@@ -227,6 +240,21 @@ class preflight_validator {
         }
 
         return $report;
+    }
+
+    /**
+     * Whether a text of the question contains markup that runs code in the browser.
+     *
+     * @param SimpleXMLElement $q
+     * @return bool
+     */
+    public static function has_active_content(SimpleXMLElement $q): bool {
+        foreach ($q->xpath('.//text') as $text) {
+            if (preg_match(self::ACTIVE_CONTENT_PATTERN, (string)$text)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

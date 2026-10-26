@@ -435,3 +435,10 @@ $string['switch_variant_intro'] = 'Choose the original or another variant. You f
 $string['switch_variant_submit'] = 'Preview changes';
 $string['switch_variant_preview'] = 'Preview of switching to "{$a}". Only "Import these changes" links the category to it.';
 $string['error_switch_variant'] = 'This category cannot switch to this package: it does not belong to the same original, or the category is no longer linked.';
+
+$string['account_linking_disabled'] = 'The site administrator has switched off linking Question Hub accounts. You can browse and import public packages.';
+$string['error_linking_disabled'] = 'Linking a Question Hub account is switched off on this site.';
+$string['stripactivecontent'] = 'Remove active content on import';
+$string['stripactivecontent_desc'] = 'Moodle displays question text without HTML cleaning, so scripts in a Hub package would run in this Moodle. If enabled, the HTML of imported questions is cleaned with Moodle\'s HTML cleaner: scripts, event handlers and embedded frames are removed. Interactive questions that rely on JavaScript then no longer work.';
+$string['import_active_content'] = '{$a->count} question(s) of this package contain active content (JavaScript, embedded frames), e.g. {$a->names}. It runs in this Moodle like the author\'s other question text. Only import packages from authors you trust.';
+$string['import_active_content_stripped'] = '{$a->count} question(s) of this package contain active content (JavaScript, embedded frames), e.g. {$a->names}. This site removes it on import.';

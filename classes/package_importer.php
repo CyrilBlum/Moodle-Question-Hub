@@ -387,6 +387,38 @@ class package_importer {
     }
 
     /**
+     * Runs every HTML text of a package through Moodle's HTML cleaner (HTML Purifier), which removes scripts,
+     * event handlers and frames. Moodle displays question text uncleaned, so this is the site's choice
+     * (setting stripactivecontent) for packages from authors it does not trust.
+     *
+     * @param string $xml Moodle XML package
+     * @return string the package with cleaned HTML texts
+     */
+    public static function strip_active_content(string $xml): string {
+        $doc = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        // Embedded media can exceed libxml's default text node limit; the size is capped by the preflight check.
+        $loaded = $doc->loadXML($xml, LIBXML_NONET | LIBXML_PARSEHUGE);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        if (!$loaded) {
+            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid package XML.');
+        }
+        $xpath = new \DOMXPath($doc);
+        foreach ($xpath->query('//*[@format="html"]/text') as $node) {
+            $html = $node->textContent;
+            if (!preg_match(preflight_validator::ACTIVE_CONTENT_PATTERN, $html)) {
+                continue;
+            }
+            while ($node->firstChild) {
+                $node->removeChild($node->firstChild);
+            }
+            $node->appendChild($doc->createTextNode(purify_html($html)));
+        }
+        return $doc->saveXML();
+    }
+
+    /**
      * Imports a Moodle XML export of one question into a category and returns the new question ID.
      * Category entries in the XML are ignored.
      */
@@ -717,6 +749,10 @@ class package_importer {
                 '<category><text>' . htmlspecialchars($catpath, ENT_XML1) . '</text></category>',
                 $processedxml
             );
+        }
+
+        if (get_config('qbank_questionhub', 'stripactivecontent')) {
+            $processedxml = self::strip_active_content($processedxml);
         }
 
         // 3. Stage XML into safe temporary file on dataroot.

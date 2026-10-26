@@ -37,8 +37,13 @@ unset($SESSION->qbank_questionhub_oauth);
 $defaultreturn = new moodle_url('/question/bank/questionhub/view.php');
 $returnurl = !empty($oauthstate['returnurl']) ? new moodle_url($oauthstate['returnurl']) : $defaultreturn;
 
+if (!\qbank_questionhub\auth_manager::linking_allowed()) {
+    \core\notification::error(get_string('error_linking_disabled', 'qbank_questionhub'));
+    redirect($returnurl);
+}
+
 if ($hubError !== '' || $code === '') {
-    \core\notification::error(get_string('error_oauth_failed', 'qbank_questionhub', $hubError ?: 'no authorization code'));
+    \core\notification::error(get_string('error_oauth_failed', 'qbank_questionhub', s($hubError ?: 'no authorization code')));
     redirect($returnurl);
 }
 
@@ -51,7 +56,8 @@ try {
     $redirecturi = (new moodle_url('/question/bank/questionhub/oauth_callback.php'))->out(false);
     $clientid = get_config('qbank_questionhub', 'clientid') ?: 'moodle-plugin-client';
 
-    $client = new \qbank_questionhub\api_client();
+    // The token request must not carry the institutional token.
+    $client = new \qbank_questionhub\api_client('');
     $tokenresponse = $client->exchange_oauth_code($code, $oauthstate['code_verifier'], $redirecturi, $clientid);
 
     if (empty($tokenresponse['access_token'])) {
@@ -70,7 +76,7 @@ try {
 
     \core\notification::success(get_string('token_saved', 'qbank_questionhub'));
 } catch (\Exception $e) {
-    \core\notification::error($e->getMessage());
+    \core\notification::error(s($e->getMessage()));
 }
 
 redirect($returnurl);

@@ -435,3 +435,10 @@ $string['switch_variant_intro'] = 'Wählen Sie das Original oder eine andere Var
 $string['switch_variant_submit'] = 'Änderungen ansehen';
 $string['switch_variant_preview'] = 'Vorschau des Wechsels zu «{$a}». Erst «Diese Änderungen importieren» verknüpft die Kategorie damit.';
 $string['error_switch_variant'] = 'Diese Kategorie kann nicht zu diesem Paket wechseln: Es gehört nicht zum selben Original, oder die Kategorie ist nicht mehr verknüpft.';
+
+$string['account_linking_disabled'] = 'Die Administration hat das Verknüpfen von Question-Hub-Konten ausgeschaltet. Sie können öffentliche Pakete durchsuchen und importieren.';
+$string['error_linking_disabled'] = 'Das Verknüpfen eines Question-Hub-Kontos ist auf dieser Website ausgeschaltet.';
+$string['stripactivecontent'] = 'Aktive Inhalte beim Import entfernen';
+$string['stripactivecontent_desc'] = 'Moodle zeigt Fragetexte ohne HTML-Bereinigung an. Skripte in einem Hub-Paket würden also in diesem Moodle ausgeführt. Ist die Option aktiv, wird das HTML importierter Fragen mit dem HTML-Filter von Moodle bereinigt: Skripte, Event-Handler und eingebettete Frames werden entfernt. Interaktive Fragen, die JavaScript benötigen, funktionieren dann nicht mehr.';
+$string['import_active_content'] = '{$a->count} Frage(n) dieses Pakets enthalten aktive Inhalte (JavaScript, eingebettete Frames), z. B. {$a->names}. Diese werden in diesem Moodle ausgeführt wie andere Fragetexte. Importieren Sie nur Pakete von Autorinnen und Autoren, denen Sie vertrauen.';
+$string['import_active_content_stripped'] = '{$a->count} Frage(n) dieses Pakets enthalten aktive Inhalte (JavaScript, eingebettete Frames), z. B. {$a->names}. Diese Website entfernt sie beim Import.';

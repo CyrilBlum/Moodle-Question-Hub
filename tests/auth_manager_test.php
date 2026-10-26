@@ -40,4 +40,15 @@ class auth_manager_test extends \advanced_testcase {
         }
         $this->assertSame('code', $params['response_type']);
     }
+
+    /** Switching linking off disables tokens that were linked before. */
+    public function test_linking_disabled_ignores_user_token(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        auth_manager::save_user_token(2, 'mqh_pat_test');
+        $this->assertSame('mqh_pat_test', auth_manager::resolve_user_token(2));
+        set_config('allowteacherlinking', 0, 'qbank_questionhub');
+        $this->assertFalse(auth_manager::linking_allowed());
+        $this->assertNull(auth_manager::resolve_user_token(2));
+    }
 }
