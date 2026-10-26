@@ -57,6 +57,8 @@ class preflight_validator {
     public const DISALLOWED_EXTENSIONS = [
         'exe', 'sh', 'bat', 'cmd', 'bin', 'msi', 'php', 'phtml', 'php3', 'php4', 'php5',
         'php7', 'php8', 'phps', 'js', 'html', 'htm', 'py', 'pl', 'cgi', 'vbs', 'scr',
+        // Script-capable formats the SVG check cannot inspect (svgz is compressed).
+        'phar', 'mjs', 'xhtml', 'xht', 'shtml', 'svgz', 'hta', 'wsf', 'ps1', 'jar',
     ];
 
     /**
