@@ -38,4 +38,25 @@ final class exporter_importer_test extends \advanced_testcase {
         $normalized = package_exporter::normalize_xml($input);
         $this->assertStringContainsString('$course$/top/Informatik', $normalized);
     }
+
+    public function test_xml_normalization_cdata_from_any_moodle_version(): void {
+        foreach (['$module$', '$cat1$', '$course$', '$system$'] as $prefix) {
+            $input = "<quiz><question type=\"category\">\n    <category>\n      <text><![CDATA[{$prefix}/top/" .
+                "Computer & Kodierungen/Hardware]]></text>\n    </category>\n  </question></quiz>";
+            $normalized = package_exporter::normalize_xml($input);
+            $this->assertStringContainsString(
+                '<text><![CDATA[$course$/top/Computer & Kodierungen/Hardware]]></text>',
+                $normalized,
+                $prefix
+            );
+        }
+    }
+
+    public function test_xml_normalization_keeps_single_top(): void {
+        $this->assertSame('$course$/top', package_exporter::normalize_category_path('$cat12$/top'));
+        $this->assertSame('$course$/top', package_exporter::normalize_category_path('$module$'));
+        $this->assertSame('$course$/top/A', package_exporter::normalize_category_path('$course$/A'));
+        $this->assertSame('$course$/top/topics', package_exporter::normalize_category_path('$course$/topics'));
+        $this->assertSame('Informatik/K1', package_exporter::normalize_category_path('Informatik/K1'));
+    }
 }

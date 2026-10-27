@@ -87,7 +87,8 @@ class package_importer {
         $segments = array_values(array_filter(explode('/', trim($path, '/')), static function ($segment) {
             return $segment !== '';
         }));
-        if (!empty($segments) && preg_match('/^\$[a-z]+\$$/i', $segments[0])) {
+        // Context prefixes: $course$, $module$, $system$, $cat1$ (Moodle 4.5 course category bank) or $$.
+        if (!empty($segments) && preg_match('/^\$[a-z]*\d*\$$/i', $segments[0])) {
             array_shift($segments);
         }
         if (!empty($segments) && $segments[0] === 'top') {
@@ -293,10 +294,18 @@ class package_importer {
             throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Package ID is required.');
         }
         $packagehash = hash('sha256', $packageid);
-        $previousimports = $DB->get_records('qbank_questionhub_history', [
-            'action' => 'import', 'package_id' => $packageid,
-            'courseid' => $this->course->id, 'categoryid' => $this->targetcategory->id,
-        ], 'timecreated DESC, id DESC', '*', 0, 1);
+        // The last sync of this category with the package: an import, or a publish when the category is the
+        // package source (a pull into the source compares with the version it published last).
+        $previousimports = $DB->get_records_select(
+            'qbank_questionhub_history',
+            "action IN ('import', 'publish') AND package_id = :packageid AND courseid = :courseid
+                AND categoryid = :categoryid",
+            ['packageid' => $packageid, 'courseid' => $this->course->id, 'categoryid' => $this->targetcategory->id],
+            'timecreated DESC, id DESC',
+            '*',
+            0,
+            1
+        );
         $history = $previousimports ? reset($previousimports) : null;
         $sameversion = $history && $history->package_version === ($packagemetadata['version'] ?? '');
         // Versions this category held at its last sync (pull or publish); a newer local version is a local edit.

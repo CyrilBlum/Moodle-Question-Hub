@@ -192,7 +192,7 @@ class preflight_validator {
                 $report->increment_category_count();
                 $cattext = isset($q->category->text) ? (string)$q->category->text : '';
                 if ($cattext !== '') {
-                    if (!str_contains($cattext, '$course$') && !str_contains($cattext, '$module$')) {
+                    if (!preg_match('/^\$[a-z]*\d*\$/i', $cattext)) {
                         $report->add_warning(
                             'WARN_CATEGORY_MISSING_CONTEXT',
                             "Category path '{$cattext}' lacks a standard context token (\$course\$); "

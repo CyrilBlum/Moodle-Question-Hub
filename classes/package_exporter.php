@@ -170,22 +170,33 @@ class package_exporter {
      * @return string Normalized XML string.
      */
     public static function normalize_xml(string $rawxml): string {
-        // First, the category path prefixes module, system, cat123 or an empty one become the canonical course prefix.
-        $normalized = preg_replace(
-            '/<category>\s*<text>\$(?:module|cat\d+|system|)\$/i',
-            '<category><text>$course$',
+        // Moodle writes category paths as CDATA (<text><![CDATA[$module$/top/...]]></text>), older or
+        // hand-made files as plain text. Releases from Moodle 4.5 ($cat1$, $course$) and 5.0 ($module$)
+        // must not differ only in this prefix.
+        return preg_replace_callback(
+            '/(<category>\s*<text>)(<!\[CDATA\[)?(.*?)(\]\]>)?(<\/text>)/s',
+            static function ($matches) {
+                return $matches[1] . ($matches[2] ?? '') . self::normalize_category_path($matches[3]) .
+                    ($matches[4] ?? '') . $matches[5];
+            },
             $rawxml
         );
+    }
 
-        // Then every category path gets a top category: $course$/top/...
-        $normalized = preg_replace_callback(
-            '/<category>\s*<text>\$course\$\/(?!top\/)([^<]+)<\/text>\s*<\/category>/i',
-            function ($matches) {
-                return '<category><text>$course$/top/' . ltrim($matches[1], '/') . '</text></category>';
-            },
-            $normalized
-        );
-
-        return $normalized;
+    /**
+     * Returns a category path with the canonical prefix $course$/top.
+     *
+     * @param string $path category path from a Moodle XML file, e.g. $cat1$/top/Informatik
+     * @return string e.g. $course$/top/Informatik
+     */
+    public static function normalize_category_path(string $path): string {
+        if (!preg_match('/^\$(?:module|course|system|cat\d+|)\$(?:\/(.*))?$/is', $path, $matches)) {
+            return $path;
+        }
+        $rest = ltrim($matches[1] ?? '', '/');
+        if ($rest === 'top' || str_starts_with($rest, 'top/')) {
+            return '$course$/' . $rest;
+        }
+        return '$course$/top' . ($rest === '' ? '' : '/' . $rest);
     }
 }

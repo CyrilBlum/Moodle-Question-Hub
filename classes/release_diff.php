@@ -198,7 +198,7 @@ class release_diff {
                     explode('/', trim((string)$node->category->text, '/')),
                     static fn($segment) => $segment !== ''
                 ));
-                if ($segments && preg_match('/^\$[a-z]+\$$/i', $segments[0])) {
+                if ($segments && preg_match('/^\$[a-z]*\d*\$$/i', $segments[0])) {
                     array_shift($segments);
                 }
                 if ($segments && $segments[0] === 'top') {
