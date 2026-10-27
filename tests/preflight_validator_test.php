@@ -20,7 +20,7 @@ namespace qbank_questionhub;
  * Unit tests for Pre-flight Validator and XXE defense.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
  * @covers \qbank_questionhub\preflight_validator
@@ -167,6 +167,24 @@ final class preflight_validator_test extends \advanced_testcase {
         $this->assertStringNotContainsString('onclick', $text);
         $this->assertStringContainsString('Text', $text);
         $this->assertSame('a<b', (string)$doc->question->answer->text);
+    }
+
+    /**
+     * A category path without context token is reported with the literal token name.
+     */
+    public function test_category_missing_context_message(): void {
+        $report = preflight_validator::validate('<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>top/Informatik</text></category>
+  </question>
+</quiz>');
+        $warnings = array_values(array_filter(
+            $report->get_warnings(),
+            fn($w) => $w['code'] === 'WARN_CATEGORY_MISSING_CONTEXT'
+        ));
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString('($course$)', $warnings[0]['message']);
     }
 
     /**

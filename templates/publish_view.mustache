@@ -1,3 +1,11 @@
+{{!
+    @template qbank_questionhub/publish_view
+
+    Form to publish a question category as a new Hub package (metadata, licence, visibility).
+
+    Example context (json):
+    {"cancel_url": "#", "action_url": "#", "sesskey": "x", "default_package_id": "ch.gym.inf.krypto", "default_title": "Kryptologie", "default_summary": "Fragen zur Kryptologie", "default_version": "1.0.0", "is_public": true, "subjects": [{"name_de": "Informatik", "selected": true}], "cantons": [{"code": "ZH", "selected": true}]}
+}}
 <div class="qbank_questionhub_publish mb-5">
     <a href="{{cancel_url}}" class="d-inline-block small mb-3"><i class="fa fa-arrow-left mr-1 me-1" aria-hidden="true"></i>{{#str}} review_back, qbank_questionhub {{/str}}</a>
     <div class="card shadow-sm border-light p-4">
@@ -52,7 +60,7 @@
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label for="package_subject" class="font-weight-bold">{{#str}} package_subject_label, qbank_questionhub {{/str}}:</label>
-                    <select id="package_subject" name="package_subject" class="custom-select form-control" required>
+                    <select id="package_subject" name="package_subject" class="custom-select form-control">
                         {{#subjects}}
                         <option value="{{name_de}}" {{#selected}}selected{{/selected}}>{{name_de}}</option>
                         {{/subjects}}
@@ -61,7 +69,7 @@
 
                 <div class="col-md-3 mb-3">
                     <label for="package_level" class="font-weight-bold">{{#str}} package_level_label, qbank_questionhub {{/str}}:</label>
-                    <select id="package_level" name="package_level" class="custom-select form-control" required>
+                    <select id="package_level" name="package_level" class="custom-select form-control">
                         <option value="GF" {{#level_gf}}selected{{/level_gf}}>GF (Grundlagenfach)</option>
                         <option value="SF" {{#level_sf}}selected{{/level_sf}}>SF (Schwerpunktfach)</option>
                         <option value="EF" {{#level_ef}}selected{{/level_ef}}>EF (Ergänzungsfach)</option>
@@ -71,7 +79,7 @@
 
                 <div class="col-md-3 mb-3">
                     <label for="package_canton" class="font-weight-bold">{{#str}} package_canton_label, qbank_questionhub {{/str}}:</label>
-                    <select id="package_canton" name="package_canton" class="custom-select form-control" required>
+                    <select id="package_canton" name="package_canton" class="custom-select form-control">
                         {{#cantons}}
                         <option value="{{code}}" {{#selected}}selected{{/selected}}>{{code}}</option>
                         {{/cantons}}
@@ -97,7 +105,7 @@
 
                 <div class="col-md-6 mb-3">
                     <label for="package_license" class="font-weight-bold">{{#str}} package_license_label, qbank_questionhub {{/str}}:</label>
-                    <select id="package_license" name="package_license" class="custom-select form-control" required>
+                    <select id="package_license" name="package_license" class="custom-select form-control">
                         <option value="CC-BY-4.0" selected>CC-BY-4.0 (Namensnennung)</option>
                         <option value="CC-BY-SA-4.0">CC-BY-SA-4.0 (Weitergabe unter gleichen Bedingungen)</option>
                         <option value="CC0-1.0">CC0-1.0 (Gemeinfrei / Public Domain)</option>

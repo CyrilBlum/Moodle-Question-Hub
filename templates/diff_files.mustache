@@ -12,53 +12,10 @@
     * files[].old_label, files[].new_label: where the removed (−) and added (+) lines come from, shown as a legend
     * files[].is_rename, renamed_from, moved_label: renamed or moved question (badge R, previous name/path)
     * files[].preview_url, files[].edit_url: links to the local question
+
+    Example context (json):
+    {"has_toolbar": true, "files": []}
 }}
-<style>
-.qh-diffs .qh-file { border: 1px solid #d0d7de; border-radius: 6px; margin-bottom: .75rem; background: #fff; }
-.qh-diffs .qh-file > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: .5rem;
-    padding: .5rem .75rem; background: #f6f8fa; border-radius: 6px; flex-wrap: wrap; }
-.qh-diffs .qh-file[open] > summary { border-bottom: 1px solid #d0d7de; border-radius: 6px 6px 0 0;
-    position: sticky; top: 0; z-index: 2; }
-.qh-diffs .qh-file > summary::-webkit-details-marker { display: none; }
-.qh-diffs .qh-chevron { transition: transform .15s; color: #57606a; width: 1rem; text-align: center; }
-.qh-diffs .qh-file[open] > summary .qh-chevron { transform: rotate(90deg); }
-.qh-diffs .qh-fname { font-weight: 600; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.qh-diffs .qh-stat { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-size: .8rem; white-space: nowrap; }
-.qh-diffs .qh-stat-add { color: #1a7f37; font-weight: 600; }
-.qh-diffs .qh-stat-del { color: #cf222e; font-weight: 600; }
-.qh-diffs .qh-bar { display: inline-flex; gap: 1px; margin-left: .35rem; vertical-align: middle; }
-.qh-diffs .qh-bar span { width: 8px; height: 8px; background: #d0d7de; display: inline-block; }
-.qh-diffs .qh-bar span.qh-b-add { background: #2da44e; }
-.qh-diffs .qh-bar span.qh-b-del { background: #cf222e; }
-.qh-diffs .qh-body { overflow-x: auto; }
-.qh-diffs table.qh-diff { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-size: .78rem; line-height: 1.45;
-    width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
-.qh-diffs .qh-diff td { padding: 0 .5rem; white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top; border: 0; }
-.qh-diffs .qh-diff td.qh-ln { width: 3.25rem; color: #6e7781; text-align: right; user-select: none; }
-.qh-diffs .qh-diff td.qh-sign { width: 1.25rem; user-select: none; color: #57606a; }
-.qh-diffs .qh-diff tr.qh-add td { background: #e6ffec; }
-.qh-diffs .qh-diff tr.qh-add td.qh-ln { background: #ccffd8; }
-.qh-diffs .qh-diff tr.qh-del td { background: #ffebe9; }
-.qh-diffs .qh-diff tr.qh-del td.qh-ln { background: #ffd7d5; }
-.qh-diffs .qh-diff tr.qh-add mark { background: #abf2bc; padding: 0; border-radius: 2px; }
-.qh-diffs .qh-diff tr.qh-del mark { background: #ff818266; padding: 0; border-radius: 2px; }
-.qh-diffs .qh-diff tr.qh-hunk td { background: #ddf4ff; color: #57606a; padding: .2rem .5rem; }
-.qh-diffs .qh-diff tr.qh-gap td { background: #f6f8fa; padding: 0; }
-.qh-diffs .qh-gap-toggle { border: 0; background: transparent; color: #0969da; width: 100%; text-align: left;
-    padding: .2rem .5rem; font-size: .78rem; }
-.qh-diffs .qh-gap-toggle:hover { background: #ddf4ff; }
-.qh-diffs .qh-diff tr.qh-hidden { display: none; }
-.qh-diffs .qh-sides { display: flex; flex-wrap: wrap; gap: .25rem 1rem; padding: .4rem .75rem; font-size: .8rem;
-    border-bottom: 1px solid #d0d7de; background: #fff; }
-.qh-diffs .qh-side { display: inline-flex; align-items: center; gap: .35rem; }
-.qh-diffs .qh-side b { font-family: SFMono-Regular, Menlo, Consolas, monospace; width: 1.1rem; text-align: center;
-    border-radius: 3px; }
-.qh-diffs .qh-side-old b { background: #ffd7d5; color: #cf222e; }
-.qh-diffs .qh-side-new b { background: #ccffd8; color: #1a7f37; }
-.qh-diffs .qh-rename { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; color: #1a7f37;
-    border: 1px solid #1a7f37; border-radius: 3px; padding: 0 .3rem; font-size: .75rem; }
-.qh-diffs .qh-actions .btn { padding: .05rem .4rem; font-size: .75rem; }
-</style>
 <div class="qh-diffs" data-qh-diffs>
     {{#has_toolbar}}
     <div class="d-flex justify-content-end mb-2">

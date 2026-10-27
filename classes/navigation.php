@@ -20,7 +20,7 @@ namespace qbank_questionhub;
  * Question Bank tertiary navigation node linking to Question Hub.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class navigation extends \core_question\local\bank\navigation_node_base {

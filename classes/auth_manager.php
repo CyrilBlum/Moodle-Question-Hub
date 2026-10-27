@@ -25,7 +25,7 @@ use moodle_url;
  * Implements two-tier token resolution (User OAuth PKCE > Institutional PAT fallback).
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class auth_manager {

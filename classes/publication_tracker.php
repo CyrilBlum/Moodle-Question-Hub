@@ -22,7 +22,7 @@ use stdClass;
  * Tracks the question versions included in a category's last Hub release.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class publication_tracker {

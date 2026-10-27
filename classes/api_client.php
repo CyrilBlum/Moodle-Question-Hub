@@ -25,7 +25,7 @@ use moodle_exception;
  * system CA bundles, and timeout policies.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class api_client {

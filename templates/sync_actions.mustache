@@ -6,6 +6,9 @@
     package the account cannot publish to), merge request link (own fork) and package settings toggle.
     Shared by the category list, Browse cards, library and My packages; expects a category sync row as context.
     hide_settings_toggle: set where the category list (which holds the settings forms) is not on the page.
+
+    Example context (json):
+    {"action_url": "#", "sesskey": "x", "id": 1, "package_id": "ch.gym.inf.krypto", "is_package_source": true, "has_changes": true, "update_url": "#"}
 }}
 {{#has_ahead}}{{^is_inherited_link}}
     <a href="{{review_url}}" class="btn btn-sm btn-outline-warning mr-1" title="{{#str}} review_button_help, qbank_questionhub {{/str}}">

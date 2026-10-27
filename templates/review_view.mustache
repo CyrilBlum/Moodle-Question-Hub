@@ -5,6 +5,9 @@
     (linked version -> local version) and the buttons to accept or reject it.
     An imported copy can accept (keep) or reject (restore the Hub version) a change; the package source
     only rejects, since accepted changes are published by the next push.
+
+    Example context (json):
+    {"return_url": "#", "action_url": "#", "sesskey": "x", "category_name": "Kryptologie", "package_id": "ch.gym.inf.krypto", "package_version": "1.0.0", "is_copy": true, "files": []}
 }}
 <div class="qbank_questionhub_review mb-5">
     <a href="{{return_url}}" class="d-inline-block small mb-3"><i class="fa fa-arrow-left mr-1 me-1" aria-hidden="true"></i>{{#str}} review_back, qbank_questionhub {{/str}}</a>

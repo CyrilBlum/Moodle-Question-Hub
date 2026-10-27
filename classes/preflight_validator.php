@@ -25,7 +25,7 @@ use SimpleXMLElement;
  * validating pedagogical question invariants and producing structured DiagnosticReports.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class preflight_validator {
@@ -195,7 +195,7 @@ class preflight_validator {
                     if (!str_contains($cattext, '$course$') && !str_contains($cattext, '$module$')) {
                         $report->add_warning(
                             'WARN_CATEGORY_MISSING_CONTEXT',
-                            "Category path '{$cattext}' lacks a standard context token ($course$); "
+                            "Category path '{$cattext}' lacks a standard context token (\$course\$); "
                                 . "will be imported into target category.",
                             $qindex,
                             $qname

@@ -20,7 +20,7 @@ namespace qbank_questionhub;
  * Question-level changes since a release, with line diffs of the exported Moodle XML.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class release_diff {

@@ -23,7 +23,7 @@ namespace qbank_questionhub;
  * a question is in use (quiz slots, attempts) or a random question draws from one of the categories.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class category_remover {

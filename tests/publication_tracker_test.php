@@ -20,7 +20,7 @@ namespace qbank_questionhub;
  * Unit tests for publication tracker and version bumping.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
  * @covers \qbank_questionhub\publication_tracker

@@ -20,7 +20,7 @@ namespace qbank_questionhub;
  * Result data container from package import execution.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class import_result {

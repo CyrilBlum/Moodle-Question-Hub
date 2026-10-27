@@ -23,7 +23,7 @@ use core_question\local\bank\view;
  * Question bank column indicating whether a question is synchronized with the Question Hub release.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class question_sync_column extends column_base {

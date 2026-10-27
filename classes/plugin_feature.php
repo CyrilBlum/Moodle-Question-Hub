@@ -29,7 +29,7 @@ use moodle_url;
  * and Moodle 5.0 Stable (PHP 8.2).
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class plugin_feature extends plugin_features_base {

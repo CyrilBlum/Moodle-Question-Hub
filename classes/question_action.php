@@ -22,7 +22,7 @@ use core_question\local\bank\question_action_base;
  * Question bank action menu item for exporting/publishing a question to Question Hub.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class question_action extends question_action_base {

@@ -5,6 +5,9 @@
     fork of another package).
     Shared by the category list, Browse cards, library and My packages; expects a category sync row as context.
     A newer Hub version is shown as a badge only when the Pull button (sync_actions) is not available.
+
+    Example context (json):
+    {"has_ahead": true, "ahead_count": 2}
 }}
 {{#has_ahead}}<span class="badge badge-warning bg-warning text-dark mr-1" title="{{#str}} sync_ahead_help, qbank_questionhub {{/str}}"><i class="fa fa-arrow-up mr-1" aria-hidden="true"></i>{{#str}} local_changes_status, qbank_questionhub, {{ahead_count}} {{/str}}</span>{{/has_ahead}}
 {{#has_remote_update}}{{^can_pull}}<span class="badge badge-info bg-info text-white mr-1" title="{{#str}} sync_behind_help, qbank_questionhub {{/str}}"><i class="fa fa-arrow-down mr-1" aria-hidden="true"></i>{{#str}} remote_update_status, qbank_questionhub, {{remote_version}} {{/str}}</span>{{/can_pull}}{{/has_remote_update}}

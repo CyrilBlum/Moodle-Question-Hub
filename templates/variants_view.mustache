@@ -7,6 +7,9 @@
     keep per group (default: keep all); the others are deleted unless a quiz uses them. A used local question can
     instead take over the Hub question: its content becomes a new version and the separate Hub question is
     deleted. The category name links to its question list.
+
+    Example context (json):
+    {"return_url": "#", "action_url": "#", "sesskey": "x", "has_groups": false}
 }}
 <div class="qbank_questionhub_variants mb-5">
     <a href="{{return_url}}" class="d-inline-block small mb-3"><i class="fa fa-arrow-left mr-1 me-1" aria-hidden="true"></i>{{#str}} review_back, qbank_questionhub {{/str}}</a>
@@ -153,7 +156,7 @@
     form.addEventListener('submit', function(e) {
         var count = form.querySelectorAll('tr.table-danger').length;
         var message = form.querySelector('[data-confirm]').getAttribute('data-confirm').replace('{count}', count);
-        if (!count || !window.confirm(message)) {
+        if (!count || !window.confirm(message)) { // eslint-disable-line no-alert
             e.preventDefault();
         }
     });

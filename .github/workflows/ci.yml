@@ -109,7 +109,6 @@ jobs:
       # Remaining: missing example contexts and HTML validation of partial templates; reported, not yet a gate.
       - name: Mustache lint
         if: ${{ !cancelled() }}
-        continue-on-error: true
         run: moodle-plugin-ci mustache
 
       - name: PHPUnit

@@ -20,7 +20,7 @@ namespace qbank_questionhub;
  * XML question importer that can remap package categories before Moodle imports them.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class qformat_xml_importer extends \qformat_xml {

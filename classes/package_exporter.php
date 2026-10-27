@@ -29,7 +29,7 @@ use moodle_exception;
  * media preservation, and dual-version support across Moodle 4.5 and 5.0.
  *
  * @package    qbank_questionhub
- * @copyright  2026 Cyril Wendl
+ * @copyright  2026 Cyril Blum
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class package_exporter {
