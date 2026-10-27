@@ -477,7 +477,8 @@ class api_client {
         $curl = $this->get_curl();
         $curl->setHeader($this->get_headers(true));
 
-        $jsonpayload = json_encode($data);
+        // Unescaped slashes and Unicode keep a publish body close to the XML size the Hub limits.
+        $jsonpayload = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $response = $curl->post($url, $jsonpayload);
         $info = $curl->get_info();
         $httpcode = (int)($info['http_code'] ?? 0);
@@ -554,12 +555,24 @@ class api_client {
                 throw new moodle_exception('error_notfound', 'qbank_questionhub', '', $message);
             case 410:
                 throw new moodle_exception('error_package_withdrawn', 'qbank_questionhub', '', $message);
+            case 413:
+                // Usually answered by nginx before the Hub sees the request, so there is no JSON message.
+                throw new moodle_exception(
+                    'error_package_too_large_hub',
+                    'qbank_questionhub',
+                    '',
+                    display_size(preflight_validator::MAX_PACKAGE_BYTES)
+                );
             case 400:
             case 409:
                 // A refused request (validation, name taken), not a network problem.
                 throw new moodle_exception('error_hub_rejected', 'qbank_questionhub', '', $message ?: "HTTP {$httpcode}");
             default:
-                $detail = !empty($message) ? $message : ("HTTP {$httpcode}: " . s(substr($body, 0, 300)));
+                // Proxy error pages are HTML: show their title, not the markup.
+                if (empty($message) && preg_match('/<title>(.*?)<\/title>/is', $body, $m)) {
+                    $message = s(trim($m[1]));
+                }
+                $detail = !empty($message) ? $message : ("HTTP {$httpcode}: " . s(substr(strip_tags($body), 0, 300)));
                 throw new moodle_exception('error_network', 'qbank_questionhub', '', $detail);
         }
     }

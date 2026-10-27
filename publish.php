@@ -279,6 +279,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Action 2: Direct Publish to Marketplace.
+        // Checked here because the Hub (and nginx in front of it) refuses larger packages only after the whole upload.
+        if (strlen($xmlcontent) > \qbank_questionhub\preflight_validator::MAX_PACKAGE_BYTES) {
+            $largest = [];
+            foreach (\qbank_questionhub\preflight_validator::largest_questions($xmlcontent) as $q) {
+                $largest[] = '«' . s($q['name']) . '» (' . display_size($q['bytes']) . ')';
+            }
+            throw new moodle_exception('error_package_too_large', 'qbank_questionhub', '', (object)[
+                'size' => display_size(strlen($xmlcontent)),
+                'limit' => display_size(\qbank_questionhub\preflight_validator::MAX_PACKAGE_BYTES),
+                'largest' => implode(', ', $largest),
+            ]);
+        }
+
         $allowedgrades = ['GYM1', 'GYM2', 'GYM3', 'GYM4'];
         $grades = array_values(array_intersect($allowedgrades, $gradesraw));
         $metadata = [

@@ -610,4 +610,32 @@ class preflight_validator {
             }
         }
     }
+
+    /**
+     * Finds the largest questions of an XML export without parsing it, so an oversized package can be explained.
+     *
+     * @param string $xmlcontent Moodle XML export.
+     * @param int $limit Number of questions to return.
+     * @return array List of ['name' => string, 'bytes' => int], largest first.
+     */
+    public static function largest_questions(string $xmlcontent, int $limit = 5): array {
+        if (!preg_match_all('/<question\s+type="([^"]*)"/', $xmlcontent, $matches, PREG_OFFSET_CAPTURE)) {
+            return [];
+        }
+        $starts = array_column($matches[0], 1);
+        $sizes = [];
+        foreach ($starts as $i => $start) {
+            if ($matches[1][$i][0] === 'category') {
+                continue;
+            }
+            $end = $starts[$i + 1] ?? strlen($xmlcontent);
+            $head = substr($xmlcontent, $start, 2000);
+            $name = preg_match('/<name>\s*<text>(.*?)<\/text>/s', $head, $m)
+                ? html_entity_decode(preg_replace('/^<!\[CDATA\[|\]\]>$/', '', trim($m[1])), ENT_QUOTES | ENT_XML1, 'UTF-8')
+                : '?';
+            $sizes[] = ['name' => $name, 'bytes' => $end - $start];
+        }
+        usort($sizes, fn($a, $b) => $b['bytes'] <=> $a['bytes']);
+        return array_slice($sizes, 0, $limit);
+    }
 }

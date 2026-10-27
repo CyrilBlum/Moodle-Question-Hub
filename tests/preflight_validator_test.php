@@ -198,4 +198,19 @@ final class preflight_validator_test extends \advanced_testcase {
             $this->assertEquals('ERR_XXE_DOCTYPE_FORBIDDEN', $report->get_errors()[0]['code']);
         }
     }
+
+    public function test_largest_questions_ranks_by_size(): void {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?><quiz>'
+            . '<question type="category"><category><text>$course$/top/SQL</text></category></question>'
+            . '<question type="shortanswer"><name><text>Klein</text></name></question>'
+            . '<question type="coderunner"><name><text><![CDATA[Gross & schwer]]></text></name>'
+            . '<file name="db.sqlite" encoding="base64">' . str_repeat('A', 5000) . '</file></question>'
+            . '<question type="truefalse"><name><text>Mittel &amp; mehr</text></name>' . str_repeat('x', 500) . '</question>'
+            . '</quiz>';
+        $largest = preflight_validator::largest_questions($xml, 2);
+        $this->assertCount(2, $largest);
+        $this->assertSame('Gross & schwer', $largest[0]['name']);
+        $this->assertGreaterThan(5000, $largest[0]['bytes']);
+        $this->assertSame('Mittel & mehr', $largest[1]['name']);
+    }
 }
