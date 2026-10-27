@@ -87,7 +87,7 @@ class package_importer {
         $segments = array_values(array_filter(explode('/', trim($path, '/')), static function ($segment) {
             return $segment !== '';
         }));
-        // Context prefixes: $course$, $module$, $system$, $cat1$ (Moodle 4.5 course category bank) or $$.
+        // Drops the context prefix, also a numbered one such as the course category bank of Moodle 4.5.
         if (!empty($segments) && preg_match('/^\$[a-z]*\d*\$$/i', $segments[0])) {
             array_shift($segments);
         }
