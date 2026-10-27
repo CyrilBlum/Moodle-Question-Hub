@@ -63,11 +63,15 @@ $coursecontext = $contexts->lowest();
 require_capability('qbank/questionhub:view', $coursecontext);
 $bankcontextid = optional_param('bankcontextid', 0, PARAM_INT);
 $bankcontexts = \qbank_questionhub\question_bank_context::available($COURSE);
-if ($bankcontextid === 0 && !empty($pagevars['cat'])) {
-    // Coming from the question bank: preselect the bank of the category shown there (e.g. a course category).
-    $catcontextid = (int)(explode(',', $pagevars['cat'])[1] ?? 0);
-    if (isset($bankcontexts[$catcontextid])) {
+if ($bankcontextid === 0) {
+    // Default to a course-category bank (Moodle 4.5): the one of the category shown in the question bank,
+    // else the nearest one. The course bank stays the default when no course-category bank is available.
+    $catcontextid = (int)(explode(',', (string)($pagevars['cat'] ?? ''))[1] ?? 0);
+    $coursecatcontexts = array_filter($bankcontexts, static fn($context) => $context->contextlevel == CONTEXT_COURSECAT);
+    if (isset($coursecatcontexts[$catcontextid])) {
         $bankcontextid = $catcontextid;
+    } else if ($coursecatcontexts) {
+        $bankcontextid = (int)array_key_first($coursecatcontexts);
     }
 }
 $bankcontext = \qbank_questionhub\question_bank_context::resolve($COURSE, $bankcontextid);
