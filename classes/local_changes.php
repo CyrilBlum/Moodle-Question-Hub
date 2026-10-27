@@ -33,7 +33,9 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class local_changes {
-    /** The link (publish or import record) held by this category itself, or null. */
+    /**
+     * The link (publish or import record) held by this category itself, or null.
+     */
     public static function link(int $courseid, int $categoryid): ?stdClass {
         $history = publication_tracker::latest($courseid, $categoryid);
         return $history && (int)$history->categoryid === $categoryid ? $history : null;
@@ -72,12 +74,16 @@ class local_changes {
         return release_diff::since((int)$history->categoryid, $history, $exporter, !self::is_source($history));
     }
 
-    /** Synced question version of an entry, 0 if the entry was added locally. */
+    /**
+     * Synced question version of an entry, 0 if the entry was added locally.
+     */
     private static function synced_questionid(stdClass $history, int $entryid): int {
         return (int)(publication_tracker::snapshot((int)$history->id)[$entryid] ?? 0);
     }
 
-    /** Latest question version of an entry within the linked category tree. */
+    /**
+     * Latest question version of an entry within the linked category tree.
+     */
     private static function current_questionid(stdClass $history, int $entryid): int {
         $current = publication_tracker::current((int)$history->categoryid);
         if (!isset($current[$entryid])) {
@@ -86,7 +92,9 @@ class local_changes {
         return $current[$entryid];
     }
 
-    /** Points the snapshot of the sync at another question version of an entry. */
+    /**
+     * Points the snapshot of the sync at another question version of an entry.
+     */
     private static function set_synced(stdClass $history, int $entryid, int $questionid): void {
         global $DB;
         $row = $DB->get_record('qbank_questionhub_published', [

@@ -29,7 +29,7 @@ $context = \context_system::instance();
 
 $code = optional_param('code', '', PARAM_RAW);
 $state = optional_param('state', '', PARAM_RAW);
-$hubError = optional_param('error', '', PARAM_TEXT);
+$huberror = optional_param('error', '', PARAM_TEXT);
 
 $oauthstate = $SESSION->qbank_questionhub_oauth ?? null;
 unset($SESSION->qbank_questionhub_oauth);
@@ -42,8 +42,8 @@ if (!\qbank_questionhub\auth_manager::linking_allowed()) {
     redirect($returnurl);
 }
 
-if ($hubError !== '' || $code === '') {
-    \core\notification::error(get_string('error_oauth_failed', 'qbank_questionhub', s($hubError ?: 'no authorization code')));
+if ($huberror !== '' || $code === '') {
+    \core\notification::error(get_string('error_oauth_failed', 'qbank_questionhub', s($huberror ?: 'no authorization code')));
     redirect($returnurl);
 }
 

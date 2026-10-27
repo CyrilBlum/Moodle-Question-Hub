@@ -20,6 +20,7 @@ namespace qbank_questionhub;
  * XML question importer that can remap package categories before Moodle imports them.
  *
  * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class qformat_xml_importer extends \qformat_xml {
@@ -38,7 +39,9 @@ class qformat_xml_importer extends \qformat_xml {
         $this->categorytransformer = $transformer;
     }
 
-    /** Set a callback that removes questions not selected for import. */
+    /**
+     * Set a callback that removes questions not selected for import.
+     */
     public function set_question_filter(callable $filter): void {
         $this->questionfilter = $filter;
     }

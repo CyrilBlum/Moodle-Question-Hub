@@ -24,14 +24,29 @@ namespace qbank_questionhub;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class bulk_publish_action extends \core_question\local\bank\bulk_action_base {
+    /**
+     * Title of the bulk action.
+     *
+     * @return string
+     */
     public function get_bulk_action_title(): string {
         return get_string('publishselected', 'qbank_questionhub');
     }
 
+    /**
+     * Unique key of the bulk action.
+     *
+     * @return string
+     */
     public function get_key(): string {
         return 'publishselected';
     }
 
+    /**
+     * URL of the publish page for the selected questions.
+     *
+     * @return \moodle_url
+     */
     public function get_bulk_action_url(): \moodle_url {
         $params = [];
         if (!empty($this->qbank)) {
@@ -43,6 +58,11 @@ class bulk_publish_action extends \core_question\local\bank\bulk_action_base {
         return new \moodle_url('/question/bank/questionhub/publish.php', $params);
     }
 
+    /**
+     * Capabilities needed for the bulk action.
+     *
+     * @return array|null
+     */
     public function get_bulk_action_capabilities(): ?array {
         return ['qbank/questionhub:publish'];
     }

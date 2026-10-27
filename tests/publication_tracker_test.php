@@ -22,6 +22,8 @@ namespace qbank_questionhub;
  * @package    qbank_questionhub
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
+ * @covers \qbank_questionhub\publication_tracker
  */
 final class publication_tracker_test extends \advanced_testcase {
     public function test_next_version_patch_bump(): void {

@@ -21,6 +21,10 @@ namespace qbank_questionhub;
  *
  * Moodle core only deletes empty categories. This removes the whole tree, but refuses as long as
  * a question is in use (quiz slots, attempts) or a random question draws from one of the categories.
+ *
+ * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class category_remover {
     /**
@@ -85,7 +89,7 @@ class category_remover {
             question_delete_question($questionid);
         }
         [$insql, $params] = $DB->get_in_or_equal($preview['categoryids']);
-        // question_delete_question() skips questions it cannot remove; never orphan them.
+        // Function question_delete_question() skips questions it cannot remove; never orphan them.
         if ($DB->record_exists_select('question_bank_entries', "questioncategoryid $insql", $params)) {
             throw new \moodle_exception('category_delete_failed', 'qbank_questionhub', '', $name);
         }

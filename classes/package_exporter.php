@@ -170,14 +170,14 @@ class package_exporter {
      * @return string Normalized XML string.
      */
     public static function normalize_xml(string $rawxml): string {
-        // 1. Normalize $module$, $system$, $cat123$, or empty $$ to canonical $course$
+        // First, the category path prefixes module, system, cat123 or an empty one become the canonical course prefix.
         $normalized = preg_replace(
             '/<category>\s*<text>\$(?:module|cat\d+|system|)\$/i',
             '<category><text>$course$',
             $rawxml
         );
 
-        // 2. Ensure /top/ exists in all category paths: $course$/top/...
+        // Then every category path gets a top category: $course$/top/...
         $normalized = preg_replace_callback(
             '/<category>\s*<text>\$course\$\/(?!top\/)([^<]+)<\/text>\s*<\/category>/i',
             function ($matches) {

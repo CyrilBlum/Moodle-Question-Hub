@@ -22,6 +22,8 @@ namespace qbank_questionhub;
  * @package    qbank_questionhub
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
+ * @covers \qbank_questionhub\auth_manager
  */
 final class auth_manager_test extends \advanced_testcase {
     /**
@@ -40,7 +42,9 @@ final class auth_manager_test extends \advanced_testcase {
         $this->assertSame('code', $params['response_type']);
     }
 
-    /** Switching linking off disables tokens that were linked before. */
+    /**
+     * Switching linking off disables tokens that were linked before.
+     */
     public function test_linking_disabled_ignores_user_token(): void {
         $this->resetAfterTest();
         $this->setAdminUser();

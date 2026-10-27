@@ -132,7 +132,9 @@
     };
     var groups = form.querySelectorAll('[data-qh-group]');
     groups.forEach(function(group) {
-        group.addEventListener('change', function() { update(group); });
+        group.addEventListener('change', function() {
+            update(group);
+        });
         update(group);
     });
     form.querySelectorAll('[data-qh-variants]').forEach(function(button) {
@@ -140,7 +142,9 @@
             var hub = button.getAttribute('data-qh-variants') === 'hub';
             groups.forEach(function(group) {
                 // A used local question takes over the Hub question; otherwise the Hub question is kept.
-                var target = hub ? (group.querySelector('input[data-qh-merge]') || group.querySelector('input[data-qh-hub]')) : null;
+                var target = hub
+                    ? (group.querySelector('input[data-qh-merge]') || group.querySelector('input[data-qh-hub]'))
+                    : null;
                 (target || group.querySelector('input[value="0"]')).checked = true;
                 update(group);
             });

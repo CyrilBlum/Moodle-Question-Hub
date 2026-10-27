@@ -50,12 +50,16 @@ class auth_manager {
         return null;
     }
 
-    /** Whether the site lets teachers link a Hub account (OAuth or PAT); unset counts as allowed, like the default. */
+    /**
+     * Whether the site lets teachers link a Hub account (OAuth or PAT); unset counts as allowed, like the default.
+     */
     public static function linking_allowed(): bool {
         return get_config('qbank_questionhub', 'allowteacherlinking') !== '0';
     }
 
-    /** Resolves only the current Moodle user's Hub token, without an institutional fallback. */
+    /**
+     * Resolves only the current Moodle user's Hub token, without an institutional fallback.
+     */
     public static function resolve_user_token(?int $userid = null): ?string {
         global $USER, $DB;
 

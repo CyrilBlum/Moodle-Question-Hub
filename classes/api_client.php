@@ -385,7 +385,12 @@ class api_client {
      * @return array Token response { access_token, token_type, expires_in, user }.
      * @throws moodle_exception On error.
      */
-    public function exchange_oauth_code(string $code, string $codeverifier, string $redirecturi, string $clientid = 'moodle-plugin-client'): array {
+    public function exchange_oauth_code(
+        string $code,
+        string $codeverifier,
+        string $redirecturi,
+        string $clientid = 'moodle-plugin-client'
+    ): array {
         $payload = [
             'grant_type' => 'authorization_code',
             'code' => $code,
@@ -433,7 +438,12 @@ class api_client {
 
         $decoded = json_decode($response, true);
         if ($decoded === null && !empty($response)) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', 'Invalid JSON response from Hub: ' . s(substr($response, 0, 200)));
+            throw new moodle_exception(
+                'error_network',
+                'qbank_questionhub',
+                '',
+                'Invalid JSON response from Hub: ' . s(substr($response, 0, 200))
+            );
         }
 
         return $decoded ?? [];
@@ -472,7 +482,12 @@ class api_client {
 
         $decoded = json_decode($response, true);
         if ($decoded === null && !empty($response)) {
-            throw new moodle_exception('error_network', 'qbank_questionhub', '', 'Invalid JSON response from Hub: ' . s(substr($response, 0, 200)));
+            throw new moodle_exception(
+                'error_network',
+                'qbank_questionhub',
+                '',
+                'Invalid JSON response from Hub: ' . s(substr($response, 0, 200))
+            );
         }
 
         return $decoded ?? [];

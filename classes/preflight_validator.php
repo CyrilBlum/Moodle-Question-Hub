@@ -33,7 +33,8 @@ class preflight_validator {
     public const MAX_PACKAGE_BYTES = 52428800;
 
     /** Script elements, frames, plugins, event-handler attributes and script URLs. */
-    public const ACTIVE_CONTENT_PATTERN = '/<\s*(?:script|iframe|frame|object|embed|applet|base|meta)\b|<[a-z][^>]*\son[a-z]+\s*=|(?:href|src|action|formaction)\s*=\s*["\']?\s*(?:javascript|vbscript|data:text\/html)/i';
+    public const ACTIVE_CONTENT_PATTERN = '/<\s*(?:script|iframe|frame|object|embed|applet|base|meta)\b|<[a-z][^>]*\son[a-z]+\s*=|'
+        . '(?:href|src|action|formaction)\s*=\s*["\']?\s*(?:javascript|vbscript|data:text\/html)/i';
 
     /** Maximum allowed single media file in bytes (10 MB). */
     public const MAX_MEDIA_FILE_BYTES = 10485760;
@@ -176,7 +177,11 @@ class preflight_validator {
             $qtype = isset($attrs['type']) ? (string)$attrs['type'] : '';
 
             if ($qtype === '') {
-                $report->add_error('ERR_QUESTION_MISSING_TYPE', "Question #{$qindex} is missing the required type attribute.", $qindex);
+                $report->add_error(
+                    'ERR_QUESTION_MISSING_TYPE',
+                    "Question #{$qindex} is missing the required type attribute.",
+                    $qindex
+                );
                 continue;
             }
 
@@ -190,7 +195,8 @@ class preflight_validator {
                     if (!str_contains($cattext, '$course$') && !str_contains($cattext, '$module$')) {
                         $report->add_warning(
                             'WARN_CATEGORY_MISSING_CONTEXT',
-                            "Category path '{$cattext}' lacks a standard context token ($course$); will be imported into target category.",
+                            "Category path '{$cattext}' lacks a standard context token ($course$); "
+                                . "will be imported into target category.",
                             $qindex,
                             $qname
                         );
@@ -281,7 +287,13 @@ class preflight_validator {
      * @param string $qname
      * @param diagnostic_report $report
      */
-    protected static function validate_question_type(SimpleXMLElement $q, string $qtype, int $qindex, string $qname, diagnostic_report $report): void {
+    protected static function validate_question_type(
+        SimpleXMLElement $q,
+        string $qtype,
+        int $qindex,
+        string $qname,
+        diagnostic_report $report
+    ): void {
         switch ($qtype) {
             case 'multichoice':
                 $single = isset($q->single) ? strtolower((string)$q->single) : 'true';
@@ -514,7 +526,12 @@ class preflight_validator {
      * @param string $qname
      * @param diagnostic_report $report
      */
-    protected static function validate_embedded_media(SimpleXMLElement $q, int $qindex, string $qname, diagnostic_report $report): void {
+    protected static function validate_embedded_media(
+        SimpleXMLElement $q,
+        int $qindex,
+        string $qname,
+        diagnostic_report $report
+    ): void {
         $files = $q->xpath('.//file');
         foreach ($files as $file) {
             $filename = (string)($file['name'] ?? 'unnamed');

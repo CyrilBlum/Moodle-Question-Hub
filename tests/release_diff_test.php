@@ -19,6 +19,10 @@ namespace qbank_questionhub;
 /**
  * Line diff used by the push view.
  *
+ * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
  * @covers \qbank_questionhub\release_diff
  */
 final class release_diff_test extends \advanced_testcase {
@@ -75,7 +79,13 @@ final class release_diff_test extends \advanced_testcase {
     }
 
     public function test_same_except_name_detects_pure_rename(): void {
-        $old = ['<question type="numerical">', '  <name>', '    <text>Anzahl Pixel</text>', '  </name>', '  <defaultgrade>1</defaultgrade>'];
+        $old = [
+            '<question type="numerical">',
+            '  <name>',
+            '    <text>Anzahl Pixel</text>',
+            '  </name>',
+            '  <defaultgrade>1</defaultgrade>',
+        ];
         $renamed = $old;
         $renamed[2] = '    <text>K3 - Anzahl Pixel</text>';
         $this->assertTrue(release_diff::same_except_name($old, $renamed));

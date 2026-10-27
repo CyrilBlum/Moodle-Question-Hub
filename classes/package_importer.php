@@ -113,7 +113,12 @@ class package_importer {
             $category = $DB->get_record('question_categories', ['id' => $category->parent], '*', MUST_EXIST);
         }
         if (empty($names) || $names[0] !== 'top') {
-            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'The selected category is not inside this question bank.');
+            throw new \moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                'The selected category is not inside this question bank.'
+            );
         }
         return '$course$/' . implode('/', $names);
     }
@@ -131,7 +136,12 @@ class package_importer {
             throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid category placement option.');
         }
         if ((int)$this->targetcategory->contextid !== (int)$this->context->id) {
-            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'The selected category is not in this course question bank.');
+            throw new \moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                'The selected category is not in this course question bank.'
+            );
         }
 
         $roots = [];
@@ -148,16 +158,31 @@ class package_importer {
 
         if ($mode === 'rename') {
             if ($packageroot === null || $packageroot === '') {
-                throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'This package has no single top-level category to use as the new name.');
+                throw new \moodle_exception(
+                    'error_import_failed',
+                    'qbank_questionhub',
+                    '',
+                    'This package has no single top-level category to use as the new name.'
+                );
             }
             if ((int)$this->targetcategory->parent === 0 && $this->targetcategory->name === 'top') {
-                throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'The question bank root cannot be renamed.');
+                throw new \moodle_exception(
+                    'error_import_failed',
+                    'qbank_questionhub',
+                    '',
+                    'The question bank root cannot be renamed.'
+                );
             }
             if (
                 $DB->count_records('question_bank_entries', ['questioncategoryid' => $this->targetcategory->id]) > 0 ||
                     $DB->record_exists('question_categories', ['parent' => $this->targetcategory->id])
             ) {
-                throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Choose an empty category before replacing its name.');
+                throw new \moodle_exception(
+                    'error_import_failed',
+                    'qbank_questionhub',
+                    '',
+                    'Choose an empty category before replacing its name.'
+                );
             }
             $context = \context::instance_by_id($this->targetcategory->contextid);
             require_capability('moodle/question:managecategory', $context);
@@ -167,7 +192,12 @@ class package_importer {
                 'name' => $packageroot,
             ]);
             if ($sibling && (int)$sibling->id !== (int)$this->targetcategory->id) {
-                throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'A category with the package name already exists beside the selected category.');
+                throw new \moodle_exception(
+                    'error_import_failed',
+                    'qbank_questionhub',
+                    '',
+                    'A category with the package name already exists beside the selected category.'
+                );
             }
             if ($this->targetcategory->name !== $packageroot) {
                 $this->targetcategory->name = $packageroot;
@@ -236,7 +266,12 @@ class package_importer {
                     $DB->count_records('question_bank_entries', ['questioncategoryid' => $this->targetcategory->id]) > 0 ||
                     $DB->record_exists('question_categories', ['parent' => $this->targetcategory->id])
             ) {
-                throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Choose an empty category for renaming.');
+                throw new moodle_exception(
+                    'error_import_failed',
+                    'qbank_questionhub',
+                    '',
+                    'Choose an empty category for renaming.'
+                );
             }
             require_capability('moodle/question:managecategory', $this->context);
             if (
@@ -244,7 +279,12 @@ class package_importer {
                     'contextid' => $this->context->id, 'parent' => $this->targetcategory->parent,
                     'name' => $packageroot]) && $packageroot !== $this->targetcategory->name
             ) {
-                throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'A category with this name already exists.');
+                throw new moodle_exception(
+                    'error_import_failed',
+                    'qbank_questionhub',
+                    '',
+                    'A category with this name already exists.'
+                );
             }
         }
 
@@ -571,7 +611,9 @@ class package_importer {
         }
     }
 
-    /** Hash of a package question without its name: equal for a question that was only renamed. */
+    /**
+     * Hash of a package question without its name: equal for a question that was only renamed.
+     */
     private static function loose_hash(\SimpleXMLElement $node): string {
         $doc = new \DOMDocument();
         $copy = $doc->importNode(dom_import_simplexml($node), true);
@@ -584,7 +626,9 @@ class package_importer {
         return hash('sha256', $copy->C14N());
     }
 
-    /** Question ID of the latest version of a question bank entry. */
+    /**
+     * Question ID of the latest version of a question bank entry.
+     */
     private function latest_questionid(int $entryid): int {
         global $DB;
         return (int)$DB->get_field_sql(
@@ -594,7 +638,9 @@ class package_importer {
         );
     }
 
-    /** Find an existing descendant without creating categories. */
+    /**
+     * Find an existing descendant without creating categories.
+     */
     private function find_existing_category(array $relative): int {
         global $DB;
         $parent = (int)$this->targetcategory->id;
@@ -978,7 +1024,7 @@ class package_importer {
                 if (!empty($importedquestions) || $categorymode !== null) {
                     publication_tracker::save((int)$historyid, $importedquestions);
                 }
-            } catch (\Throwable $ignore) {
+            } catch (\Throwable $ignore) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
                 // Non-fatal if snapshot fails during import.
             }
 
@@ -989,7 +1035,7 @@ class package_importer {
             if (!$transaction->is_disposed()) {
                 try {
                     $transaction->rollback($t);
-                } catch (\Throwable $ignore) {
+                } catch (\Throwable $ignore) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
                     // Moodle's rollback_delegated_transaction re-throws $t.
                 }
             }

@@ -22,6 +22,9 @@ namespace qbank_questionhub;
  * @package    qbank_questionhub
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ *
+ * @covers \qbank_questionhub\preflight_validator
+ * @covers \qbank_questionhub\package_importer
  */
 final class preflight_validator_test extends \advanced_testcase {
     public function test_empty_payload_rejected(): void {
@@ -123,13 +126,17 @@ final class preflight_validator_test extends \advanced_testcase {
         $this->assertNull(\qbank_questionhub\preflight_validator::find_cloze_problem('{1:SHORTANSWER:=a\\}b~=c}'));
     }
 
-    /** Scripts and event handlers are reported, plain text with angle brackets is not. */
+    /**
+     * Scripts and event handlers are reported, plain text with angle brackets is not.
+     */
     public function test_active_content_warned(): void {
         $report = preflight_validator::validate('<?xml version="1.0" encoding="UTF-8"?>
 <quiz>
   <question type="shortanswer">
     <name><text>Active</text></name>
-    <questiontext format="html"><text><![CDATA[<p onclick="alert(1)">Text</p><script>alert(2)</script><p>a &lt; b</p>]]></text></questiontext>
+    <questiontext format="html">
+      <text><![CDATA[<p onclick="alert(1)">Text</p><script>alert(2)</script><p>a &lt; b</p>]]></text>
+    </questiontext>
     <answer fraction="100" format="moodle_auto_format"><text>ab</text></answer>
   </question>
 </quiz>');
@@ -139,14 +146,18 @@ final class preflight_validator_test extends \advanced_testcase {
         $this->assertSame(1, preg_match(preflight_validator::ACTIVE_CONTENT_PATTERN, '<IFRAME src="https://example.org">'));
     }
 
-    /** Stripping cleans HTML texts only and leaves plain answers alone. */
+    /**
+     * Stripping cleans HTML texts only and leaves plain answers alone.
+     */
     public function test_strip_active_content(): void {
         $this->resetAfterTest();
         $xml = package_importer::strip_active_content('<?xml version="1.0" encoding="UTF-8"?>
 <quiz>
   <question type="shortanswer">
     <name><text>Active</text></name>
-    <questiontext format="html"><text><![CDATA[<p onclick="alert(1)">Text</p><script>alert(2)</script><p>a &lt; b</p>]]></text></questiontext>
+    <questiontext format="html">
+      <text><![CDATA[<p onclick="alert(1)">Text</p><script>alert(2)</script><p>a &lt; b</p>]]></text>
+    </questiontext>
     <answer fraction="100" format="moodle_auto_format"><text>a&lt;b</text></answer>
   </question>
 </quiz>');
@@ -158,7 +169,9 @@ final class preflight_validator_test extends \advanced_testcase {
         $this->assertSame('a<b', (string)$doc->question->answer->text);
     }
 
-    /** A DOCTYPE in UTF-16 without byte order mark is refused as well. */
+    /**
+     * A DOCTYPE in UTF-16 without byte order mark is refused as well.
+     */
     public function test_xxe_doctype_utf16_without_bom_blocked(): void {
         $xml = '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE quiz [<!ENTITY x "y">]><quiz></quiz>';
         foreach (['UTF-16LE', 'UTF-16BE'] as $encoding) {

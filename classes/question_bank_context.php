@@ -16,7 +16,13 @@
 
 namespace qbank_questionhub;
 
-/** Available question-bank contexts for a course. */
+/**
+ * Available question-bank contexts for a course.
+ *
+ * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class question_bank_context {
     /**
      * Return the course bank and populated banks in its course-category ancestry.
@@ -53,6 +59,8 @@ class question_bank_context {
     }
 
     /**
+     * Resolve a selectable question-bank context of a course.
+     *
      * @param \stdClass $course
      * @param int $contextid Zero selects the course bank.
      * @return \context

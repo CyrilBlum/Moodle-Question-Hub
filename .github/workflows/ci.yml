@@ -89,11 +89,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phplint
 
-      # Style findings (formatting, PHPDoc, naming; no security sniff hits on 2026-10-26) are reported, not yet a gate.
+      # Gate since 2026-10-27: no errors and no warnings allowed.
       - name: Moodle code checker (phpcs, incl. security sniffs)
         if: ${{ !cancelled() }}
-        continue-on-error: true
-        run: moodle-plugin-ci phpcs
+        run: moodle-plugin-ci phpcs --max-warnings 0
 
       - name: PHP mess detector
         if: ${{ !cancelled() }}
@@ -107,7 +106,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci savepoints
 
-      # HTML validation and ESLint style warnings in templates; reported, not yet a gate.
+      # Remaining: missing example contexts and HTML validation of partial templates; reported, not yet a gate.
       - name: Mustache lint
         if: ${{ !cancelled() }}
         continue-on-error: true

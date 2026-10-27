@@ -70,7 +70,7 @@ $PAGE->set_url($thispageurl);
 $PAGE->set_title(get_string('pluginname', 'qbank_questionhub'));
 $PAGE->set_heading($COURSE->fullname);
 
-// Handle POST actions (Save PAT, Import Package)
+// Handle POST actions (Save PAT, Import Package).
 $importpreview = null;
 $duplicatepreview = [];
 $duplicatecategoryid = 0;
@@ -94,7 +94,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
             $current = $client->get_package((string)$link->package_id);
             $target = $client->get_package($targetid);
-            if (empty($target['root_id']) || $target['root_id'] !== ($current['root_id'] ?? '') || empty($target['latest_version'])) {
+            if (
+                empty($target['root_id']) || $target['root_id'] !== ($current['root_id'] ?? '')
+                || empty($target['latest_version'])
+            ) {
                 throw new moodle_exception('error_switch_variant', 'qbank_questionhub');
             }
             \qbank_questionhub\publication_tracker::copy_tracking($categoryid, (string)$link->package_id, $targetid);
@@ -158,7 +161,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
             $created = $client->create_github_repo(required_param('repo_name', PARAM_RAW_TRIMMED));
-            \core\notification::success(get_string('github_repo_created_named', 'qbank_questionhub', s($created['html_url'] ?? $created['repo'])));
+            \core\notification::success(
+                get_string('github_repo_created_named', 'qbank_questionhub', s($created['html_url'] ?? $created['repo']))
+            );
             $updated = $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), ['github_repo' => $created['repo']]);
             \qbank_questionhub\api_client::notify_github_result($updated['github_sync'] ?? null);
         } catch (\Exception $e) {
@@ -459,7 +464,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Prepare filter parameters
+// Prepare filter parameters.
 $section = optional_param('section', 'browse', PARAM_ALPHANUMEXT);
 if (!in_array($section, ['browse', 'library', 'my_packages'], true)) {
     $section = 'browse';
@@ -502,7 +507,7 @@ if ($canton !== '') {
     $filters['canton'] = $canton;
 }
 
-// Fetch taxonomy and packages from marketplace
+// Fetch taxonomy and packages from marketplace.
 $client = new \qbank_questionhub\api_client(null, null, 30, true);
 $taxonomy = [];
 $packageresult = ['packages' => [], 'pagination' => ['page' => 1, 'limit' => 12, 'total' => 0, 'total_pages' => 1]];
@@ -512,7 +517,7 @@ try {
         $taxonomy = $client->get_taxonomy();
     }
 } catch (\Exception $e) {
-    // Fallback default taxonomy if offline
+    // Fallback default taxonomy if offline.
     $taxonomy = [
         'subjects' => [
             ['id' => 'informatik', 'name_de' => 'Informatik'],
@@ -542,7 +547,7 @@ if ($showbrowse) {
     }
 }
 
-// Format subjects for filter dropdown
+// Format subjects for filter dropdown.
 $subjectsdata = [];
 foreach ($taxonomy['subjects'] ?? [] as $sub) {
     $subjectsdata[] = [
@@ -552,7 +557,7 @@ foreach ($taxonomy['subjects'] ?? [] as $sub) {
     ];
 }
 
-// Format cantons for filter dropdown
+// Format cantons for filter dropdown.
 $cantonsdata = [];
 $cantonlist = $taxonomy['cantons'] ?? [
     ['code' => 'AG'], ['code' => 'BE'], ['code' => 'BS'], ['code' => 'LU'],
@@ -565,7 +570,7 @@ foreach ($cantonlist as $c) {
     ];
 }
 
-// Format package cards data
+// Format package cards data.
 $packagesdata = [];
 // The Hub API returns the list under "data" (older mocks used "packages").
 foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
@@ -591,8 +596,10 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
                     'version' => (string)($variant['latest_version'] ?? ''),
                     'title' => html_entity_decode((string)($variant['title'] ?? $variant['id']), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
                     'label' => get_string('import_variant_option', 'qbank_questionhub', (object)[
-                        'name' => (string)($variant['author']['name'] ?? ''), 'version' => (string)($variant['latest_version'] ?? ''),
-                    ]) . (($variant['visibility'] ?? 'public') === 'private' ? ' · ' . get_string('package_visibility_private', 'qbank_questionhub') : ''),
+                        'name' => (string)($variant['author']['name'] ?? ''),
+                        'version' => (string)($variant['latest_version'] ?? ''),
+                    ]) . (($variant['visibility'] ?? 'public') === 'private'
+                        ? ' · ' . get_string('package_visibility_private', 'qbank_questionhub') : ''),
                 ];
             }
         } catch (\Exception $e) {
@@ -638,7 +645,7 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
     ];
 }
 
-// Get user account linking status
+// Get user account linking status.
 $userrecord = \qbank_questionhub\auth_manager::get_user_token_record((int)$USER->id);
 $hasaccount = !empty($userrecord) && !empty($userrecord->access_token);
 $accountname = $hasaccount ? ($userrecord->hub_name ?: ($userrecord->hub_email ?: 'Verbunden')) : '';
@@ -672,7 +679,11 @@ if ($hasaccount) {
             $catid = $history ? (int)$history->categoryid : 0;
             if ($catid === 0) {
                 // Try matching course category by title or slug in current course.
-                $cleantitle = preg_replace('/[^a-z0-9]/', '', mb_strtolower(html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                $cleantitle = preg_replace(
+                    '/[^a-z0-9]/',
+                    '',
+                    mb_strtolower(html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+                );
                 foreach ($categories as $catcandidate) {
                     if ((int)$catcandidate->parent === 0 && $catcandidate->name === 'top') {
                         continue;
@@ -896,7 +907,9 @@ $walk = function (
             $coursecategories[] = [
                 'id' => $cat->id,
                 'name' => str_repeat("\u{00A0}\u{00A0}\u{00A0}", max(0, $level - 1)) . ($level > 1 ? "\u{2514} " : '') . $name,
-                'display_name' => str_repeat("\u{00A0}\u{00A0}\u{00A0}", max(0, $level - 1)) . ($level > 1 ? "\u{2514} " : '') . $name . ' (' . get_string('questions_count', 'qbank_questionhub', $owncounts[(int)$cat->id] ?? 0) . ')',
+                'display_name' => str_repeat("\u{00A0}\u{00A0}\u{00A0}", max(0, $level - 1))
+                    . ($level > 1 ? "\u{2514} " : '') . $name
+                    . ' (' . get_string('questions_count', 'qbank_questionhub', $owncounts[(int)$cat->id] ?? 0) . ')',
                 'question_count' => $owncounts[(int)$cat->id] ?? 0,
                 'is_root' => false,
                 'can_rename' => ($owncounts[(int)$cat->id] ?? 0) === 0 && empty($children[(int)$cat->id]),
@@ -920,7 +933,10 @@ $walk = function (
             $categoryduplicatecount = $duplicatecountforcategory((int)$cat->id);
 
             $directlink = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, (int)$cat->id);
-            $latestpub = \qbank_questionhub\publication_tracker::find_local_publication_for_category((int)$cat->id, (int)$COURSE->id);
+            $latestpub = \qbank_questionhub\publication_tracker::find_local_publication_for_category(
+                (int)$cat->id,
+                (int)$COURSE->id
+            );
             $isunlinked = \qbank_questionhub\publication_tracker::is_unlinked((int)$COURSE->id, (int)$cat->id);
             if (!$directlink && !$latestpub && !$isunlinked) {
                 // A subcategory belongs to the package its parent is linked to, also when the parent was
@@ -937,7 +953,10 @@ $walk = function (
                 foreach ($mypackagesbyid as $mp) {
                     $mptitle = trim(mb_strtolower(html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
                     $cleantitle = preg_replace('/[^a-z0-9]/', '', $mptitle);
-                    if ($cleanname !== '' && ($cleanname === $cleantitle || str_ends_with($mp['id'], $cleanname) || $mptitle === trim(mb_strtolower($name)))) {
+                    if (
+                        $cleanname !== '' && ($cleanname === $cleantitle || str_ends_with($mp['id'], $cleanname)
+                            || $mptitle === trim(mb_strtolower($name)))
+                    ) {
                         $matchedpackage = $mp;
                         break;
                     }
@@ -1017,7 +1036,8 @@ $walk = function (
                         if ($root && !empty($root['forks_count'])) {
                             $candidates = [[
                                 'id' => $rootid,
-                                'label' => get_string('import_variant_original', 'qbank_questionhub') . ' ' . ($root['latest_version'] ?? ''),
+                                'label' => get_string('import_variant_original', 'qbank_questionhub') . ' '
+                                    . ($root['latest_version'] ?? ''),
                             ]];
                             foreach ($getvariants($rootid) as $variant) {
                                 $candidates[] = [
@@ -1063,7 +1083,8 @@ $walk = function (
                     $pkgdetails = $mprole !== 'admin' ? null : [
                     'packageid' => $pkgid,
                     'domid' => md5($pkgid . '_' . $cat->id),
-                    'title' => $mp ? html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : ($linkhistory->package_title ?: $name),
+                    'title' => $mp ? html_entity_decode($mp['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8')
+                        : ($linkhistory->package_title ?: $name),
                     'summary' => $mp['summary'] ?? '',
                     'tags' => implode(', ', $mp['tags'] ?? []),
                     'github_repo' => (string)($mp['github_repo'] ?? ''),
@@ -1208,7 +1229,8 @@ if ($rootcategory) {
     array_unshift($coursecategories, [
         'id' => $rootcategory->id,
         'name' => get_string('questionbankroot', 'qbank_questionhub'),
-        'display_name' => get_string('questionbankroot', 'qbank_questionhub') . ' (' . get_string('questions_count', 'qbank_questionhub', $owncounts[(int)$rootcategory->id] ?? 0) . ')',
+        'display_name' => get_string('questionbankroot', 'qbank_questionhub') . ' ('
+            . get_string('questions_count', 'qbank_questionhub', $owncounts[(int)$rootcategory->id] ?? 0) . ')',
         'question_count' => $owncounts[(int)$rootcategory->id] ?? 0,
         'is_root' => true,
         'can_rename' => false,
@@ -1216,7 +1238,7 @@ if ($rootcategory) {
     ]);
 }
 
-// Build URLs
+// Build URLs.
 $reseturl = new moodle_url('/question/bank/questionhub/view.php', ['courseid' => $COURSE->id]);
 $reseturl->param('bankcontextid', $bankcontext->id);
 if (!empty($cmid)) {
@@ -1235,7 +1257,7 @@ $disconnecturl = new moodle_url('/question/bank/questionhub/disconnect.php', [
     'returnurl' => $thispageurl->out_as_local_url(false),
 ]);
 
-// Pagination URLs
+// Pagination URLs.
 $pagination = $packageresult['pagination'] ?? ['page' => 1, 'total_pages' => 1];
 $prevurl = clone $thispageurl;
 $prevurl->param('page', max(1, $page - 1));
@@ -1363,7 +1385,7 @@ $templatedata = [
 
 echo $OUTPUT->header();
 
-// Render tertiary question bank navigation dropdown
+// Render tertiary question bank navigation dropdown.
 $renderer = $PAGE->get_renderer('core_question', 'bank');
 $qbankaction = new \core_question\output\qbank_action_menu($thispageurl);
 echo $renderer->render($qbankaction);

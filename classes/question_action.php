@@ -29,15 +29,29 @@ class question_action extends question_action_base {
     /** @var string Cached action label. */
     protected string $strpublishtohub;
 
+    /**
+     * Initialise the cached label.
+     */
     public function init(): void {
         parent::init();
         $this->strpublishtohub = get_string('publishtohub', 'qbank_questionhub');
     }
 
+    /**
+     * Position in the question action menu.
+     *
+     * @return int
+     */
     public function get_menu_position(): int {
         return 610; // Placed right next to core exporttoxml at position 600.
     }
 
+    /**
+     * URL, icon and label of the action for a question.
+     *
+     * @param \stdClass $question
+     * @return array
+     */
     protected function get_url_icon_and_label(\stdClass $question): array {
         if (!\question_bank::is_qtype_installed($question->qtype)) {
             return [null, null, null];

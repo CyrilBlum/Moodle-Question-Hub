@@ -71,7 +71,8 @@ class question_sync_column extends column_base {
      * @return int
      */
     protected function resolve_category_id(object $question): int {
-        return (int)($question->categoryid ?? $question->questioncategoryid ?? $question->questioncategory ?? $question->category ?? 0);
+        return (int)($question->categoryid ?? $question->questioncategoryid ?? $question->questioncategory
+            ?? $question->category ?? 0);
     }
 
     /**

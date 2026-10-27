@@ -108,7 +108,9 @@
 document.querySelectorAll('[data-qh-review-all]').forEach(function(button) {
     button.addEventListener('click', function() {
         var open = button.getAttribute('data-qh-review-all') === 'open';
-        document.querySelectorAll('.qbank_questionhub_review details.qh-file').forEach(function(d) { d.open = open; });
+        document.querySelectorAll('.qbank_questionhub_review details.qh-file').forEach(function(d) {
+            d.open = open;
+        });
     });
 });
 {{/js}}

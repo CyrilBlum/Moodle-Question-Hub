@@ -55,7 +55,13 @@ class diagnostic_report implements JsonSerializable {
      * @param string|null $questionname
      * @param array|null $details
      */
-    public function add_error(string $code, string $message, ?int $questionindex = null, ?string $questionname = null, ?array $details = null): void {
+    public function add_error(
+        string $code,
+        string $message,
+        ?int $questionindex = null,
+        ?string $questionname = null,
+        ?array $details = null
+    ): void {
         $this->valid = false;
         $this->summary['errorCount']++;
         $this->errors[] = [
@@ -77,7 +83,13 @@ class diagnostic_report implements JsonSerializable {
      * @param string|null $questionname
      * @param array|null $details
      */
-    public function add_warning(string $code, string $message, ?int $questionindex = null, ?string $questionname = null, ?array $details = null): void {
+    public function add_warning(
+        string $code,
+        string $message,
+        ?int $questionindex = null,
+        ?string $questionname = null,
+        ?array $details = null
+    ): void {
         $this->summary['warningCount']++;
         $this->warnings[] = [
             'code' => $code,
@@ -89,26 +101,54 @@ class diagnostic_report implements JsonSerializable {
         ];
     }
 
+    /**
+     * Whether the package passed all checks.
+     *
+     * @return bool
+     */
     public function is_valid(): bool {
         return $this->valid;
     }
 
+    /**
+     * Errors found.
+     *
+     * @return array
+     */
     public function get_errors(): array {
         return $this->errors;
     }
 
+    /**
+     * Warnings found.
+     *
+     * @return array
+     */
     public function get_warnings(): array {
         return $this->warnings;
     }
 
+    /**
+     * Summary counts of the package.
+     *
+     * @return array
+     */
     public function get_summary(): array {
         return $this->summary;
     }
 
+    /**
+     * Count one more category.
+     */
     public function increment_category_count(): void {
         $this->summary['totalCategories']++;
     }
 
+    /**
+     * Count one more question of a type.
+     *
+     * @param string $qtype
+     */
     public function increment_question_count(string $qtype): void {
         $this->summary['totalQuestions']++;
         if (!isset($this->summary['questionTypeBreakdown'][$qtype])) {
@@ -117,11 +157,21 @@ class diagnostic_report implements JsonSerializable {
         $this->summary['questionTypeBreakdown'][$qtype]++;
     }
 
+    /**
+     * Count one more media file.
+     *
+     * @param int $bytes Size of the file
+     */
     public function add_media_file_stat(int $bytes): void {
         $this->summary['mediaFileCount']++;
         $this->summary['totalMediaBytes'] += $bytes;
     }
 
+    /**
+     * Data for json_encode().
+     *
+     * @return array
+     */
     public function jsonSerialize(): array {
         return [
             'valid' => $this->valid,

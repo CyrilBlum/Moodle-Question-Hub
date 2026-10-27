@@ -18,9 +18,17 @@ namespace qbank_questionhub;
 
 use stdClass;
 
-/** Tracks the question versions included in a category's last Hub release. */
+/**
+ * Tracks the question versions included in a category's last Hub release.
+ *
+ * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class publication_tracker {
-    /** Latest publish or import record for a local category, or null. */
+    /**
+     * Latest publish or import record for a local category, or null.
+     */
     public static function latest(int $courseid, int $categoryid): ?stdClass {
         global $DB;
         if ($categoryid <= 0) {
@@ -49,7 +57,9 @@ class publication_tracker {
         return null;
     }
 
-    /** Whether the latest category link was explicitly removed. */
+    /**
+     * Whether the latest category link was explicitly removed.
+     */
     public static function is_unlinked(int $courseid, int $categoryid): bool {
         global $DB;
         $params = ['categoryid' => $categoryid];
@@ -157,7 +167,9 @@ class publication_tracker {
         }
     }
 
-    /** Latest record for a package ID, or null. */
+    /**
+     * Latest record for a package ID, or null.
+     */
     public static function latest_by_package(string $packageid, int $courseid = 0): ?stdClass {
         global $DB;
         if ($packageid === '') {
@@ -183,7 +195,9 @@ class publication_tracker {
         return null;
     }
 
-    /** Latest local publication for a package, excluding later imports of it. */
+    /**
+     * Latest local publication for a package, excluding later imports of it.
+     */
     public static function latest_publication_by_package(string $packageid, int $courseid = 0): ?stdClass {
         global $DB;
         if ($packageid === '') {
@@ -270,7 +284,9 @@ class publication_tracker {
         return null;
     }
 
-    /** Category IDs including descendants in the same question bank context. */
+    /**
+     * Category IDs including descendants in the same question bank context.
+     */
     public static function category_ids(int $categoryid): array {
         global $DB;
         if ($categoryid <= 0) {
@@ -294,7 +310,9 @@ class publication_tracker {
         return $result;
     }
 
-    /** Find publication history for a category by checking itself, parent categories, or package title match. */
+    /**
+     * Find publication history for a category by checking itself, parent categories, or package title match.
+     */
     public static function find_publication_for_category(int $categoryid, int $courseid = 0): ?stdClass {
         global $DB;
         $currentid = $categoryid;
@@ -353,7 +371,9 @@ class publication_tracker {
         return null;
     }
 
-    /** Find a local publication for a category; imports must not make a category publishable as an update. */
+    /**
+     * Find a local publication for a category; imports must not make a category publishable as an update.
+     */
     public static function find_local_publication_for_category(int $categoryid, int $courseid = 0): ?stdClass {
         global $DB;
         $currentid = $categoryid;
@@ -393,7 +413,9 @@ class publication_tracker {
         return null;
     }
 
-    /** Current latest question IDs by question bank entry within a category tree (without cloze subquestions). */
+    /**
+     * Current latest question IDs by question bank entry within a category tree (without cloze subquestions).
+     */
     public static function current(int $categoryid): array {
         global $DB;
         $catids = self::category_ids($categoryid);
@@ -417,7 +439,9 @@ class publication_tracker {
         return $result;
     }
 
-    /** Snapshot from the most recent local publication. Automatically backfills if missing. */
+    /**
+     * Snapshot from the most recent local publication. Automatically backfills if missing.
+     */
     public static function snapshot(int $historyid): ?array {
         global $DB;
         $history = $DB->get_record('qbank_questionhub_history', ['id' => $historyid]);
@@ -447,7 +471,9 @@ class publication_tracker {
         return $result;
     }
 
-    /** Backfill snapshot for historical records created before tracking was enabled. */
+    /**
+     * Backfill snapshot for historical records created before tracking was enabled.
+     */
     public static function backfill_snapshot(stdClass $history): void {
         global $DB;
         $catid = (int)$history->categoryid;
@@ -497,7 +523,9 @@ class publication_tracker {
         }
     }
 
-    /** Changes for one category tree, using a package-level snapshot where necessary. */
+    /**
+     * Changes for one category tree, using a package-level snapshot where necessary.
+     */
     public static function changes_in_scope(int $categoryid, stdClass $history): ?array {
         $previous = self::snapshot((int)$history->id);
         if ($previous === null) {
@@ -517,7 +545,9 @@ class publication_tracker {
         return ['count' => count($changed), 'entries' => $changed, 'removed' => []];
     }
 
-    /** Number of added, edited, or removed entries since the latest release. */
+    /**
+     * Number of added, edited, or removed entries since the latest release.
+     */
     public static function changes(int $categoryid, stdClass $history): ?array {
         $previous = self::snapshot((int)$history->id);
         if ($previous === null) {
@@ -538,7 +568,9 @@ class publication_tracker {
         ];
     }
 
-    /** Persist a snapshot only after the Hub has accepted the release. */
+    /**
+     * Persist a snapshot only after the Hub has accepted the release.
+     */
     public static function save(int $historyid, array $questions): void {
         global $DB;
         $transaction = $DB->start_delegated_transaction();
@@ -553,7 +585,9 @@ class publication_tracker {
         $transaction->allow_commit();
     }
 
-    /** Suggest next SemVer string. */
+    /**
+     * Suggest next SemVer string.
+     */
     public static function next_version(string $version): string {
         $parts = explode('.', trim($version));
         if (count($parts) === 3 && is_numeric($parts[2])) {

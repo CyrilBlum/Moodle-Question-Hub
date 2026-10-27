@@ -16,7 +16,13 @@
 
 namespace qbank_questionhub;
 
-/** Question-level changes since a release, with line diffs of the exported Moodle XML. */
+/**
+ * Question-level changes since a release, with line diffs of the exported Moodle XML.
+ *
+ * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class release_diff {
     /** Lines of unchanged context around each change, as in git diff. */
     private const CONTEXT = 3;
@@ -88,12 +94,20 @@ class release_diff {
         return ['files' => self::decorate($files), 'same_content' => $samecontent];
     }
 
+    /**
+     * Whether a question still exists.
+     *
+     * @param int $questionid
+     * @return bool
+     */
     private static function question_exists(int $questionid): bool {
         global $DB;
         return $DB->record_exists('question', ['id' => $questionid]);
     }
 
-    /** The published release from the Hub (downloaded once per request), '' if it is not available. */
+    /**
+     * The published release from the Hub (downloaded once per request), '' if it is not available.
+     */
     private static function release_xml(\stdClass $history): string {
         static $cache = [];
         $key = $history->package_id . '@' . $history->package_version;
@@ -208,12 +222,16 @@ class release_diff {
         return $paths;
     }
 
-    /** Readable category path below the package category. */
+    /**
+     * Readable category path below the package category.
+     */
     public static function path_label(array $segments): string {
         return $segments ? implode(' / ', $segments) : get_string('diff_path_root', 'qbank_questionhub');
     }
 
-    /** Adds a move (old and new category) to a file of the diff view. */
+    /**
+     * Adds a move (old and new category) to a file of the diff view.
+     */
     private static function with_move(array $file, ?array $move): array {
         if ($move) {
             $file['moved_label'] = get_string('diff_moved', 'qbank_questionhub', (object)$move);
@@ -293,7 +311,9 @@ class release_diff {
         return $files;
     }
 
-    /** One changed question: added (no old version), removed (no new version) or modified. */
+    /**
+     * One changed question: added (no old version), removed (no new version) or modified.
+     */
     private static function file(int $oldid, int $newid, package_exporter $exporter): array {
         global $DB;
         $name = (string)$DB->get_field('question', 'name', ['id' => $newid ?: $oldid]);
@@ -309,7 +329,9 @@ class release_diff {
         return $file + ['renamed_from' => trim($oldname), 'is_rename' => true];
     }
 
-    /** Whether two exported questions differ in their name only. */
+    /**
+     * Whether two exported questions differ in their name only.
+     */
     public static function same_except_name(array $old, array $new): bool {
         if (count($old) !== count($new)) {
             return false;
@@ -387,7 +409,9 @@ class release_diff {
         return $files;
     }
 
-    /** Names both sides of the diffs, shown as a legend above each diff (− old, + new). */
+    /**
+     * Names both sides of the diffs, shown as a legend above each diff (− old, + new).
+     */
     public static function label_sides(array $files, string $old, string $new): array {
         foreach ($files as &$file) {
             $file['old_label'] = $old;
@@ -397,7 +421,9 @@ class release_diff {
         return $files;
     }
 
-    /** Exported XML of one question version as comparable lines (without the export envelope). */
+    /**
+     * Exported XML of one question version as comparable lines (without the export envelope).
+     */
     public static function question_lines(package_exporter $exporter, int $questionid): array {
         try {
             $xml = $exporter->export_questions_xml([$questionid]);
@@ -407,7 +433,9 @@ class release_diff {
         return self::xml_lines($xml);
     }
 
-    /** Lines of the latest version of a question bank entry. */
+    /**
+     * Lines of the latest version of a question bank entry.
+     */
     public static function entry_lines(package_exporter $exporter, int $entryid): array {
         global $DB;
         $questionid = (int)$DB->get_field_sql(
@@ -418,7 +446,9 @@ class release_diff {
         return $questionid ? self::question_lines($exporter, $questionid) : [];
     }
 
-    /** Moodle XML as comparable lines: envelope, category entries and question ID comments removed. */
+    /**
+     * Moodle XML as comparable lines: envelope, category entries and question ID comments removed.
+     */
     public static function xml_lines(string $xml): array {
         $xml = preg_replace('~<question type="category">.*?</question>~s', '', self::pretty_xml($xml));
         $lines = [];
@@ -464,7 +494,9 @@ class release_diff {
         return count($matches[0]) === $expected ? $matches[0] : null;
     }
 
-    /** Line diff via longest common subsequence: rows of type ctx, del or add. */
+    /**
+     * Line diff via longest common subsequence: rows of type ctx, del or add.
+     */
     public static function diff(array $old, array $new): array {
         $n = count($old);
         $m = count($new);
@@ -574,7 +606,9 @@ class release_diff {
         return $rows;
     }
 
-    /** Segments of two lines: common prefix, changed middle, common suffix. */
+    /**
+     * Segments of two lines: common prefix, changed middle, common suffix.
+     */
     public static function word_segments(string $old, string $new): array {
         $a = mb_str_split($old);
         $b = mb_str_split($new);

@@ -74,7 +74,7 @@ if ($xmlcontent === false || trim($xmlcontent) === '') {
     cli_error("Input file is empty or unreadable: {$file}");
 }
 
-// Pre-flight check first
+// Pre-flight check first.
 $report = \qbank_questionhub\preflight_validator::validate($xmlcontent);
 if (!$report->is_valid()) {
     cli_writeln("Preflight validation failed with errors:");

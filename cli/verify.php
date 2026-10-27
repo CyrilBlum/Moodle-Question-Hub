@@ -33,6 +33,13 @@ cli_writeln("=== qbank_questionhub Verification Suite ===");
 $passed = 0;
 $failed = 0;
 
+/**
+ * Print and count the result of one check.
+ *
+ * @param string $name
+ * @param bool $condition
+ * @param string $detail
+ */
 function assert_test(string $name, bool $condition, string $detail = '') {
     global $passed, $failed;
     if ($condition) {
@@ -178,17 +185,28 @@ if ($course) {
         }
         if ($testcat) {
             $exportedxml = $exporter->export_category_xml($testcat->id);
-            assert_test('Package Exporter: Category Export to XML', str_contains($exportedxml, '<quiz>') && str_contains($exportedxml, '$course$'));
+            assert_test(
+                'Package Exporter: Category Export to XML',
+                str_contains($exportedxml, '<quiz>') && str_contains($exportedxml, '$course$')
+            );
 
-            // Test importing into new category
+            // Test importing into new category.
             $importer = new \qbank_questionhub\package_importer(2);
             $importresult = $importer->import_package($exportedxml, true, ['title' => 'Self-Verification']);
-            assert_test('Package Importer: Import Package Roundtrip', $importresult->success && $importresult->questioncount > 0, "Imported {$importresult->questioncount} questions");
+            assert_test(
+                'Package Importer: Import Package Roundtrip',
+                $importresult->success && $importresult->questioncount > 0,
+                "Imported {$importresult->questioncount} questions"
+            );
         } else {
             cli_writeln(" [SKIP] No existing questions in course 2 to test exporter; will test importing directly.");
             $importer = new \qbank_questionhub\package_importer(2);
             $importresult = $importer->import_package($validxml, true, ['title' => 'Sample Question']);
-            assert_test('Package Importer: Import Valid Package', $importresult->success && $importresult->questioncount > 0, "Imported {$importresult->questioncount} questions");
+            assert_test(
+                'Package Importer: Import Valid Package',
+                $importresult->success && $importresult->questioncount > 0,
+                "Imported {$importresult->questioncount} questions"
+            );
         }
 
         // 6b. Test Single-Question Export (No Category Leakage)

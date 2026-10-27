@@ -24,18 +24,38 @@ namespace qbank_questionhub;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class navigation extends \core_question\local\bank\navigation_node_base {
+    /**
+     * Title of the navigation node.
+     *
+     * @return string
+     */
     public function get_navigation_title(): string {
         return get_string('pluginname', 'qbank_questionhub');
     }
 
+    /**
+     * Unique key of the navigation node.
+     *
+     * @return string
+     */
     public function get_navigation_key(): string {
         return 'questionhub';
     }
 
+    /**
+     * URL of the Question Hub page.
+     *
+     * @return \moodle_url
+     */
     public function get_navigation_url(): \moodle_url {
         return new \moodle_url('/question/bank/questionhub/view.php');
     }
 
+    /**
+     * Capabilities needed to see the node.
+     *
+     * @return array|null
+     */
     public function get_navigation_capabilities(): ?array {
         return ['qbank/questionhub:view'];
     }

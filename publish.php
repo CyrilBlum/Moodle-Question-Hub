@@ -108,7 +108,7 @@ $PAGE->set_title(get_string('publishtohub', 'qbank_questionhub'));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_context($context);
 
-// Resolve selected category or question
+// Resolve selected category or question.
 if ($questionid > 0) {
     $sql = "SELECT qbe.questioncategoryid
               FROM {question_bank_entries} qbe
@@ -182,11 +182,14 @@ if ($updatepackageid !== '') {
         }
     }
     if (!$latestpublication) {
-        $latestpublication = \qbank_questionhub\publication_tracker::latest_active_publication_by_package($updatepackageid, (int)$course->id);
+        $latestpublication = \qbank_questionhub\publication_tracker::latest_active_publication_by_package(
+            $updatepackageid,
+            (int)$course->id
+        );
     }
 }
 
-// Handle Form Submissions (Download XML or Direct Publish)
+// Handle Form Submissions (Download XML or Direct Publish).
 $inputerror = null;
 $postedversion = null;
 $postednotes = '';
@@ -212,12 +215,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // The GitHub link stays as set in the package settings.
         $githubrepo = '';
         $githubnewname = '';
-        if ($action !== 'publish_hub') {
-            // Downloading the XML needs neither a release note nor a new version.
-        } else if ($releasenotes === '') {
-            $inputerror = new moodle_exception('error_release_notes_required', 'qbank_questionhub');
-        } else if (version_compare($version, $ownedpackage['latest_version'], '<=')) {
-            $inputerror = new moodle_exception('error_update_version', 'qbank_questionhub', '', $ownedpackage['latest_version']);
+        // Downloading the XML needs neither a release note nor a new version.
+        if ($action === 'publish_hub') {
+            if ($releasenotes === '') {
+                $inputerror = new moodle_exception('error_release_notes_required', 'qbank_questionhub');
+            } else if (version_compare($version, $ownedpackage['latest_version'], '<=')) {
+                $inputerror = new moodle_exception(
+                    'error_update_version',
+                    'qbank_questionhub',
+                    '',
+                    $ownedpackage['latest_version']
+                );
+            }
         }
         // Shown again in the form after an error.
         $postedversion = $version;
@@ -259,7 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $xmlcontent = $exporter->export_category_xml($categoryid);
         }
 
-        // Action 1: Direct File Download
+        // Action 1: Direct File Download.
         if ($action === 'download_xml') {
             $filename = clean_filename("package-{$packageid}-{$version}.xml");
             header('Content-Type: application/xml; charset=utf-8');
@@ -269,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        // Action 2: Direct Publish to Marketplace
+        // Action 2: Direct Publish to Marketplace.
         $allowedgrades = ['GYM1', 'GYM2', 'GYM3', 'GYM4'];
         $grades = array_values(array_intersect($allowedgrades, $gradesraw));
         $metadata = [
@@ -319,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $published = $client->publish($xmlcontent, $metadata);
 
         // Snapshot the versions represented by this category export after Hub acceptance.
-        // Audit log in history table
+        // Audit log in history table.
         try {
             $history = new stdClass();
             $history->userid = (int)$USER->id;
@@ -353,7 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch Taxonomy for dropdown choices
+// Fetch Taxonomy for dropdown choices.
 $client = new \qbank_questionhub\api_client();
 $taxonomy = [];
 try {
@@ -399,7 +408,7 @@ foreach ($cantonlist as $c) {
     ];
 }
 
-// Prepare category choices
+// Prepare category choices.
 $allcategories = $DB->get_records('question_categories', ['contextid' => $context->id], 'sortorder, name');
 $childmap = [];
 foreach ($allcategories as $cat) {
@@ -477,7 +486,8 @@ $templatedata = [
     'level_ef' => ($ownedpackage['subject_category'] ?? 'GF') === 'EF',
     'level_ff' => ($ownedpackage['subject_category'] ?? 'GF') === 'FF',
     'preview_checked' => $ownedpackage ? !empty($ownedpackage['preview_enabled']) : true,
-    'default_github_repo' => $_SERVER['REQUEST_METHOD'] === 'POST' ? optional_param('package_github_repo', '', PARAM_RAW_TRIMMED) : '',
+    'default_github_repo' => $_SERVER['REQUEST_METHOD'] === 'POST'
+        ? optional_param('package_github_repo', '', PARAM_RAW_TRIMMED) : '',
     'default_github_new' => $_SERVER['REQUEST_METHOD'] === 'POST'
         ? optional_param('package_github_new', $defaultslug, PARAM_RAW_TRIMMED) : $defaultslug,
     'github_mode_new_checked' => optional_param('github_mode', 'none', PARAM_ALPHA) === 'new',

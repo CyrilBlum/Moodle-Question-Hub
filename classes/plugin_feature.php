@@ -102,7 +102,11 @@ class plugin_feature extends plugin_features_base {
 
         return [
             200 => new output\bank_action_button($browseurl, get_string('browsehub', 'qbank_questionhub'), 'btn-outline-primary'),
-            210 => new output\bank_action_button($exportcaturl, get_string('exportcategorytohub', 'qbank_questionhub'), 'btn-outline-secondary'),
+            210 => new output\bank_action_button(
+                $exportcaturl,
+                get_string('exportcategorytohub', 'qbank_questionhub'),
+                'btn-outline-secondary'
+            ),
         ];
     }
 

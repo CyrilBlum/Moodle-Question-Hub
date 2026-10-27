@@ -16,9 +16,17 @@
 
 namespace qbank_questionhub;
 
-/** Finds unused, single-version duplicate question-bank entries. */
+/**
+ * Finds unused, single-version duplicate question-bank entries.
+ *
+ * @package    qbank_questionhub
+ * @copyright  2026 Cyril Wendl
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class duplicate_manager {
-    /** Returns the selected category and all of its descendants. */
+    /**
+     * Returns the selected category and all of its descendants.
+     */
     private static function scoped_category_ids(\context $context, int $categoryid): array {
         if ($categoryid === 0) {
             return [];
@@ -44,6 +52,13 @@ class duplicate_manager {
         return $ids;
     }
 
+    /**
+     * Groups of identical questions in a context, with the copies that can be removed.
+     *
+     * @param \context $context
+     * @param int $categoryid Limit to this category and its descendants (0 = whole context)
+     * @return array
+     */
     public static function find_removable(\context $context, int $categoryid = 0): array {
         global $CFG, $DB;
         require_once($CFG->libdir . '/questionlib.php');
@@ -55,7 +70,8 @@ class duplicate_manager {
                        h.action packageaction, h.timecreated packagetime
                   FROM {question} q
                   JOIN {question_versions} qv ON qv.questionid = q.id
-                  JOIN (SELECT questionbankentryid, MAX(version) version FROM {question_versions} GROUP BY questionbankentryid) latest
+                  JOIN (SELECT questionbankentryid, MAX(version) version
+                          FROM {question_versions} GROUP BY questionbankentryid) latest
                     ON latest.questionbankentryid = qv.questionbankentryid AND latest.version = qv.version
                   JOIN {question_bank_entries} qbe ON qbe.id = qv.questionbankentryid
                   JOIN {question_categories} qc ON qc.id = qbe.questioncategoryid
@@ -91,7 +107,10 @@ class duplicate_manager {
             if (count($matches) < 2) {
                 continue;
             }
-            usort($matches, static fn($a, $b) => [(int)$a->timecreated, (int)$a->entryid] <=> [(int)$b->timecreated, (int)$b->entryid]);
+            usort(
+                $matches,
+                static fn($a, $b) => [(int)$a->timecreated, (int)$a->entryid] <=> [(int)$b->timecreated, (int)$b->entryid]
+            );
             $keep = array_shift($matches);
             $remove = [];
             foreach ($matches as $row) {
@@ -146,7 +165,10 @@ class duplicate_manager {
                 // A single question, or exact copies (those are handled by find_removable()).
                 continue;
             }
-            usort($rows, static fn($a, $b) => [(int)$a->timecreated, (int)$a->entryid] <=> [(int)$b->timecreated, (int)$b->entryid]);
+            usort(
+                $rows,
+                static fn($a, $b) => [(int)$a->timecreated, (int)$a->entryid] <=> [(int)$b->timecreated, (int)$b->entryid]
+            );
             $entries = [];
             foreach ($rows as $row) {
                 $versions = $DB->get_fieldset_select('question_versions', 'questionid', 'questionbankentryid = ?', [$row->entryid]);
@@ -245,7 +267,9 @@ class duplicate_manager {
         return $result;
     }
 
-    /** The Hub question's content becomes a new version of the target; tracking and sync state move along. */
+    /**
+     * The Hub question's content becomes a new version of the target; tracking and sync state move along.
+     */
     private static function take_over(\context $context, \stdClass $course, array $source, array $target): void {
         global $DB;
         question_require_capability_on($target['questionid'], 'edit');
@@ -284,7 +308,9 @@ class duplicate_manager {
         $transaction->allow_commit();
     }
 
-    /** Deletes a question bank entry with all versions and its Hub tracking. */
+    /**
+     * Deletes a question bank entry with all versions and its Hub tracking.
+     */
     private static function delete_entry(array $entry): void {
         global $DB;
         question_require_capability_on($entry['questionid'], 'edit');
@@ -301,6 +327,13 @@ class duplicate_manager {
         }
     }
 
+    /**
+     * Delete the removable copies found by find_removable().
+     *
+     * @param \context $context
+     * @param int $categoryid Limit to this category and its descendants (0 = whole context)
+     * @return int Number of deleted questions
+     */
     public static function delete_removable(\context $context, int $categoryid = 0): int {
         global $CFG, $DB;
         require_once($CFG->libdir . '/questionlib.php');
