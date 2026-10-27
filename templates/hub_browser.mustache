@@ -82,15 +82,15 @@
                 <span class="badge badge-secondary">{{unchangedcount}} {{#str}} import_preview_unchanged, qbank_questionhub {{/str}}</span>
                 {{#conflictcount}}<span class="badge badge-danger bg-danger">{{conflictcount}} {{#str}} import_preview_conflicts, qbank_questionhub {{/str}}</span>{{/conflictcount}}
             </p>
-            {{#new.0}}<h6>{{#str}} import_preview_new_heading, qbank_questionhub {{/str}}</h6><ul>{{#new}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}</li>{{/new}}</ul>{{/new.0}}
-            {{#update.0}}<h6>{{#str}} import_preview_updated_heading, qbank_questionhub {{/str}}</h6><ul>{{#update}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}{{#uncertain}} <small class="text-warning">{{#str}} import_preview_uncertain, qbank_questionhub {{/str}}</small>{{/uncertain}}</li>{{/update}}</ul>{{/update.0}}
+            {{#newcount}}<h6>{{#str}} import_preview_new_heading, qbank_questionhub {{/str}}</h6><ul>{{#new}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}</li>{{/new}}</ul>{{/newcount}}
+            {{#updatecount}}<h6>{{#str}} import_preview_updated_heading, qbank_questionhub {{/str}}</h6><ul>{{#update}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}{{#uncertain}} <small class="text-warning">{{#str}} import_preview_uncertain, qbank_questionhub {{/str}}</small>{{/uncertain}}</li>{{/update}}</ul>{{/updatecount}}
             {{#update_diff}}
             <details class="mb-3">
                 <summary class="small text-primary" style="cursor:pointer">{{#str}} import_preview_show_update_diffs, qbank_questionhub {{/str}}</summary>
                 <div class="mt-2">{{> qbank_questionhub/diff_files }}</div>
             </details>
             {{/update_diff}}
-            {{#unchanged.0}}<h6>{{#str}} import_preview_unchanged_heading, qbank_questionhub {{/str}}</h6><ul>{{#unchanged}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}</li>{{/unchanged}}</ul>{{/unchanged.0}}
+            {{#unchangedcount}}<h6>{{#str}} import_preview_unchanged_heading, qbank_questionhub {{/str}}</h6><ul>{{#unchanged}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}</li>{{/unchanged}}</ul>{{/unchangedcount}}
             <form method="post" action="{{action_url}}" class="d-inline">
                 <input type="hidden" name="sesskey" value="{{sesskey}}">
                 <input type="hidden" name="action" value="import_package">
@@ -103,7 +103,7 @@
                 <input type="hidden" name="targetcategoryid" value="{{targetcategoryid}}">
                 <input type="hidden" name="categorymode" value="{{categorymode}}">
                 {{#updatechanged}}<input type="hidden" name="updatechanged" value="1">{{/updatechanged}}
-                {{#conflict.0}}
+                {{#conflictcount}}
                 <div class="border border-danger rounded p-3 mb-3">
                     <h6 class="text-danger">{{#str}} import_preview_conflicts_heading, qbank_questionhub {{/str}}</h6>
                     <p class="small text-muted">{{#str}} import_preview_conflicts_help, qbank_questionhub {{/str}}</p>
@@ -126,7 +126,7 @@
                     </fieldset>
                     {{/conflict}}
                 </div>
-                {{/conflict.0}}
+                {{/conflictcount}}
                 <button type="submit" class="btn btn-primary">{{#str}} import_preview_confirm, qbank_questionhub {{/str}}</button>
             </form>
             <a href="{{browse_tab_url}}" class="btn btn-outline-secondary ml-2">{{#str}} import_preview_cancel, qbank_questionhub {{/str}}</a>
