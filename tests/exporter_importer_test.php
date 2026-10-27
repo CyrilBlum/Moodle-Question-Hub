@@ -52,6 +52,27 @@ final class exporter_importer_test extends \advanced_testcase {
         }
     }
 
+    public function test_same_question_content(): void {
+        $question = static fn(string $name, string $grade, string $answer, string $extra = '') =>
+            "<quiz><question type=\"multichoice\"><name><text>{$name}</text></name>" .
+            "<questiontext format=\"html\"><text><![CDATA[<p>Was gilt?</p>]]></text></questiontext>" .
+            "<defaultgrade>{$grade}</defaultgrade>{$extra}" .
+            "<answer fraction=\"100\"><text>{$answer}</text></answer><answer fraction=\"0\"><text>B</text></answer>" .
+            "</question></quiz>";
+        $hub = $question('K1: Begriff', '1.0000000', 'Information und Automatik');
+        // Same content from another Moodle: other name, number format and an element only one version writes.
+        $this->assertTrue(package_importer::same_question_content(
+            $hub,
+            $question('K1 - Begriff', '1', 'Information und Automatik', '<showstandardinstruction>0</showstandardinstruction>')
+        ));
+        // An older local wording is a different question content.
+        $this->assertFalse(package_importer::same_question_content(
+            $hub,
+            $question('K1: Begriff', '1', 'Internet und Mathematik')
+        ));
+        $this->assertFalse(package_importer::same_question_content($hub, '<quiz></quiz>'));
+    }
+
     public function test_xml_normalization_keeps_single_top(): void {
         $this->assertSame('$course$/top', package_exporter::normalize_category_path('$cat12$/top'));
         $this->assertSame('$course$/top', package_exporter::normalize_category_path('$module$'));

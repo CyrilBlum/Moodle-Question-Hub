@@ -40,6 +40,9 @@ class package_importer {
     /** @var stdClass Destination question category. */
     protected stdClass $targetcategory;
 
+    /** @var package_exporter|null Exports local questions to compare them with package questions. */
+    protected ?package_exporter $exporter = null;
+
     /**
      * Constructor.
      *
@@ -406,6 +409,12 @@ class package_importer {
                     $status = 'conflict';
                 }
             }
+            if ($status === 'unchanged' && $entryid && !$this->local_matches_package($entryid, $node)) {
+                // Unchanged on the Hub since the last pull, but the local question has other content: a local
+                // edit, or a local question that was taken for the Hub version when it was first matched by name.
+                // The teacher decides, otherwise a later push would publish the local content again.
+                $status = 'conflict';
+            }
             $items[] = [
                 'name' => $name, 'type' => $type, 'category' => implode(' / ', $relative),
                 'status' => $status, 'sourcekey' => $sourcekey, 'sourcehash' => $sourcehash,
@@ -633,6 +642,103 @@ class package_importer {
             }
         }
         return hash('sha256', $copy->C14N());
+    }
+
+    /**
+     * Whether the latest version of a local question has the content of a package question.
+     */
+    private function local_matches_package(int $entryid, \SimpleXMLElement $node): bool {
+        $this->exporter ??= new package_exporter((int)$this->course->id, (int)$this->context->id);
+        try {
+            $local = $this->exporter->export_questions_xml([$this->latest_questionid($entryid)]);
+        } catch (\Throwable $e) {
+            // Without an export there is nothing to compare: keep the result of the version comparison.
+            return true;
+        }
+        return self::same_question_content($local, $node->asXML());
+    }
+
+    /**
+     * Compares two Moodle XML questions (each a <question> element or a <quiz> with one question) by content.
+     *
+     * The name is ignored (renames are handled by the source key). Moodle versions and databases export the
+     * same question with different number formats (1 or 1.0000000) and some elements only one version writes,
+     * so numbers are compared by value and elements present on one side only are ignored.
+     *
+     * @param string $a Moodle XML of the first question
+     * @param string $b Moodle XML of the second question
+     * @return bool true if every element both sides have holds the same values
+     */
+    public static function same_question_content(string $a, string $b): bool {
+        $first = self::content_values($a);
+        $second = self::content_values($b);
+        if ($first === null || $second === null) {
+            return false;
+        }
+        foreach (array_intersect_key($first, $second) as $path => $values) {
+            if ($values !== $second[$path]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Normalised leaf values and attributes of the first non-category question, by element path.
+     *
+     * @return array|null sorted values per path, null if the XML holds no question
+     */
+    private static function content_values(string $xml): ?array {
+        $doc = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($xml, LIBXML_NONET | LIBXML_PARSEHUGE);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        if (!$loaded) {
+            return null;
+        }
+        $question = null;
+        foreach ($doc->getElementsByTagName('question') as $candidate) {
+            if ($candidate->getAttribute('type') !== 'category') {
+                $question = $candidate;
+                break;
+            }
+        }
+        if (!$question) {
+            return null;
+        }
+        $normalise = static function (string $value): string {
+            $value = trim(preg_replace('/\s+/u', ' ', $value));
+            return is_numeric($value) ? (string)(0 + $value) : $value;
+        };
+        $values = [];
+        $walk = static function (\DOMElement $element, string $path) use (&$walk, &$values, $normalise): void {
+            foreach ($element->attributes as $attribute) {
+                $values[$path . '@' . $attribute->name][] = $normalise($attribute->value);
+            }
+            $children = [];
+            foreach ($element->childNodes as $child) {
+                if ($child instanceof \DOMElement) {
+                    $children[] = $child;
+                }
+            }
+            if (!$children) {
+                $values[$path][] = $normalise($element->textContent);
+                return;
+            }
+            foreach ($children as $child) {
+                if ($path === 'question' && $child->tagName === 'name') {
+                    continue;
+                }
+                $walk($child, $path . '/' . $child->tagName);
+            }
+        };
+        $walk($question, 'question');
+        foreach ($values as &$list) {
+            sort($list, SORT_STRING);
+        }
+        unset($list);
+        return $values;
     }
 
     /**

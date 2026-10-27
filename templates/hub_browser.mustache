@@ -566,7 +566,7 @@
                         <input type="hidden" name="dryrun" value="1">
                         <label class="sr-only" for="restore-{{id}}">{{#str}} library_restore_version, qbank_questionhub {{/str}}</label>
                         <select name="version" id="restore-{{id}}" class="custom-select custom-select-sm form-select form-select-sm w-auto mr-1 me-1">
-                            {{#restore_versions}}<option value="{{version}}">v{{version}}</option>{{/restore_versions}}
+                            {{#restore_versions}}<option value="{{version}}">{{label}}</option>{{/restore_versions}}
                         </select>
                         <button type="submit" class="btn btn-sm btn-outline-secondary">
                             <i class="fa fa-history mr-1" aria-hidden="true"></i>{{#str}} library_restore_button, qbank_questionhub {{/str}}

@@ -1221,12 +1221,15 @@ if ($showlibrary) {
     foreach ($syncrowsbypackage as $packageid => $row) {
         $remote = $getremotepackage($packageid);
         $title = html_entity_decode((string)($remote['title'] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        // Older releases on the Hub can be imported again into the linked category (preview first).
+        // Releases on the Hub can be imported again into the linked category (preview first): the linked
+        // version compares the category with it again, an older one restores it.
         $restoreversions = [];
         if ($canimport && (int)$row['link_category_id'] === (int)$row['id'] && $row['package_version'] !== '') {
             foreach ($remote['versions'] ?? [] as $v) {
-                if (version_compare((string)$v, $row['package_version'], '<')) {
-                    $restoreversions[] = ['version' => (string)$v];
+                $v = (string)$v;
+                if (version_compare($v, $row['package_version'], '<=')) {
+                    $restoreversions[] = ['version' => $v, 'label' => $v === $row['package_version']
+                        ? get_string('library_restore_current', 'qbank_questionhub', $v) : 'v' . $v];
                 }
             }
             usort($restoreversions, static fn(array $a, array $b): int => version_compare($b['version'], $a['version']));
