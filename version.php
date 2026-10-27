@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'qbank_questionhub';
-$plugin->version   = 2026102700;
+$plugin->version   = 2026102701;
 $plugin->requires  = 2024100700; // Moodle 4.5.0 LTS and higher.
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v1.0.34';
+$plugin->release   = 'v1.0.35';
