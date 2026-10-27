@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace qbank_questionhub;
 
 /**
@@ -8,7 +23,6 @@ namespace qbank_questionhub;
  * a question is in use (quiz slots, attempts) or a random question draws from one of the categories.
  */
 class category_remover {
-
     /**
      * Collects what a deletion would remove and whether it is blocked.
      *
@@ -19,8 +33,12 @@ class category_remover {
     public static function preview(\context $context, int $categoryid): array {
         global $CFG, $DB;
         require_once($CFG->libdir . '/questionlib.php');
-        $category = $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $context->id],
-            '*', MUST_EXIST);
+        $category = $DB->get_record(
+            'question_categories',
+            ['id' => $categoryid, 'contextid' => $context->id],
+            '*',
+            MUST_EXIST
+        );
         // Refuses the top category and the last category of the context, like core does.
         (new \core_question\category_manager())->require_can_delete_category($categoryid);
 
@@ -31,7 +49,9 @@ class category_remover {
                FROM {question} q
                JOIN {question_versions} qv ON qv.questionid = q.id
                JOIN {question_bank_entries} qbe ON qbe.id = qv.questionbankentryid
-              WHERE qbe.questioncategoryid $insql AND q.parent = 0", $params);
+              WHERE qbe.questioncategoryid $insql AND q.parent = 0",
+            $params
+        );
         $questionids = array_map('intval', array_keys($questions));
         $entryids = array_values(array_unique(array_map(static fn($q) => (int)$q->questionbankentryid, $questions)));
 
@@ -98,8 +118,12 @@ class category_remover {
     private static function count_random_references(\context $context, array $categoryids): int {
         global $DB;
         $count = 0;
-        $references = $DB->get_records('question_set_references', ['questionscontextid' => $context->id],
-            '', 'id, filtercondition');
+        $references = $DB->get_records(
+            'question_set_references',
+            ['questionscontextid' => $context->id],
+            '',
+            'id, filtercondition'
+        );
         foreach ($references as $reference) {
             $filter = json_decode((string)$reference->filtercondition, true) ?: [];
             $ids = $filter['filter']['category']['values'] ?? [];

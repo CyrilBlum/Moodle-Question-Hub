@@ -23,8 +23,7 @@ namespace qbank_questionhub;
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class publication_tracker_test extends \advanced_testcase {
-
+final class publication_tracker_test extends \advanced_testcase {
     public function test_next_version_patch_bump(): void {
         $this->assertEquals('1.0.1', publication_tracker::next_version('1.0.0'));
         $this->assertEquals('1.2.4', publication_tracker::next_version('1.2.3'));

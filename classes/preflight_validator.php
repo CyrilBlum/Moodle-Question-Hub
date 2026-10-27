@@ -29,7 +29,6 @@ use SimpleXMLElement;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class preflight_validator {
-
     /** Maximum allowed package size in bytes (50 MB). */
     public const MAX_PACKAGE_BYTES = 52428800;
 

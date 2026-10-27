@@ -33,7 +33,6 @@ use moodle_url;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class plugin_feature extends plugin_features_base {
-
     /**
      * Navigation node for Question Bank tertiary action menu.
      *
@@ -51,9 +50,11 @@ class plugin_feature extends plugin_features_base {
      */
     public function get_question_columns(view $qbank): ?array {
         $context = $qbank->get_most_specific_context();
-        if (!has_capability('qbank/questionhub:view', $context) &&
+        if (
+            !has_capability('qbank/questionhub:view', $context) &&
                 !has_capability('moodle/question:viewall', $context) &&
-                !is_siteadmin()) {
+                !is_siteadmin()
+        ) {
             return [];
         }
         return [

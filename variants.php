@@ -102,18 +102,25 @@ foreach (\qbank_questionhub\duplicate_manager::find_variants($context, $category
             // A used local question can take over the Hub question as a new version.
             'can_merge' => $mergesource && $entry['inuse'] && $entry['tracked'] === '',
             'is_merge_source' => $mergesource && $mergesource['entryid'] === $entry['entryid'],
-            'preview_url' => (new moodle_url('/question/bank/previewquestion/preview.php',
-                ['id' => $entry['questionid']] + $bankparams))->out(false),
-            'edit_url' => (new moodle_url('/question/bank/editquestion/question.php',
-                ['id' => $entry['questionid'], 'returnurl' => $returnlocal] + $bankparams))->out(false),
+            'preview_url' => (new moodle_url(
+                '/question/bank/previewquestion/preview.php',
+                ['id' => $entry['questionid']] + $bankparams
+            ))->out(false),
+            'edit_url' => (new moodle_url(
+                '/question/bank/editquestion/question.php',
+                ['id' => $entry['questionid'], 'returnurl' => $returnlocal] + $bankparams
+            ))->out(false),
             'created' => userdate($entry['timecreated'], $format),
             'modified' => userdate($entry['timemodified'], $format),
             'has_tracked' => $entry['tracked'] !== '',
         ];
         if ($position > 0) {
             $files[] = \qbank_questionhub\release_diff::label_sides([
-                \qbank_questionhub\release_diff::compare($group['name'], $firstlines,
-                    \qbank_questionhub\release_diff::question_lines($exporter, $entry['questionid'])),
+                \qbank_questionhub\release_diff::compare(
+                    $group['name'],
+                    $firstlines,
+                    \qbank_questionhub\release_diff::question_lines($exporter, $entry['questionid'])
+                ),
             ], $side($first, 0), $side($entry, $position))[0];
         }
     }
@@ -126,8 +133,10 @@ foreach (\qbank_questionhub\duplicate_manager::find_variants($context, $category
         'groupindex' => $index,
         'name' => $group['name'],
         'categoryname' => format_string($group['categoryname'], true, ['context' => $context, 'escape' => false]),
-        'category_url' => (new moodle_url('/question/edit.php',
-            ['cat' => $group['categoryid'] . ',' . $context->id] + $bankparams))->out(false),
+        'category_url' => (new moodle_url(
+            '/question/edit.php',
+            ['cat' => $group['categoryid'] . ',' . $context->id] + $bankparams
+        ))->out(false),
         'qtype' => $group['qtype'],
         'entries' => $entries,
         'diff' => ['files' => $files],

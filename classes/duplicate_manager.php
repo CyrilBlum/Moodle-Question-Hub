@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace qbank_questionhub;
 
 /** Finds unused, single-version duplicate question-bank entries. */
@@ -53,8 +68,14 @@ class duplicate_manager {
         $groups = [];
         foreach ($rows as $row) {
             $answers = [];
-            foreach ($DB->get_records('question_answers', ['question' => $row->questionid], 'id ASC',
-                    'answer, fraction, feedback, feedbackformat') as $answer) {
+            foreach (
+                $DB->get_records(
+                    'question_answers',
+                    ['question' => $row->questionid],
+                    'id ASC',
+                    'answer, fraction, feedback, feedbackformat'
+                ) as $answer
+            ) {
                 $answers[] = [(string)$answer->answer, (string)$answer->fraction,
                     (string)$answer->feedback, (int)$answer->feedbackformat];
             }
@@ -67,7 +88,9 @@ class duplicate_manager {
         }
         $result = [];
         foreach ($groups as $matches) {
-            if (count($matches) < 2) { continue; }
+            if (count($matches) < 2) {
+                continue;
+            }
             usort($matches, static fn($a, $b) => [(int)$a->timecreated, (int)$a->entryid] <=> [(int)$b->timecreated, (int)$b->entryid]);
             $keep = array_shift($matches);
             $remove = [];
@@ -75,12 +98,16 @@ class duplicate_manager {
                 if ($scopeids && empty($scopeids[(int)$row->categoryid])) {
                     continue;
                 }
-                if ($DB->count_records('question_versions', ['questionbankentryid' => $row->entryid]) === 1 &&
-                        !questions_in_use([(int)$row->questionid])) {
+                if (
+                    $DB->count_records('question_versions', ['questionbankentryid' => $row->entryid]) === 1 &&
+                        !questions_in_use([(int)$row->questionid])
+                ) {
                     $remove[] = $row;
                 }
             }
-            if ($remove) { $result[] = ['keep' => $keep, 'remove' => $remove]; }
+            if ($remove) {
+                $result[] = ['keep' => $keep, 'remove' => $remove];
+            }
         }
         return $result;
     }
@@ -128,7 +155,10 @@ class duplicate_manager {
                        FROM {qbank_questionhub_items} i
                        JOIN {qbank_questionhub_history} h ON h.categoryid = i.targetcategoryid AND h.action = 'import'
                       WHERE i.questionbankentryid = ?
-                   ORDER BY h.timecreated DESC, h.id DESC", [$row->entryid], IGNORE_MULTIPLE);
+                   ORDER BY h.timecreated DESC, h.id DESC",
+                    [$row->entryid],
+                    IGNORE_MULTIPLE
+                );
                 $entries[] = [
                     'entryid' => (int)$row->entryid,
                     'questionid' => (int)$row->questionid,
@@ -222,8 +252,12 @@ class duplicate_manager {
         question_require_capability_on($source['questionid'], 'edit');
         $exporter = new package_exporter((int)$course->id, (int)$context->id);
         $xml = $exporter->export_questions_xml([$source['questionid']]);
-        $categoryid = (int)$DB->get_field('question_bank_entries', 'questioncategoryid', ['id' => $target['entryid']],
-            MUST_EXIST);
+        $categoryid = (int)$DB->get_field(
+            'question_bank_entries',
+            'questioncategoryid',
+            ['id' => $target['entryid']],
+            MUST_EXIST
+        );
         $category = $DB->get_record('question_categories', ['id' => $categoryid], '*', MUST_EXIST);
 
         $transaction = $DB->start_delegated_transaction();
@@ -233,8 +267,10 @@ class duplicate_manager {
         $DB->execute('UPDATE {qbank_questionhub_items} SET questionbankentryid = ?, questionid = ?
                        WHERE questionbankentryid = ?', [$target['entryid'], $newid, $source['entryid']]);
         foreach ($DB->get_records('qbank_questionhub_published', ['questionbankentryid' => $source['entryid']]) as $row) {
-            $existing = $DB->get_record('qbank_questionhub_published',
-                ['historyid' => $row->historyid, 'questionbankentryid' => $target['entryid']]);
+            $existing = $DB->get_record(
+                'qbank_questionhub_published',
+                ['historyid' => $row->historyid, 'questionbankentryid' => $target['entryid']]
+            );
             if ($existing) {
                 $DB->set_field('qbank_questionhub_published', 'questionid', $newid, ['id' => $existing->id]);
                 $DB->delete_records('qbank_questionhub_published', ['id' => $row->id]);
@@ -253,8 +289,14 @@ class duplicate_manager {
         global $DB;
         question_require_capability_on($entry['questionid'], 'edit');
         $DB->delete_records('qbank_questionhub_items', ['questionbankentryid' => $entry['entryid']]);
-        foreach ($DB->get_fieldset_select('question_versions', 'questionid', 'questionbankentryid = ?',
-                [$entry['entryid']]) as $questionid) {
+        foreach (
+            $DB->get_fieldset_select(
+                'question_versions',
+                'questionid',
+                'questionbankentryid = ?',
+                [$entry['entryid']]
+            ) as $questionid
+        ) {
             question_delete_question((int)$questionid);
         }
     }

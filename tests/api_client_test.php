@@ -23,8 +23,7 @@ namespace qbank_questionhub;
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class api_client_test extends \advanced_testcase {
-
+final class api_client_test extends \advanced_testcase {
     public function test_health_check(): void {
         $client = new api_client();
         $health = $client->health();

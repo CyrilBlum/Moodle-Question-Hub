@@ -33,7 +33,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class local_changes {
-
     /** The link (publish or import record) held by this category itself, or null. */
     public static function link(int $courseid, int $categoryid): ?stdClass {
         $history = publication_tracker::latest($courseid, $categoryid);
@@ -159,11 +158,17 @@ class local_changes {
             $categoryid = (int)$category->parent;
         }
         $type = ['multianswer' => 'cloze', 'match' => 'matching'][$question->qtype] ?? $question->qtype;
-        $sourcekey = package_importer::source_key($relative, trim((string)($entry->idnumber ?? '')), $type,
-            trim($question->name));
+        $sourcekey = package_importer::source_key(
+            $relative,
+            trim((string)($entry->idnumber ?? '')),
+            $type,
+            trim($question->name)
+        );
         $packagehash = hash('sha256', (string)$history->package_id);
-        if ($DB->record_exists('qbank_questionhub_items', [
-                'packagehash' => $packagehash, 'targetcategoryid' => $history->categoryid, 'sourcekey' => $sourcekey])) {
+        if (
+            $DB->record_exists('qbank_questionhub_items', [
+                'packagehash' => $packagehash, 'targetcategoryid' => $history->categoryid, 'sourcekey' => $sourcekey])
+        ) {
             return;
         }
         $DB->insert_record('qbank_questionhub_items', (object)[
@@ -211,8 +216,12 @@ class local_changes {
         // The restored version has the synced content: it is the new baseline of the sync, and the version
         // a later pull compares with.
         self::set_synced($history, $entryid, $restoredid);
-        $DB->set_field('qbank_questionhub_items', 'questionid', $restoredid,
-            ['questionbankentryid' => $entryid, 'questionid' => $syncedid]);
+        $DB->set_field(
+            'qbank_questionhub_items',
+            'questionid',
+            $restoredid,
+            ['questionbankentryid' => $entryid, 'questionid' => $syncedid]
+        );
         $transaction->allow_commit();
         return 'restored';
     }

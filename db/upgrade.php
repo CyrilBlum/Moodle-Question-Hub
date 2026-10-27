@@ -88,19 +88,30 @@ function xmldb_qbank_questionhub_upgrade(int $oldversion): bool {
                FROM {qbank_questionhub_history} h
               WHERE h.action = 'import' AND h.snapshotted = 1
                 AND h.id = (SELECT MAX(h2.id) FROM {qbank_questionhub_history} h2
-                             WHERE h2.categoryid = h.categoryid AND h2.action IN ('publish', 'import', 'unlink'))");
+                             WHERE h2.categoryid = h.categoryid AND h2.action IN ('publish', 'import', 'unlink'))"
+        );
         foreach ($links as $link) {
             if ((string)$link->package_id === '') {
                 continue;
             }
-            $tracked = $DB->get_fieldset_select('qbank_questionhub_items', 'questionbankentryid',
-                'packagehash = ? AND targetcategoryid = ?', [hash('sha256', $link->package_id), $link->categoryid]);
+            $tracked = $DB->get_fieldset_select(
+                'qbank_questionhub_items',
+                'questionbankentryid',
+                'packagehash = ? AND targetcategoryid = ?',
+                [hash('sha256', $link->package_id), $link->categoryid]
+            );
             if (!$tracked) {
                 continue;
             }
             $tracked = array_flip(array_map('intval', $tracked));
-            foreach ($DB->get_records('qbank_questionhub_published', ['historyid' => $link->id], '',
-                    'id, questionbankentryid') as $row) {
+            foreach (
+                $DB->get_records(
+                    'qbank_questionhub_published',
+                    ['historyid' => $link->id],
+                    '',
+                    'id, questionbankentryid'
+                ) as $row
+            ) {
                 if (!isset($tracked[(int)$row->questionbankentryid])) {
                     $DB->delete_records('qbank_questionhub_published', ['id' => $row->id]);
                 }

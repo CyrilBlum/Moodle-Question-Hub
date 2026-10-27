@@ -23,8 +23,7 @@ namespace qbank_questionhub;
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class exporter_importer_test extends \advanced_testcase {
-
+final class exporter_importer_test extends \advanced_testcase {
     public function test_xml_normalization_course_token(): void {
         $input = '<quiz><question type="category"><category><text>$module$/top/Informatik</text></category></question></quiz>';
         $normalized = package_exporter::normalize_xml($input);

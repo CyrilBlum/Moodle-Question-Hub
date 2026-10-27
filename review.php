@@ -61,8 +61,11 @@ if ($cmid > 0) {
     $PAGE->set_cm($cm, $course);
 }
 $PAGE->set_context($context);
-$PAGE->set_title(get_string('review_heading', 'qbank_questionhub',
-    format_string($category->name, true, ['context' => $context, 'escape' => false])));
+$PAGE->set_title(get_string(
+    'review_heading',
+    'qbank_questionhub',
+    format_string($category->name, true, ['context' => $context, 'escape' => false])
+));
 $PAGE->set_heading($course->fullname);
 
 $history = \qbank_questionhub\local_changes::link((int)$course->id, $categoryid);
@@ -77,8 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'reject_added_all' || $action === 'reject_all') {
         // The list is computed again here, so nothing is discarded that changed after the page was shown.
         $statuses = $action === 'reject_all' ? ['added', 'modified'] : ['added'];
-        $current = \qbank_questionhub\local_changes::files($history,
-            new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id));
+        $current = \qbank_questionhub\local_changes::files(
+            $history,
+            new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id)
+        );
         $counts = ['restored' => 0, 'deleted' => 0, 'failed' => 0];
         foreach ($current['files'] ?? [] as $file) {
             if (!in_array($file['status'], $statuses, true)) {
@@ -120,9 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $exporter = new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id);
 $diff = \qbank_questionhub\local_changes::files($history, $exporter);
 $items = [];
-$files = \qbank_questionhub\release_diff::add_links(\qbank_questionhub\release_diff::label_sides($diff['files'] ?? [],
+$files = \qbank_questionhub\release_diff::add_links(\qbank_questionhub\release_diff::label_sides(
+    $diff['files'] ?? [],
     get_string('diff_side_synced', 'qbank_questionhub', $history->package_version),
-    get_string('diff_side_current', 'qbank_questionhub')), $context, (int)$course->id, $thispageurl->out_as_local_url(false));
+    get_string('diff_side_current', 'qbank_questionhub')
+), $context, (int)$course->id, $thispageurl->out_as_local_url(false));
 foreach ($files as $file) {
     $items[] = [
         'entryid' => $file['entryid'],
@@ -156,8 +163,10 @@ $templatedata = [
     'added_count' => count(array_filter($items, static fn($item) => $item['is_added'])),
     'reject_count' => count(array_filter($items, static fn($item) => $item['can_reject'])),
     'can_accept_all' => !$issource && count(array_filter($items, static fn($item) => $item['can_accept'])) > 1,
-    'accept_all_ids' => array_values(array_map(static fn($item) => ['id' => $item['entryid']],
-        array_filter($items, static fn($item) => $item['can_accept']))),
+    'accept_all_ids' => array_values(array_map(
+        static fn($item) => ['id' => $item['entryid']],
+        array_filter($items, static fn($item) => $item['can_accept'])
+    )),
     'push_url' => '',
 ];
 if ($issource) {

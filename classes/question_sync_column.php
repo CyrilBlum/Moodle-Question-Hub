@@ -27,7 +27,6 @@ use core_question\local\bank\view;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class question_sync_column extends column_base {
-
     /** @var array Cached map of historyid => snapshot array. */
     protected array $snapshots = [];
 

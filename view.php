@@ -56,7 +56,7 @@ if (empty($_GET['cmid']) && empty($_POST['cmid'])) {
     }
 }
 
-list($thispageurl, $contexts, $cmid, $cm, $module, $pagevars) =
+[$thispageurl, $contexts, $cmid, $cm, $module, $pagevars] =
         question_edit_setup('questions', '/question/bank/questionhub/view.php');
 
 $coursecontext = $contexts->lowest();
@@ -188,7 +188,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!\qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid)) {
             // A subcategory only inherits its parent's link; it stays part of that package either way.
             $inherited = \qbank_questionhub\publication_tracker::find_local_publication_for_category(
-                $categoryid, (int)$COURSE->id);
+                $categoryid,
+                (int)$COURSE->id
+            );
             if ($inherited && (int)$inherited->categoryid !== $categoryid) {
                 \core\notification::error(get_string('error_unlink_inherited', 'qbank_questionhub'));
                 redirect($thispageurl);
@@ -199,9 +201,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Resolve inherited parent links as well, so disconnecting a parent makes every
             // category in its tree independently publishable again.
             $link = \qbank_questionhub\publication_tracker::find_publication_for_category(
-                $scopedcategoryid, (int)$COURSE->id);
-            if (!$link || empty($link->package_id) ||
-                    \qbank_questionhub\publication_tracker::is_unlinked((int)$COURSE->id, $scopedcategoryid)) {
+                $scopedcategoryid,
+                (int)$COURSE->id
+            );
+            if (
+                !$link || empty($link->package_id) ||
+                    \qbank_questionhub\publication_tracker::is_unlinked((int)$COURSE->id, $scopedcategoryid)
+            ) {
                 continue;
             }
             $DB->insert_record('qbank_questionhub_history', (object)[
@@ -252,9 +258,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 debugging($e->getMessage(), DEBUG_DEVELOPER);
             }
             try {
-                \qbank_questionhub\publication_tracker::relink_to_fork($link, (int)$COURSE->id, (string)$created['package_id'],
-                    (string)$created['version'], html_entity_decode($forktitlehub !== '' ? $forktitlehub : (string)$created['package_id'],
-                    ENT_QUOTES | ENT_HTML5, 'UTF-8'), (int)$USER->id);
+                \qbank_questionhub\publication_tracker::relink_to_fork(
+                    $link,
+                    (int)$COURSE->id,
+                    (string)$created['package_id'],
+                    (string)$created['version'],
+                    html_entity_decode(
+                        $forktitlehub !== '' ? $forktitlehub : (string)$created['package_id'],
+                        ENT_QUOTES | ENT_HTML5,
+                        'UTF-8'
+                    ),
+                    (int)$USER->id
+                );
             } catch (\Throwable $e) {
                 // The fork exists on the Hub: forking again with this ID links it (the Hub returns the unchanged fork).
                 \core\notification::error(get_string('error_fork_relink', 'qbank_questionhub', s($created['package_id'])) .
@@ -315,8 +330,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($dryrun) {
                 $items = $items ?? $importer->preview_package($xmlcontent, $metadata, $categorymode);
-                $activenames = array_column(array_filter($importer->run_diagnostics($xmlcontent)->get_warnings(),
-                    static fn($warning) => $warning['code'] === 'WARN_ACTIVE_CONTENT'), 'questionName');
+                $activenames = array_column(array_filter(
+                    $importer->run_diagnostics($xmlcontent)->get_warnings(),
+                    static fn($warning) => $warning['code'] === 'WARN_ACTIVE_CONTENT'
+                ), 'questionName');
                 if ($activenames) {
                     \core\notification::warning(get_string(get_config('qbank_questionhub', 'stripactivecontent')
                         ? 'import_active_content_stripped' : 'import_active_content', 'qbank_questionhub', (object)[
@@ -333,16 +350,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'title' => $title, 'packageid' => $packageid, 'version' => $version,
                     'targetcategoryid' => $targetcatid, 'categorymode' => $categorymode,
                     'updatechanged' => $updatechanged,
-                    'new' => array_values(array_filter($items, static function($item) {
+                    'new' => array_values(array_filter($items, static function ($item) {
                         return $item['status'] === 'new';
                     })),
-                    'update' => array_values(array_filter($items, static function($item) {
+                    'update' => array_values(array_filter($items, static function ($item) {
                         return $item['status'] === 'update';
                     })),
-                    'unchanged' => array_values(array_filter($items, static function($item) {
+                    'unchanged' => array_values(array_filter($items, static function ($item) {
                         return $item['status'] === 'unchanged';
                     })),
-                    'conflict' => array_values(array_filter($items, static function($item) {
+                    'conflict' => array_values(array_filter($items, static function ($item) {
                         return $item['status'] === 'conflict';
                     })),
                 ];
@@ -355,11 +372,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $linkcontext = $bankcontext;
                     $linkreturn = $PAGE->url->out_as_local_url(false);
                     $linkcourseid = (int)$COURSE->id;
-                    $difffor = static function(array $item) use ($blocks, $diffexporter, $sides, $DB, $linkcontext,
-                            $linkreturn, $linkcourseid): array {
-                        $file = \qbank_questionhub\release_diff::compare($item['name'],
+                    $difffor = static function (array $item) use (
+                        $blocks,
+                        $diffexporter,
+                        $sides,
+                        $DB,
+                        $linkcontext,
+                        $linkreturn,
+                        $linkcourseid
+): array {
+                        $file = \qbank_questionhub\release_diff::compare(
+                            $item['name'],
                             \qbank_questionhub\release_diff::entry_lines($diffexporter, (int)$item['entryid']),
-                            \qbank_questionhub\release_diff::xml_lines($blocks[$item['index']]));
+                            \qbank_questionhub\release_diff::xml_lines($blocks[$item['index']])
+                        );
                         if (!empty($item['renamed_from'])) {
                             $file += ['renamed_from' => $item['renamed_from'], 'is_rename' => true];
                         }
@@ -370,8 +396,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $file['questionid'] = (int)$DB->get_field_sql('SELECT questionid FROM {question_versions}
                             WHERE questionbankentryid = ? ORDER BY version DESC', [(int)$item['entryid']], IGNORE_MULTIPLE);
                         $file = \qbank_questionhub\release_diff::label_sides([$file], ...$sides)[0];
-                        return \qbank_questionhub\release_diff::add_links([$file], $linkcontext, $linkcourseid,
-                            $linkreturn)[0];
+                        return \qbank_questionhub\release_diff::add_links(
+                            [$file],
+                            $linkcontext,
+                            $linkcourseid,
+                            $linkreturn
+                        )[0];
                     };
                     foreach ($importpreview['conflict'] as &$conflictitem) {
                         if ($conflictitem['entryid']) {
@@ -397,8 +427,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $importpreview['updatecount'] = count($importpreview['update']);
                 $importpreview['unchangedcount'] = count($importpreview['unchanged']);
             } else {
-                $result = $importer->import_package($xmlcontent, true, $metadata, $categorymode, $updatechanged,
-                    $resolutions);
+                $result = $importer->import_package(
+                    $xmlcontent,
+                    true,
+                    $metadata,
+                    $categorymode,
+                    $updatechanged,
+                    $resolutions
+                );
                 \core\notification::success(get_string('import_result_summary', 'qbank_questionhub', (object)[
                     'added' => $result->addedcount, 'updated' => $result->updatedcount,
                     'unchanged' => $result->unchangedcount,
@@ -579,10 +615,10 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
         'preview_enabled' => ($pkg['visibility'] ?? 'public') !== 'private' && !empty($pkg['preview_enabled']),
         'is_private' => ($pkg['visibility'] ?? 'public') === 'private',
         'can_access' => !empty($pkg['can_access']),
-        'package_root' => (function(array $paths): string {
+        'package_root' => (function (array $paths): string {
             $roots = [];
             foreach ($paths as $path) {
-                $segments = array_values(array_filter(explode('/', trim((string)$path, '/')), static function($segment) {
+                $segments = array_values(array_filter(explode('/', trim((string)$path, '/')), static function ($segment) {
                     return $segment !== '';
                 }));
                 if (!empty($segments) && preg_match('/^\$[a-z]+\$$/i', $segments[0])) {
@@ -772,8 +808,12 @@ $publishcategories = [];
 $remotepackages = [];
 $remotepackageerrors = [];
 $remotepackagesmissing = [];
-$getremotepackage = static function(string $packageid) use (&$remotepackages, &$remotepackageerrors,
-        &$remotepackagesmissing, $client): ?array {
+$getremotepackage = static function (string $packageid) use (
+    &$remotepackages,
+    &$remotepackageerrors,
+    &$remotepackagesmissing,
+    $client
+): ?array {
     if ($packageid === '') {
         return null;
     }
@@ -810,7 +850,7 @@ $subcategorycount = function (int $id) use (&$subcategorycount, $children): int 
 };
 // Variants of an original, for switching a linked category (loaded once per original).
 $variantcache = [];
-$getvariants = static function(string $rootid) use (&$variantcache, $client): array {
+$getvariants = static function (string $rootid) use (&$variantcache, $client): array {
     if (!array_key_exists($rootid, $variantcache)) {
         try {
             $variantcache[$rootid] = $client->get_variants($rootid);
@@ -820,9 +860,33 @@ $getvariants = static function(string $rootid) use (&$variantcache, $client): ar
     }
     return $variantcache[$rootid];
 };
-$walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts, $totalcount, $duplicatecountforcategory, &$coursecategories,
-        &$publishcategories, $COURSE, $cmid, $bankcontext, $mypackagesbyid, $getremotepackage, $canimport, $huburl, &$remotepackagesmissing,
-        $canmanagecategories, $candeletecategories, $categorymanager, $subcategorycount, $canpublish, $hasaccount, $getvariants) {
+$walk = function (
+    int $parentid,
+    int $depth
+) use (
+    &$walk,
+    $children,
+    $owncounts,
+    $totalcount,
+    $duplicatecountforcategory,
+    &$coursecategories,
+    &$publishcategories,
+    $COURSE,
+    $cmid,
+    $bankcontext,
+    $mypackagesbyid,
+    $getremotepackage,
+    $canimport,
+    $huburl,
+    &$remotepackagesmissing,
+    $canmanagecategories,
+    $candeletecategories,
+    $categorymanager,
+    $subcategorycount,
+    $canpublish,
+    $hasaccount,
+    $getvariants
+) {
     foreach ($children[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         $name = $cat->name;
@@ -912,8 +976,11 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                 $linkhistory = $directlink ?: $latestpub;
                 $linkcategoryid = $linkhistory ? (int)$linkhistory->categoryid : 0;
                 $linkaction = $linkhistory ? (string)$linkhistory->action : '';
-                $linktitle = $linkhistory ? html_entity_decode((string)$linkhistory->package_title,
-                    ENT_QUOTES | ENT_HTML5, 'UTF-8') : '';
+                $linktitle = $linkhistory ? html_entity_decode(
+                    (string)$linkhistory->package_title,
+                    ENT_QUOTES | ENT_HTML5,
+                    'UTF-8'
+                ) : '';
                 $pkgid = $linkhistory ? $linkhistory->package_id : $matchedpackage['id'];
                 $pkgversion = $linkhistory ? $linkhistory->package_version : $matchedpackage['latest_version'];
                 $mp = $matchedpackage ?: ($mypackagesbyid[$pkgid] ?? null);
@@ -961,8 +1028,10 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                                     ]),
                                 ];
                             }
-                            $switchoptions = array_values(array_filter($candidates,
-                                static fn(array $option): bool => $option['id'] !== $pkgid));
+                            $switchoptions = array_values(array_filter(
+                                $candidates,
+                                static fn(array $option): bool => $option['id'] !== $pkgid
+                            ));
                         }
                     }
                     // Pull into the linked category (import target or own package source), so the
@@ -970,8 +1039,11 @@ $walk = function (int $parentid, int $depth) use (&$walk, $children, $owncounts,
                     // (publication_tracker::is_own_link()).
                     if ($hasremoteupdate && $canimport) {
                         $pulltargetid = (int)$statushistory->categoryid;
-                        $pulltitle = html_entity_decode((string)($remote['title'] ?? $statushistory->package_title),
-                            ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $pulltitle = html_entity_decode(
+                            (string)($remote['title'] ?? $statushistory->package_title),
+                            ENT_QUOTES | ENT_HTML5,
+                            'UTF-8'
+                        );
                     }
                 }
 
@@ -1092,8 +1164,10 @@ foreach ($publishcategories as $row) {
         continue;
     }
     $current = $syncrowsbypackage[$row['package_id']] ?? null;
-    if ($current === null || ((int)$current['link_category_id'] !== (int)$current['id']
-            && (int)$row['link_category_id'] === (int)$row['id'])) {
+    if (
+        $current === null || ((int)$current['link_category_id'] !== (int)$current['id']
+            && (int)$row['link_category_id'] === (int)$row['id'])
+    ) {
         $syncrowsbypackage[$row['package_id']] = $row;
     }
 }
@@ -1169,7 +1243,7 @@ $nexturl = clone $thispageurl;
 $nexturl->param('page', min($pagination['total_pages'] ?? 1, $page + 1));
 
 $templatedata = [
-    'bank_contexts' => array_values(array_map(static function($context) use ($COURSE, $cmid, $bankcontext) {
+    'bank_contexts' => array_values(array_map(static function ($context) use ($COURSE, $cmid, $bankcontext) {
         $url = new moodle_url('/question/bank/questionhub/view.php', [
             'courseid' => $COURSE->id, 'bankcontextid' => $context->id,
             'section' => optional_param('section', 'browse', PARAM_ALPHANUMEXT),
@@ -1178,9 +1252,12 @@ $templatedata = [
             $url->param('cmid', $cmid);
         }
         return [
-            'name' => get_string($context->contextlevel === CONTEXT_COURSECAT ?
+            'name' => get_string(
+                $context->contextlevel === CONTEXT_COURSECAT ?
                 'question_bank_course_category' : 'question_bank_course',
-                'qbank_questionhub', $context->get_context_name(false)),
+                'qbank_questionhub',
+                $context->get_context_name(false)
+            ),
             'url' => $url->out(false),
             'selected' => (int)$context->id === (int)$bankcontext->id,
         ];
@@ -1235,9 +1312,9 @@ $templatedata = [
     'variant_count' => $variantcount,
     'variants_url' => (new moodle_url('/question/bank/questionhub/variants.php', $variantsparams))->out(false),
     'duplicate_count' => $duplicatecount,
-    'duplicate_categories' => (function() use ($duplicatepreview, $bankcontext): array {
+    'duplicate_categories' => (function () use ($duplicatepreview, $bankcontext): array {
         $categories = [];
-        $formatrow = static function($row, bool $keep, string $previewid) use ($bankcontext): array {
+        $formatrow = static function ($row, bool $keep, string $previewid) use ($bankcontext): array {
             return [
                 'name' => $row->name,
                 'question_id' => $row->questionid,

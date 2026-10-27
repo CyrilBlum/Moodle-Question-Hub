@@ -26,7 +26,6 @@ use core_question\local\bank\question_action_base;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class question_action extends question_action_base {
-
     /** @var string Cached action label. */
     protected string $strpublishtohub;
 

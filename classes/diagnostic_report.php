@@ -26,7 +26,6 @@ use JsonSerializable;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class diagnostic_report implements JsonSerializable {
-
     /** @var bool Whether package is valid (0 blocking errors). */
     protected bool $valid = true;
 

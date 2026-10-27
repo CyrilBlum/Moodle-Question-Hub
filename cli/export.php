@@ -29,7 +29,7 @@ require_once($CFG->libdir . '/clilib.php');
 
 \core\session\manager::set_user(get_admin());
 
-list($options, $unrecognized) = cli_get_params([
+[$options, $unrecognized] = cli_get_params([
     'help' => false,
     'courseid' => 0,
     'categoryid' => 0,

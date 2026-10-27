@@ -24,7 +24,6 @@ namespace qbank_questionhub;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class import_result {
-
     /** @var bool Whether import succeeded. */
     public bool $success;
 

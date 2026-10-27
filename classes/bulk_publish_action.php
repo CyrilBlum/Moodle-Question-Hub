@@ -24,7 +24,6 @@ namespace qbank_questionhub;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class bulk_publish_action extends \core_question\local\bank\bulk_action_base {
-
     public function get_bulk_action_title(): string {
         return get_string('publishselected', 'qbank_questionhub');
     }

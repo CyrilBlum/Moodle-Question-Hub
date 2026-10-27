@@ -29,7 +29,6 @@ use moodle_exception;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class api_client {
-
     /** @var string Base URL of Question Hub marketplace. */
     protected string $baseurl;
 
@@ -300,8 +299,11 @@ class api_client {
             }
         }
         $settingsurl = rtrim($huburl, '/') . '/dashboard#github';
-        $link = \html_writer::link($settingsurl, s(parse_url($huburl, PHP_URL_HOST) ?: $huburl),
-            ['target' => '_blank', 'rel' => 'noopener']);
+        $link = \html_writer::link(
+            $settingsurl,
+            s(parse_url($huburl, PHP_URL_HOST) ?: $huburl),
+            ['target' => '_blank', 'rel' => 'noopener']
+        );
         return [
             'github_connected' => !empty($connection['connected']),
             'github_login' => (string)($connection['login'] ?? ''),

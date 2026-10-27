@@ -23,8 +23,7 @@ namespace qbank_questionhub;
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class auth_manager_test extends \advanced_testcase {
-
+final class auth_manager_test extends \advanced_testcase {
     /**
      * Moodle sets arg_separator.output to '&amp;'; the authorize URL must still use plain '&',
      * otherwise the template escapes it again and the Hub receives "amp;redirect_uri".

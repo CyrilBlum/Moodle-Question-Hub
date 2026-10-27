@@ -20,7 +20,6 @@ use stdClass;
 
 /** Tracks the question versions included in a category's last Hub release. */
 class publication_tracker {
-
     /** Latest publish or import record for a local category, or null. */
     public static function latest(int $courseid, int $categoryid): ?stdClass {
         global $DB;
@@ -104,8 +103,14 @@ class publication_tracker {
      *
      * @return int ID of the new link record.
      */
-    public static function relink_to_fork(stdClass $link, int $courseid, string $forkid, string $version, string $title,
-            int $userid): int {
+    public static function relink_to_fork(
+        stdClass $link,
+        int $courseid,
+        string $forkid,
+        string $version,
+        string $title,
+        int $userid
+    ): int {
         global $DB;
         // Without a snapshot (null) the new link is backfilled later like any old link; an empty one would mark
         // every question as a local change.
@@ -140,8 +145,10 @@ class publication_tracker {
             'packagehash' => hash('sha256', $frompackageid), 'targetcategoryid' => $categoryid,
         ]);
         foreach ($rows as $row) {
-            if ($DB->record_exists('qbank_questionhub_items', ['packagehash' => $newhash,
-                    'targetcategoryid' => $row->targetcategoryid, 'sourcekey' => $row->sourcekey])) {
+            if (
+                $DB->record_exists('qbank_questionhub_items', ['packagehash' => $newhash,
+                    'targetcategoryid' => $row->targetcategoryid, 'sourcekey' => $row->sourcekey])
+            ) {
                 continue;
             }
             unset($row->id);
@@ -217,10 +224,13 @@ class publication_tracker {
         if ($history->action !== 'import' || (string)$history->package_id === '') {
             return false;
         }
-        return $DB->record_exists_select('qbank_questionhub_history',
-            "action = 'publish' AND package_id = :packageid AND categoryid = :categoryid AND id < :id", [
+        return $DB->record_exists_select(
+            'qbank_questionhub_history',
+            "action = 'publish' AND package_id = :packageid AND categoryid = :categoryid AND id < :id",
+            [
                 'packageid' => $history->package_id, 'categoryid' => $history->categoryid, 'id' => $history->id,
-            ]);
+            ]
+        );
     }
 
     /**
@@ -370,8 +380,10 @@ class publication_tracker {
                 );
                 foreach ($historybyname as $publication) {
                     $latest = self::latest($courseid, (int)$publication->categoryid);
-                    if ($latest && ((int)$latest->id === (int)$publication->id ||
-                            ($latest->package_id === $publication->package_id && self::is_own_link($latest)))) {
+                    if (
+                        $latest && ((int)$latest->id === (int)$publication->id ||
+                            ($latest->package_id === $publication->package_id && self::is_own_link($latest)))
+                    ) {
                         return $latest;
                     }
                 }
@@ -388,7 +400,7 @@ class publication_tracker {
         if (empty($catids)) {
             return [];
         }
-        list($insql, $params) = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED, 'pubcat');
+        [$insql, $params] = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED, 'pubcat');
         $sql = "SELECT qbe.id, latest.questionid
                   FROM {question_bank_entries} qbe
                   JOIN (SELECT questionbankentryid, MAX(version) AS maxversion
@@ -448,7 +460,7 @@ class publication_tracker {
             $DB->set_field('qbank_questionhub_history', 'snapshotted', 1, ['id' => $history->id]);
             return;
         }
-        list($insql, $params) = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED, 'bcat');
+        [$insql, $params] = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED, 'bcat');
         $sql = "SELECT qv.id AS qvid, qbe.id AS qbeid, qv.questionid, qv.version, q.timemodified
                   FROM {question_bank_entries} qbe
                   JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id

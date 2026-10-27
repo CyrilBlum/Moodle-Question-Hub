@@ -31,7 +31,6 @@ use moodle_exception;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class package_importer {
-
     /** @var stdClass Target course record. */
     protected stdClass $course;
 
@@ -85,7 +84,7 @@ class package_importer {
      * @return string[]
      */
     private function category_path_segments(string $path): array {
-        $segments = array_values(array_filter(explode('/', trim($path, '/')), static function($segment) {
+        $segments = array_values(array_filter(explode('/', trim($path, '/')), static function ($segment) {
             return $segment !== '';
         }));
         if (!empty($segments) && preg_match('/^\$[a-z]+\$$/i', $segments[0])) {
@@ -154,8 +153,10 @@ class package_importer {
             if ((int)$this->targetcategory->parent === 0 && $this->targetcategory->name === 'top') {
                 throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'The question bank root cannot be renamed.');
             }
-            if ($DB->count_records('question_bank_entries', ['questioncategoryid' => $this->targetcategory->id]) > 0 ||
-                    $DB->record_exists('question_categories', ['parent' => $this->targetcategory->id])) {
+            if (
+                $DB->count_records('question_bank_entries', ['questioncategoryid' => $this->targetcategory->id]) > 0 ||
+                    $DB->record_exists('question_categories', ['parent' => $this->targetcategory->id])
+            ) {
                 throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Choose an empty category before replacing its name.');
             }
             $context = \context::instance_by_id($this->targetcategory->contextid);
@@ -202,13 +203,15 @@ class package_importer {
 
         $report = $this->run_diagnostics($xmlcontent);
         if (!$report->is_valid()) {
-            $errors = array_map(static function($error) {
+            $errors = array_map(static function ($error) {
                 return '[' . $error['code'] . '] ' . $error['message'];
             }, $report->get_errors());
             throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', implode("\n", $errors));
         }
-        if (!in_array($categorymode, ['keep', 'rename'], true) ||
-                (int)$this->targetcategory->contextid !== (int)$this->context->id) {
+        if (
+            !in_array($categorymode, ['keep', 'rename'], true) ||
+                (int)$this->targetcategory->contextid !== (int)$this->context->id
+        ) {
             throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid target category or placement.');
         }
 
@@ -227,16 +230,20 @@ class package_importer {
         }
         $packageroot = count($roots) === 1 ? (string)array_key_first($roots) : null;
         if ($categorymode === 'rename') {
-            if ($packageroot === null || $packageroot === '' ||
+            if (
+                $packageroot === null || $packageroot === '' ||
                     ((int)$this->targetcategory->parent === 0 && $this->targetcategory->name === 'top') ||
                     $DB->count_records('question_bank_entries', ['questioncategoryid' => $this->targetcategory->id]) > 0 ||
-                    $DB->record_exists('question_categories', ['parent' => $this->targetcategory->id])) {
+                    $DB->record_exists('question_categories', ['parent' => $this->targetcategory->id])
+            ) {
                 throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Choose an empty category for renaming.');
             }
             require_capability('moodle/question:managecategory', $this->context);
-            if ($DB->record_exists('question_categories', [
+            if (
+                $DB->record_exists('question_categories', [
                     'contextid' => $this->context->id, 'parent' => $this->targetcategory->parent,
-                    'name' => $packageroot]) && $packageroot !== $this->targetcategory->name) {
+                    'name' => $packageroot]) && $packageroot !== $this->targetcategory->name
+            ) {
                 throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'A category with this name already exists.');
             }
         }
@@ -374,7 +381,9 @@ class package_importer {
         $newversion->questionbankentryid = $entryid;
         // Moodle 4.5 has no question_bank_entries.nextversion (5.0 does); never reuse a number.
         $newversion->version = max((int)($oldentry->nextversion ?? 0), 1 + (int)$DB->get_field_sql(
-            'SELECT MAX(version) FROM {question_versions} WHERE questionbankentryid = ?', [$entryid]));
+            'SELECT MAX(version) FROM {question_versions} WHERE questionbankentryid = ?',
+            [$entryid]
+        ));
         $DB->update_record('question_versions', $newversion);
         if (property_exists($oldentry, 'nextversion')) {
             $oldentry->nextversion = $newversion->version + 1;
@@ -422,8 +431,12 @@ class package_importer {
      * Imports a Moodle XML export of one question into a category and returns the new question ID.
      * Category entries in the XML are ignored.
      */
-    public static function import_question_xml(string $xml, \stdClass $category, \context $context,
-            \stdClass $course): int {
+    public static function import_question_xml(
+        string $xml,
+        \stdClass $category,
+        \context $context,
+        \stdClass $course
+    ): int {
         global $CFG;
         require_once($CFG->dirroot . '/question/editlib.php');
         require_once($CFG->dirroot . '/question/format/xml/format.php');
@@ -477,8 +490,12 @@ class package_importer {
      * @param array[] $items preview items, changed in place
      * @param array|null $previoushashes fingerprints of the previous release if already downloaded
      */
-    private function match_renames(array &$items, string $packagehash, ?\stdClass $history,
-            ?array $previoushashes): void {
+    private function match_renames(
+        array &$items,
+        string $packagehash,
+        ?\stdClass $history,
+        ?array $previoushashes
+    ): void {
         global $DB;
         $candidates = [];
         foreach ($items as $index => $item) {
@@ -495,8 +512,10 @@ class package_importer {
             'packagehash' => $packagehash, 'targetcategoryid' => $this->targetcategory->id,
         ]);
         foreach ($rows as $row) {
-            if (!isset($keys[$row->sourcekey]) &&
-                    $DB->record_exists('question_bank_entries', ['id' => $row->questionbankentryid])) {
+            if (
+                !isset($keys[$row->sourcekey]) &&
+                    $DB->record_exists('question_bank_entries', ['id' => $row->questionbankentryid])
+            ) {
                 $orphans[$row->sourcekey] = $row;
             }
         }
@@ -507,7 +526,8 @@ class package_importer {
             try {
                 $client = new api_client(null, null, 30, true);
                 $previoushashes = $this->release_fingerprints(
-                    $client->download_release((string)$history->package_id, (string)$history->package_version));
+                    $client->download_release((string)$history->package_id, (string)$history->package_version)
+                );
             } catch (\Throwable $e) {
                 // Without the previous release a rename cannot be told from a new question.
                 return;
@@ -531,8 +551,10 @@ class package_importer {
             $item['baselinequestionid'] = (int)($row->questionid ?? 0);
             // Only moved: the question itself (name included) is the one last pulled.
             $item['status'] = $row->sourcehash === $item['sourcehash'] ? 'unchanged' : 'update';
-            if ($item['status'] === 'update' && $item['baselinequestionid'] &&
-                    $this->latest_questionid($item['entryid']) !== $item['baselinequestionid']) {
+            if (
+                $item['status'] === 'update' && $item['baselinequestionid'] &&
+                    $this->latest_questionid($item['entryid']) !== $item['baselinequestionid']
+            ) {
                 // Renamed on the Hub and edited here: never overwrite silently.
                 $item['status'] = 'conflict';
             }
@@ -567,7 +589,9 @@ class package_importer {
         global $DB;
         return (int)$DB->get_field_sql(
             'SELECT questionid FROM {question_versions} WHERE questionbankentryid = ? ORDER BY version DESC',
-            [$entryid], IGNORE_MULTIPLE);
+            [$entryid],
+            IGNORE_MULTIPLE
+        );
     }
 
     /** Find an existing descendant without creating categories. */
@@ -598,8 +622,14 @@ class package_importer {
      * @return array|null id (question bank entry), differs (the question text is not identical) and text
      *         (the local question text)
      */
-    private function find_existing_question(int $categoryid, \SimpleXMLElement $node, string $idnumber,
-            string $name, string $type, array $exclude = []): ?array {
+    private function find_existing_question(
+        int $categoryid,
+        \SimpleXMLElement $node,
+        string $idnumber,
+        string $name,
+        string $type,
+        array $exclude = []
+    ): ?array {
         global $DB;
         $params = ['categoryid' => $categoryid];
         $requiretextmatch = $idnumber === '';
@@ -693,8 +723,14 @@ class package_importer {
      * @return import_result
      * @throws moodle_exception On validation or import failure.
      */
-    public function import_package(string $xmlcontent, bool $preservehierarchy = true, array $packagemetadata = [],
-            ?string $categorymode = null, bool $updatechanged = false, array $resolutions = []): import_result {
+    public function import_package(
+        string $xmlcontent,
+        bool $preservehierarchy = true,
+        array $packagemetadata = [],
+        ?string $categorymode = null,
+        bool $updatechanged = false,
+        array $resolutions = []
+    ): import_result {
         global $CFG, $DB, $USER;
         require_once($CFG->dirroot . '/question/editlib.php');
         require_once($CFG->dirroot . '/question/format/xml/format.php');
@@ -734,7 +770,7 @@ class package_importer {
         }
         unset($item);
         // A release without content changes still has to be recorded, or the category keeps offering it.
-        $needsimport = $categorymode === null || (bool)array_filter($plan, static function($item) {
+        $needsimport = $categorymode === null || (bool)array_filter($plan, static function ($item) {
             return !in_array($item['status'], ['unchanged', 'kept'], true);
         });
         $copysuffix = ' (Hub v' . ($packagemetadata['version'] ?? '') . ')';
@@ -768,10 +804,10 @@ class package_importer {
         // 5. Configure and execute qformat_xml within an isolated transaction.
         $qformat = $categorymode === null ? new \qformat_xml() : new qformat_xml_importer();
         if ($categorymode !== null) {
-            $qformat->set_category_transformer(function(array $questions) use ($categorymode): void {
+            $qformat->set_category_transformer(function (array $questions) use ($categorymode): void {
                 $this->remap_package_categories($questions, $categorymode);
             });
-            $qformat->set_question_filter(static function(array $questions) use ($plan, $copysuffix): array {
+            $qformat->set_question_filter(static function (array $questions) use ($plan, $copysuffix): array {
                 $index = 0;
                 $filtered = [];
                 foreach ($questions as $question) {
@@ -872,13 +908,20 @@ class package_importer {
                         } else if ($item['status'] === 'update') {
                             $entryid = $item['entryid'];
                             // Category the package places the question in (its temporary entry is removed below).
-                            $packagecategoryid = (int)$DB->get_field('question_bank_entries', 'questioncategoryid',
-                                ['id' => $newentryid]);
+                            $packagecategoryid = (int)$DB->get_field(
+                                'question_bank_entries',
+                                'questioncategoryid',
+                                ['id' => $newentryid]
+                            );
                             self::attach_as_version($questionid, (int)$entryid, $this->context);
                             if (!empty($item['moved_label']) && $packagecategoryid) {
                                 // Moved into another subcategory on the Hub: follow it here.
-                                $DB->set_field('question_bank_entries', 'questioncategoryid', $packagecategoryid,
-                                    ['id' => $entryid]);
+                                $DB->set_field(
+                                    'question_bank_entries',
+                                    'questioncategoryid',
+                                    $packagecategoryid,
+                                    ['id' => $entryid]
+                                );
                             }
                             $updatedcount++;
                             $addedcount--;

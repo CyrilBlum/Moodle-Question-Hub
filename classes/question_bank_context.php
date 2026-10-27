@@ -8,7 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace qbank_questionhub;
 
@@ -37,8 +41,10 @@ class question_bank_context {
                 break;
             }
             $context = \context_coursecat::instance($categoryid);
-            if ($DB->record_exists_select('question_categories', 'contextid = ? AND parent <> 0', [$context->id]) &&
-                    has_capability('qbank/questionhub:view', $context)) {
+            if (
+                $DB->record_exists_select('question_categories', 'contextid = ? AND parent <> 0', [$context->id]) &&
+                    has_capability('qbank/questionhub:view', $context)
+            ) {
                 $contexts[$context->id] = $context;
             }
             $categoryid = (int)$category->parent;

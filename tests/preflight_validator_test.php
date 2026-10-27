@@ -23,8 +23,7 @@ namespace qbank_questionhub;
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class preflight_validator_test extends \advanced_testcase {
-
+final class preflight_validator_test extends \advanced_testcase {
     public function test_empty_payload_rejected(): void {
         $report = preflight_validator::validate('');
         $this->assertFalse($report->is_valid());

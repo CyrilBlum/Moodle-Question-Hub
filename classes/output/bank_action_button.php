@@ -29,7 +29,6 @@ use moodle_url;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class bank_action_button implements renderable, templatable {
-
     /** @var moodle_url Target destination URL. */
     protected moodle_url $url;
 

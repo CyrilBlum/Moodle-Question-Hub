@@ -37,7 +37,7 @@ $updatepackageid = optional_param('updatepackageid', '', PARAM_RAW_TRIMMED);
 
 // Resolve course and cmid bidirectionally across Moodle 4.5 and 5.0.
 if ($courseid <= 0 && $cmid > 0) {
-    list($module, $cm) = get_module_from_cmid($cmid);
+    [$module, $cm] = get_module_from_cmid($cmid);
     $courseid = (int)$cm->course;
 }
 
@@ -99,7 +99,7 @@ if ((int)$course->id !== (int)SITEID) {
     $PAGE->set_course($course);
 }
 if ($cmid > 0) {
-    list($module, $cm) = get_module_from_cmid($cmid);
+    [$module, $cm] = get_module_from_cmid($cmid);
     if ((int)$cm->course === (int)$course->id) {
         $PAGE->set_cm($cm, $course);
     }
@@ -174,8 +174,10 @@ if ($updatepackageid !== '') {
     if ($categoryid > 0) {
         $latestpublication = \qbank_questionhub\publication_tracker::latest((int)$course->id, $categoryid);
         // An editor's category may hold an import of the package: its snapshot is the base of the update.
-        if ($latestpublication && !($latestpublication->action === 'publish' ||
-                ($latestpublication->action === 'import' && $latestpublication->package_id === $updatepackageid))) {
+        if (
+            $latestpublication && !($latestpublication->action === 'publish' ||
+                ($latestpublication->action === 'import' && $latestpublication->package_id === $updatepackageid))
+        ) {
             $latestpublication = null;
         }
     }
@@ -308,8 +310,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Created first: if that fails, nothing is published. The Hub commits the release into it.
             $createdrepo = $client->create_github_repo($githubnewname);
             $metadata['github_repo'] = $createdrepo['repo'];
-            \core\notification::success(get_string('github_repo_created_named', 'qbank_questionhub',
-                s($createdrepo['html_url'] ?? $createdrepo['repo'])));
+            \core\notification::success(get_string(
+                'github_repo_created_named',
+                'qbank_questionhub',
+                s($createdrepo['html_url'] ?? $createdrepo['repo'])
+            ));
         }
         $published = $client->publish($xmlcontent, $metadata);
 
@@ -406,8 +411,19 @@ $defaultslug = $ownedpackage ? $ownedpackage['id'] : ('ch.gym.inf.collection.' .
 $defaultsummary = $ownedpackage ? ($ownedpackage['summary'] ?? '') : 'Fragensammlung für Schweizer Gymnasien.';
 $defaultversion = $ownedpackage ? \qbank_questionhub\publication_tracker::next_version($ownedpackage['latest_version']) : '1.0.0';
 
-$walkcats = function (int $parentid, int $depth) use (&$walkcats, $childmap, $DB, $categoryid, &$categoriesdata,
-        &$defaulttitle, &$defaultslug, $ownedpackage) {
+$walkcats = function (
+    int $parentid,
+    int $depth
+) use (
+    &$walkcats,
+    $childmap,
+    $DB,
+    $categoryid,
+    &$categoriesdata,
+    &$defaulttitle,
+    &$defaultslug,
+    $ownedpackage
+) {
     foreach ($childmap[$parentid] ?? [] as $cat) {
         $istop = ($cat->name === 'top' && $parentid === 0);
         if (!$istop) {
@@ -475,29 +491,38 @@ $templatedata = [
             : get_string('github_push_unlinked', 'qbank_questionhub'))),
     'github_push_linked' => !empty($ownedpackage['github_repo']) || !empty($ownedpackage['github_linked']),
 ] + ($ownedpackage ? [] : (new \qbank_questionhub\api_client(null, null, 30, true))->github_template_data(
-    rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/'))) + [
+    rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/')
+)) + [
     'is_private' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') === 'private') : false,
     'is_public' => $ownedpackage ? (($ownedpackage['visibility'] ?? 'public') !== 'private') : true,
-];
+    ];
 
-echo $OUTPUT->header();
+    echo $OUTPUT->header();
 
-$renderer = $PAGE->get_renderer('core_question', 'bank');
-$qbankaction = new \core_question\output\qbank_action_menu($thispageurl);
-echo $renderer->render($qbankaction);
+    $renderer = $PAGE->get_renderer('core_question', 'bank');
+    $qbankaction = new \core_question\output\qbank_action_menu($thispageurl);
+    echo $renderer->render($qbankaction);
 
 if ($ownedpackage) {
     // Push view: what changed since the last release, plus version and release note only.
     $diff = null;
     if ($categoryid > 0 && $latestpublication) {
-        $diff = \qbank_questionhub\release_diff::since($categoryid, $latestpublication,
-            new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id));
+        $diff = \qbank_questionhub\release_diff::since(
+            $categoryid,
+            $latestpublication,
+            new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id)
+        );
     }
     $files = $diff === null ? null : \qbank_questionhub\release_diff::add_links(
-        \qbank_questionhub\release_diff::label_sides($diff['files'],
+        \qbank_questionhub\release_diff::label_sides(
+            $diff['files'],
             get_string('diff_side_published', 'qbank_questionhub', $latestpublication->package_version),
-            get_string('diff_side_current', 'qbank_questionhub')),
-        $context, (int)$course->id, $thispageurl->out_as_local_url(false));
+            get_string('diff_side_current', 'qbank_questionhub')
+        ),
+        $context,
+        (int)$course->id,
+        $thispageurl->out_as_local_url(false)
+    );
     $category = $DB->get_record('question_categories', ['id' => $categoryid], 'id,name', IGNORE_MISSING);
     $templatedata += [
         'package_title' => $defaulttitle,
@@ -510,13 +535,13 @@ if ($ownedpackage) {
         'no_changes' => $files !== null && !$files,
         'same_content' => $diff['same_content'] ?? 0,
         'additions' => array_sum(array_column($files ?? [], 'additions')),
-        'deletions' => array_sum(array_column($files ?? [], 'deletions')),
-        'version_value' => $postedversion ?? $defaultversion,
-        'release_notes' => $postednotes,
-    ];
-    echo $OUTPUT->render_from_template('qbank_questionhub/push_view', $templatedata);
+            'deletions' => array_sum(array_column($files ?? [], 'deletions')),
+            'version_value' => $postedversion ?? $defaultversion,
+            'release_notes' => $postednotes,
+        ];
+        echo $OUTPUT->render_from_template('qbank_questionhub/push_view', $templatedata);
 } else {
     echo $OUTPUT->render_from_template('qbank_questionhub/publish_view', $templatedata);
 }
 
-echo $OUTPUT->footer();
+    echo $OUTPUT->footer();

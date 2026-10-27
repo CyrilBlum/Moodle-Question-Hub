@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace qbank_questionhub;
 
 /** Question-level changes since a release, with line diffs of the exported Moodle XML. */
@@ -22,8 +37,12 @@ class release_diff {
      * @return array|null files (name, status, additions, deletions, hunks, entryid) and same_content (new versions
      *         with identical content, e.g. an edit that was undone), null without a snapshot
      */
-    public static function since(int $categoryid, \stdClass $history, package_exporter $exporter,
-            bool $inscope = false): ?array {
+    public static function since(
+        int $categoryid,
+        \stdClass $history,
+        package_exporter $exporter,
+        bool $inscope = false
+    ): ?array {
         global $DB;
         $changes = $inscope ? publication_tracker::changes_in_scope($categoryid, $history) :
             publication_tracker::changes($categoryid, $history);
@@ -37,8 +56,10 @@ class release_diff {
         $samecontent = 0;
         foreach (array_keys($changes['entries']) as $entryid) {
             $file = self::file($previous[$entryid] ?? 0, $current[$entryid] ?? 0, $exporter);
-            if ($file['status'] === 'modified' && !$file['too_large'] && !$file['additions'] && !$file['deletions'] &&
-                    !isset($moves[$entryid])) {
+            if (
+                $file['status'] === 'modified' && !$file['too_large'] && !$file['additions'] && !$file['deletions'] &&
+                    !isset($moves[$entryid])
+            ) {
                 $samecontent++;
                 continue;
             }
@@ -78,8 +99,10 @@ class release_diff {
         $key = $history->package_id . '@' . $history->package_version;
         if (!isset($cache[$key])) {
             try {
-                $cache[$key] = (new api_client(null, null, 30, true))->download_release((string)$history->package_id,
-                    (string)$history->package_version);
+                $cache[$key] = (new api_client(null, null, 30, true))->download_release(
+                    (string)$history->package_id,
+                    (string)$history->package_version
+                );
             } catch (\Throwable $e) {
                 $cache[$key] = '';
             }
@@ -157,8 +180,10 @@ class release_diff {
                 continue;
             }
             if ($block[1] === 'category') {
-                $segments = array_values(array_filter(explode('/', trim((string)$node->category->text, '/')),
-                    static fn($segment) => $segment !== ''));
+                $segments = array_values(array_filter(
+                    explode('/', trim((string)$node->category->text, '/')),
+                    static fn($segment) => $segment !== ''
+                ));
                 if ($segments && preg_match('/^\$[a-z]+\$$/i', $segments[0])) {
                     array_shift($segments);
                 }
@@ -212,10 +237,14 @@ class release_diff {
             if (!$questionid || !self::question_exists($questionid)) {
                 continue;
             }
-            $file['preview_url'] = (new \moodle_url('/question/bank/previewquestion/preview.php',
-                ['id' => $questionid] + $bankparams))->out(false);
-            $file['edit_url'] = (new \moodle_url('/question/bank/editquestion/question.php',
-                ['id' => $questionid, 'returnurl' => $returnurl] + $bankparams))->out(false);
+            $file['preview_url'] = (new \moodle_url(
+                '/question/bank/previewquestion/preview.php',
+                ['id' => $questionid] + $bankparams
+            ))->out(false);
+            $file['edit_url'] = (new \moodle_url(
+                '/question/bank/editquestion/question.php',
+                ['id' => $questionid, 'returnurl' => $returnurl] + $bankparams
+            ))->out(false);
         }
         unset($file);
         return $files;
@@ -228,8 +257,12 @@ class release_diff {
      *
      * @param int[] $entryids the deleted question bank entries
      */
-    private static function deleted_from_release(\stdClass $history, array $previous, array $current,
-            array $entryids): array {
+    private static function deleted_from_release(
+        \stdClass $history,
+        array $previous,
+        array $current,
+        array $entryids
+    ): array {
         global $DB;
         $ids = array_filter(array_merge(array_values($current), array_values(array_intersect_key($previous, $current))));
         $known = [];
@@ -379,7 +412,9 @@ class release_diff {
         global $DB;
         $questionid = (int)$DB->get_field_sql(
             'SELECT questionid FROM {question_versions} WHERE questionbankentryid = ? ORDER BY version DESC',
-            [$entryid], IGNORE_MULTIPLE);
+            [$entryid],
+            IGNORE_MULTIPLE
+        );
         return $questionid ? self::question_lines($exporter, $questionid) : [];
     }
 
@@ -389,8 +424,10 @@ class release_diff {
         $lines = [];
         foreach (preg_split('/\R/', $xml) as $line) {
             // The export envelope and the question ID comment differ between versions without a content change.
-            if (trim($line) === '' || str_starts_with(ltrim($line), '<?xml') || preg_match('~^\s*</?quiz>\s*$~', $line) ||
-                    preg_match('~^\s*<!-- question: \d+\s*-->\s*$~', $line)) {
+            if (
+                trim($line) === '' || str_starts_with(ltrim($line), '<?xml') || preg_match('~^\s*</?quiz>\s*$~', $line) ||
+                    preg_match('~^\s*<!-- question: \d+\s*-->\s*$~', $line)
+            ) {
                 continue;
             }
             if (strlen($line) > self::MAX_LINE) {
@@ -550,7 +587,7 @@ class release_diff {
         while ($suffix < $max - $prefix && $a[count($a) - 1 - $suffix] === $b[count($b) - 1 - $suffix]) {
             $suffix++;
         }
-        $split = static function(array $chars) use ($prefix, $suffix): array {
+        $split = static function (array $chars) use ($prefix, $suffix): array {
             $parts = [
                 ['text' => implode('', array_slice($chars, 0, $prefix)), 'changed' => false],
                 ['text' => implode('', array_slice($chars, $prefix, count($chars) - $prefix - $suffix)), 'changed' => true],

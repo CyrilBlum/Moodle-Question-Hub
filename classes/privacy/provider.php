@@ -30,11 +30,7 @@ use core_privacy\local\request\writer;
  * @copyright  2026 Cyril Wendl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements
-    \core_privacy\local\metadata\provider,
-    \core_privacy\local\request\plugin\provider,
-    \core_privacy\local\request\core_userlist_provider {
-
+class provider implements \core_privacy\local\metadata\provider, \core_privacy\local\request\core_userlist_provider, \core_privacy\local\request\plugin\provider {
     /**
      * Describe the types of data stored by this plugin.
      *
@@ -166,7 +162,7 @@ class provider implements
         global $DB;
         $userids = $userlist->get_userids();
         if (!empty($userids)) {
-            list($insql, $params) = $DB->get_in_or_equal($userids);
+            [$insql, $params] = $DB->get_in_or_equal($userids);
             $DB->delete_records_select('qbank_questionhub_tokens', "userid $insql", $params);
             $DB->delete_records_select('qbank_questionhub_history', "userid $insql", $params);
         }
