@@ -380,6 +380,15 @@ $string['sync_source_label'] = 'published from here';
 $string['target_category'] = 'Target category';
 
 $string['target_category_help'] = 'The number shows how many questions are directly in this category. Questions in subcategories are not included. Renaming is available only for an empty category with no subcategories.';
+$string['testconnection'] = 'Test connection';
+$string['testconnection_desc'] = 'Checks with the saved settings whether the Hub is reachable and the institutional token and your own linked account are valid. Save changes first.';
+$string['testconnection_hub_failed'] = 'Hub at {$a->url} is not reachable: {$a->error}';
+$string['testconnection_hub_ok'] = 'Hub at {$a} is reachable.';
+$string['testconnection_token_failed'] = 'The institutional token was rejected: {$a}';
+$string['testconnection_token_none'] = 'No institutional token is saved.';
+$string['testconnection_token_ok'] = 'The institutional token is valid (Hub account {$a}).';
+$string['testconnection_user_failed'] = 'Your linked Hub account was rejected: {$a}';
+$string['testconnection_user_ok'] = 'Your linked Hub account is valid ({$a}).';
 $string['token_saved'] = 'Personal Access Token saved successfully.';
 
 

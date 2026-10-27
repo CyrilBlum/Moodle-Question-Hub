@@ -108,6 +108,16 @@ class api_client {
     }
 
     /**
+     * Returns the Hub account the token belongs to.
+     *
+     * @return array Profile with id, email, full_name.
+     * @throws moodle_exception When the token is missing, invalid or expired.
+     */
+    public function get_me(): array {
+        return $this->get('/api/v1/auth/me', [], true);
+    }
+
+    /**
      * Fetches the canonical Swiss Gymnasium curriculum taxonomy.
      *
      * @return array Taxonomy catalog with subjects, levels, topics, cantons.

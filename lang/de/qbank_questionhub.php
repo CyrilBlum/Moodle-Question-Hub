@@ -380,6 +380,15 @@ $string['sync_source_label'] = 'von hier veröffentlicht';
 $string['target_category'] = 'Zielkategorie';
 
 $string['target_category_help'] = 'Die Zahl zeigt, wie viele Fragen direkt in dieser Kategorie liegen. Fragen in Unterkategorien sind nicht mitgezählt. Eine Umbenennung ist nur bei einer leeren Kategorie ohne Unterkategorien möglich.';
+$string['testconnection'] = 'Verbindung testen';
+$string['testconnection_desc'] = 'Prüft mit den gespeicherten Einstellungen, ob der Hub erreichbar ist und ob das Institutions-Token und Ihr eigenes verknüpftes Konto gültig sind. Speichern Sie Änderungen zuerst.';
+$string['testconnection_hub_failed'] = 'Der Hub unter {$a->url} ist nicht erreichbar: {$a->error}';
+$string['testconnection_hub_ok'] = 'Der Hub unter {$a} ist erreichbar.';
+$string['testconnection_token_failed'] = 'Das Institutions-Token wurde abgelehnt: {$a}';
+$string['testconnection_token_none'] = 'Es ist kein Institutions-Token gespeichert.';
+$string['testconnection_token_ok'] = 'Das Institutions-Token ist gültig (Hub-Konto {$a}).';
+$string['testconnection_user_failed'] = 'Ihr verknüpftes Hub-Konto wurde abgelehnt: {$a}';
+$string['testconnection_user_ok'] = 'Ihr verknüpftes Hub-Konto ist gültig ({$a}).';
 $string['token_saved'] = 'Personal Access Token erfolgreich gespeichert.';
 
 

@@ -52,6 +52,18 @@ if ($ADMIN->fulltree) {
         ''
     ));
 
+    // Test the saved Hub URL and tokens.
+    $settings->add(new admin_setting_description(
+        'qbank_questionhub/testconnection',
+        get_string('testconnection', 'qbank_questionhub'),
+        html_writer::div(get_string('testconnection_desc', 'qbank_questionhub'), 'mb-2') .
+            html_writer::link(
+                new moodle_url('/question/bank/questionhub/testconnection.php'),
+                get_string('testconnection', 'qbank_questionhub'),
+                ['class' => 'btn btn-secondary']
+            )
+    ));
+
     // Allow Individual Teacher Account Linking.
     $settings->add(new admin_setting_configcheckbox(
         'qbank_questionhub/allowteacherlinking',

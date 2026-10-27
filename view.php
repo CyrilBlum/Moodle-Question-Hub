@@ -63,6 +63,13 @@ $coursecontext = $contexts->lowest();
 require_capability('qbank/questionhub:view', $coursecontext);
 $bankcontextid = optional_param('bankcontextid', 0, PARAM_INT);
 $bankcontexts = \qbank_questionhub\question_bank_context::available($COURSE);
+if ($bankcontextid === 0 && !empty($pagevars['cat'])) {
+    // Coming from the question bank: preselect the bank of the category shown there (e.g. a course category).
+    $catcontextid = (int)(explode(',', $pagevars['cat'])[1] ?? 0);
+    if (isset($bankcontexts[$catcontextid])) {
+        $bankcontextid = $catcontextid;
+    }
+}
 $bankcontext = \qbank_questionhub\question_bank_context::resolve($COURSE, $bankcontextid);
 $thispageurl->param('bankcontextid', $bankcontext->id);
 
