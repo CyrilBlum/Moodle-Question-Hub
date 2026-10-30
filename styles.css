@@ -18,7 +18,12 @@
  */
 
 /* Line diffs (templates/diff_files.mustache). */
-.qh-diffs .qh-file { border: 1px solid #d0d7de; border-radius: 6px; margin-bottom: .75rem; background: #fff; }
+.qh-diffs .qh-file {
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    margin-bottom: .75rem;
+    background: #fff;
+}
 
 .qh-diffs .qh-file > summary {
     list-style: none;
@@ -241,7 +246,9 @@
 }
 
 /* Question Hub page and forms. */
-.qh-token-input { min-width: 300px; }
+.qh-token-input {
+    min-width: 300px;
+}
 
 .qh-clickable {
     cursor: pointer;
