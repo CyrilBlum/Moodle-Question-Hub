@@ -283,7 +283,7 @@
     padding-left: calc(1.25rem + var(--qh-indent, 0rem));
 }
 
-.list-group-item.qh-category-child {
+.list-group .list-group-item.qh-category-child {
     border-left: 3px solid #dee2e6;
 }
 
