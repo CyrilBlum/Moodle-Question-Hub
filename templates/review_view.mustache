@@ -1,4 +1,23 @@
 {{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @copyright  2026 Cyril Blum
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+{{!
     @template qbank_questionhub/review_view
 
     Review of local changes in a category linked to a Hub package: each changed question with its diff
@@ -49,8 +68,8 @@
             </form>
             {{/can_accept_all}}
             {{#added_count}}
-            <form method="post" action="{{action_url}}" class="d-inline" onsubmit="return window.confirm(this.dataset.confirm);"
-                  data-confirm="{{#str}} review_reject_added_all_confirm, qbank_questionhub, {{added_count}} {{/str}}">
+            <form method="post" action="{{action_url}}" class="d-inline"
+                  data-qh-confirm="{{#str}} review_reject_added_all_confirm, qbank_questionhub, {{added_count}} {{/str}}">
                 <input type="hidden" name="sesskey" value="{{sesskey}}">
                 <input type="hidden" name="action" value="reject_added_all">
                 <button type="submit" class="btn btn-sm btn-outline-danger ml-1 ms-1">
@@ -59,8 +78,8 @@
             </form>
             {{/added_count}}
             {{#reject_count}}
-            <form method="post" action="{{action_url}}" class="d-inline" onsubmit="return window.confirm(this.dataset.confirm);"
-                  data-confirm="{{#str}} review_reject_all_confirm, qbank_questionhub, {{reject_count}} {{/str}}">
+            <form method="post" action="{{action_url}}" class="d-inline"
+                  data-qh-confirm="{{#str}} review_reject_all_confirm, qbank_questionhub, {{reject_count}} {{/str}}">
                 <input type="hidden" name="sesskey" value="{{sesskey}}">
                 <input type="hidden" name="action" value="reject_all">
                 <button type="submit" class="btn btn-sm btn-danger ml-1 ms-1">
@@ -86,7 +105,7 @@
             </form>
             {{/can_accept}}
             {{#can_reject}}
-            <form method="post" action="{{action_url}}" class="d-inline" onsubmit="return window.confirm(this.dataset.confirm);" data-confirm="{{reject_confirm}}">
+            <form method="post" action="{{action_url}}" class="d-inline" data-qh-confirm="{{reject_confirm}}">
                 <input type="hidden" name="sesskey" value="{{sesskey}}">
                 <input type="hidden" name="action" value="reject">
                 <input type="hidden" name="entryid" value="{{entryid}}">
@@ -107,13 +126,3 @@
         {{/has_items}}{{/push_url}}
     </div>
 </div>
-{{#js}}
-document.querySelectorAll('[data-qh-review-all]').forEach(function(button) {
-    button.addEventListener('click', function() {
-        var open = button.getAttribute('data-qh-review-all') === 'open';
-        document.querySelectorAll('.qbank_questionhub_review details.qh-file').forEach(function(d) {
-            d.open = open;
-        });
-    });
-});
-{{/js}}

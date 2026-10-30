@@ -1,4 +1,23 @@
 {{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @copyright  2026 Cyril Blum
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+{{!
     @template qbank_questionhub/hub_browser
 
     Question Hub page: account connection, linked categories, own packages, Hub search with package cards,
@@ -46,7 +65,7 @@
                 <input type="hidden" name="sesskey" value="{{sesskey}}">
                 <input type="hidden" name="action" value="save_pat">
                 <label for="pat_token" class="mr-2">{{#str}} pat_token_label, qbank_questionhub {{/str}}</label>
-                <input type="password" id="pat_token" name="pat_token" class="form-control mr-2 mb-2 mb-md-0" placeholder="mqh_pat_..." style="min-width: 300px;">
+                <input type="password" id="pat_token" name="pat_token" class="form-control mr-2 mb-2 mb-md-0 qh-token-input" placeholder="mqh_pat_...">
                 <button type="submit" class="btn btn-primary">{{#str}} save_token, qbank_questionhub {{/str}}</button>
             </form>
         </div>
@@ -54,7 +73,7 @@
     {{/linking_allowed}}
     {{/has_account}}
 
-    <nav aria-label="Question Hub">
+    <nav aria-label="{{#str}} pluginname, qbank_questionhub {{/str}}">
         <ul class="nav nav-tabs mb-4">
             <li class="nav-item"><a class="nav-link {{#section_browse}}active{{/section_browse}}" href="{{browse_tab_url}}" {{#section_browse}}aria-current="page"{{/section_browse}}>{{#str}} hub_tab_browse, qbank_questionhub {{/str}}</a></li>
             <li class="nav-item"><a class="nav-link {{#section_library}}active{{/section_library}}" href="{{library_tab_url}}" {{#section_library}}aria-current="page"{{/section_library}}>{{#str}} hub_tab_library, qbank_questionhub {{/str}}</a></li>
@@ -65,7 +84,7 @@
     {{#has_multiple_bank_contexts}}
     <div class="form-group mb-4">
         <label class="font-weight-bold" for="qh-bank-context">{{#str}} question_bank_context, qbank_questionhub {{/str}}</label>
-        <select id="qh-bank-context" class="custom-select form-control" onchange="window.location.href=this.value">
+        <select id="qh-bank-context" class="custom-select form-control" data-qh-bank-select>
             {{#bank_contexts}}<option value="{{url}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/bank_contexts}}
         </select>
     </div>
@@ -86,7 +105,7 @@
             {{#updatecount}}<h6>{{#str}} import_preview_updated_heading, qbank_questionhub {{/str}}</h6><ul>{{#update}}<li>{{name}}{{#category}} <small class="text-muted">({{category}})</small>{{/category}}{{#renamed_from}} <small class="text-success"><b>R</b> {{#str}} import_preview_renamed, qbank_questionhub, {{renamed_from}} {{/str}}</small>{{/renamed_from}}{{#moved_label}} <small class="text-success"><b>R</b> {{moved_label}}</small>{{/moved_label}}{{#uncertain}} <small class="text-warning">{{#str}} import_preview_uncertain, qbank_questionhub {{/str}}</small>{{/uncertain}}</li>{{/update}}</ul>{{/updatecount}}
             {{#update_diff}}
             <details class="mb-3">
-                <summary class="small text-primary" style="cursor:pointer">{{#str}} import_preview_show_update_diffs, qbank_questionhub {{/str}}</summary>
+                <summary class="small text-primary qh-clickable">{{#str}} import_preview_show_update_diffs, qbank_questionhub {{/str}}</summary>
                 <div class="mt-2">{{> qbank_questionhub/diff_files }}</div>
             </details>
             {{/update_diff}}
@@ -170,7 +189,7 @@
                                     <tbody>{{#rows}}
                                         <tr {{#is_keep}}class="table-success"{{/is_keep}}{{#is_delete}}class="table-danger"{{/is_delete}}>
                                             <td>{{#is_keep}}<span class="badge badge-success"><i class="fa fa-check mr-1" aria-hidden="true"></i>{{#str}} duplicate_keep_badge, qbank_questionhub {{/str}}</span>{{/is_keep}}{{#is_delete}}<span class="badge badge-danger"><i class="fa fa-trash mr-1" aria-hidden="true"></i>{{#str}} duplicate_delete_badge, qbank_questionhub {{/str}}</span>{{/is_delete}}</td>
-                                            <td><strong>{{name}}</strong><div class="text-muted mt-1">ID {{question_id}} · {{#str}} duplicate_entry_id, qbank_questionhub {{/str}} {{entry_id}}</div></td>
+                                            <td><strong>{{name}}</strong><div class="text-muted mt-1">{{#str}} question_id, qbank_questionhub, {{question_id}} {{/str}} · {{#str}} duplicate_entry_id, qbank_questionhub {{/str}} {{entry_id}}</div></td>
                                             <td>v{{question_version}}</td>
                                             <td><div>{{created_at}}</div><div class="text-muted">{{modified_at}}</div></td>
                                             <td><div>{{package_title}}</div><div class="text-muted">{{package_id}} · v{{package_version}}</div><div class="text-muted">{{package_action}} · {{package_at}}</div></td>
@@ -187,7 +206,7 @@
             </div>
             {{/duplicate_categories}}
         </div>
-        <form method="post" action="{{action_url}}" onsubmit="return confirm('{{#str}} duplicate_delete_confirm, qbank_questionhub, {{duplicate_preview_count}} {{/str}}');"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="delete_duplicates"><input type="hidden" name="duplicatecategoryid" value="{{duplicate_category_id}}"><button type="submit" class="btn btn-danger"><i class="fa fa-trash mr-1" aria-hidden="true"></i>{{#str}} delete_duplicates, qbank_questionhub, {{duplicate_preview_count}} {{/str}}</button><a href="{{browse_tab_url}}" class="btn btn-outline-secondary ml-2">{{#str}} import_preview_cancel, qbank_questionhub {{/str}}</a></form>
+        <form method="post" action="{{action_url}}" data-qh-confirm="{{#str}} duplicate_delete_confirm, qbank_questionhub, {{duplicate_preview_count}} {{/str}}"><input type="hidden" name="sesskey" value="{{sesskey}}"><input type="hidden" name="action" value="delete_duplicates"><input type="hidden" name="duplicatecategoryid" value="{{duplicate_category_id}}"><button type="submit" class="btn btn-danger"><i class="fa fa-trash mr-1" aria-hidden="true"></i>{{#str}} delete_duplicates, qbank_questionhub, {{duplicate_preview_count}} {{/str}}</button><a href="{{browse_tab_url}}" class="btn btn-outline-secondary ml-2">{{#str}} import_preview_cancel, qbank_questionhub {{/str}}</a></form>
     </div>
     </div>
     {{/has_duplicate_preview}}
@@ -217,10 +236,10 @@
             <div class="col-md-2 mb-2">
                 <select name="level" class="custom-select form-control">
                     <option value="">{{#str}} all_levels, qbank_questionhub {{/str}}</option>
-                    <option value="GF" {{#level_gf_selected}}selected{{/level_gf_selected}}>GF (Grundlagenfach)</option>
-                    <option value="SF" {{#level_sf_selected}}selected{{/level_sf_selected}}>SF (Schwerpunktfach)</option>
-                    <option value="EF" {{#level_ef_selected}}selected{{/level_ef_selected}}>EF (Ergänzungsfach)</option>
-                    <option value="FF" {{#level_ff_selected}}selected{{/level_ff_selected}}>FF (Freifach)</option>
+                    <option value="GF" {{#level_gf_selected}}selected{{/level_gf_selected}}>{{#str}} level_gf, qbank_questionhub {{/str}}</option>
+                    <option value="SF" {{#level_sf_selected}}selected{{/level_sf_selected}}>{{#str}} level_sf, qbank_questionhub {{/str}}</option>
+                    <option value="EF" {{#level_ef_selected}}selected{{/level_ef_selected}}>{{#str}} level_ef, qbank_questionhub {{/str}}</option>
+                    <option value="FF" {{#level_ff_selected}}selected{{/level_ff_selected}}>{{#str}} level_ff, qbank_questionhub {{/str}}</option>
                 </select>
             </div>
 
@@ -259,7 +278,7 @@
 
     <!-- Pagination Controls -->
     {{#pagination.total_pages}}
-    <nav class="mt-4" aria-label="Page navigation">
+    <nav class="mt-4" aria-label="{{#str}} page_navigation, qbank_questionhub {{/str}}">
         <ul class="pagination justify-content-center">
             <li class="page-item {{^has_prev}}disabled{{/has_prev}}">
                 <a class="page-link" href="{{prev_url}}">&laquo;</a>
@@ -280,8 +299,8 @@
         <ul class="list-group list-group-flush">
             {{/publish_categories.0}}
             {{#publish_categories}}
-            <li class="list-group-item"
-                style="padding-left: calc(1.25rem + {{indent}}rem); {{#is_child}}border-left: 3px solid #dee2e6;{{/is_child}}">
+            <li class="list-group-item qh-category-row{{#is_child}} qh-category-child{{/is_child}}"
+                style="--qh-indent: {{indent}}rem;">
                 <div class="d-flex justify-content-between align-items-center flex-wrap">
                     <span class="mb-1 mb-md-0">
                         {{#is_child}}<span class="text-muted mr-1">&#9492;</span>{{/is_child}}
@@ -325,7 +344,7 @@
                             </button>
                             {{/can_edit_category}}
                             {{#can_delete_category}}
-                            <form method="post" action="{{action_url}}" class="d-inline" data-confirm="{{category_delete_confirm}}" onsubmit="return confirm(this.dataset.confirm);">
+                            <form method="post" action="{{action_url}}" class="d-inline" data-qh-confirm="{{category_delete_confirm}}">
                                 <input type="hidden" name="sesskey" value="{{sesskey}}">
                                 <input type="hidden" name="action" value="delete_category">
                                 <input type="hidden" name="categoryid" value="{{id}}">
@@ -349,9 +368,9 @@
                             <textarea name="summary" class="form-control" rows="3" required>{{summary}}</textarea></div>
                         <div class="form-group"><label>{{#str}} package_license_label, qbank_questionhub {{/str}}</label>
                             <select name="license" class="custom-select form-control">
-                                <option value="CC-BY-4.0" {{#lic_by}}selected{{/lic_by}}>CC-BY-4.0</option>
-                                <option value="CC-BY-SA-4.0" {{#lic_bysa}}selected{{/lic_bysa}}>CC-BY-SA-4.0</option>
-                                <option value="CC0-1.0" {{#lic_cc0}}selected{{/lic_cc0}}>CC0-1.0</option>
+                                <option value="CC-BY-4.0" {{#lic_by}}selected{{/lic_by}}>{{#str}} license_cc_by, qbank_questionhub {{/str}}</option>
+                                <option value="CC-BY-SA-4.0" {{#lic_bysa}}selected{{/lic_bysa}}>{{#str}} license_cc_by_sa, qbank_questionhub {{/str}}</option>
+                                <option value="CC0-1.0" {{#lic_cc0}}selected{{/lic_cc0}}>{{#str}} license_cc0, qbank_questionhub {{/str}}</option>
                             </select>
                             <small class="form-text text-muted">{{#str}} open_content_notice, qbank_questionhub {{/str}}</small></div>
                         <div class="form-group"><label>{{#str}} package_visibility_label, qbank_questionhub {{/str}}</label>
@@ -363,19 +382,19 @@
                         </div>
                         <div class="form-group"><label>{{#str}} package_level_label, qbank_questionhub {{/str}}</label>
                             <select name="subject_category" class="custom-select form-control" required>
-                                <option value="GF" {{#level_gf}}selected{{/level_gf}}>GF (Grundlagenfach)</option>
-                                <option value="SF" {{#level_sf}}selected{{/level_sf}}>SF (Schwerpunktfach)</option>
-                                <option value="EF" {{#level_ef}}selected{{/level_ef}}>EF (Ergänzungsfach)</option>
-                                <option value="FF" {{#level_ff}}selected{{/level_ff}}>FF (Freifach)</option>
+                                <option value="GF" {{#level_gf}}selected{{/level_gf}}>{{#str}} level_gf, qbank_questionhub {{/str}}</option>
+                                <option value="SF" {{#level_sf}}selected{{/level_sf}}>{{#str}} level_sf, qbank_questionhub {{/str}}</option>
+                                <option value="EF" {{#level_ef}}selected{{/level_ef}}>{{#str}} level_ef, qbank_questionhub {{/str}}</option>
+                                <option value="FF" {{#level_ff}}selected{{/level_ff}}>{{#str}} level_ff, qbank_questionhub {{/str}}</option>
                             </select></div>
                         <div class="form-group"><label>{{#str}} package_grades_label, qbank_questionhub {{/str}}</label>
                             <select name="grades[]" class="custom-select form-control" multiple size="4">
-                                <option value="GYM1" {{#g1}}selected{{/g1}}>GYM1</option>
-                                <option value="GYM2" {{#g2}}selected{{/g2}}>GYM2</option>
-                                <option value="GYM3" {{#g3}}selected{{/g3}}>GYM3</option>
-                                <option value="GYM4" {{#g4}}selected{{/g4}}>GYM4</option>
+                                <option value="GYM1" {{#g1}}selected{{/g1}}>{{#str}} grade_gym1, qbank_questionhub {{/str}}</option>
+                                <option value="GYM2" {{#g2}}selected{{/g2}}>{{#str}} grade_gym2, qbank_questionhub {{/str}}</option>
+                                <option value="GYM3" {{#g3}}selected{{/g3}}>{{#str}} grade_gym3, qbank_questionhub {{/str}}</option>
+                                <option value="GYM4" {{#g4}}selected{{/g4}}>{{#str}} grade_gym4, qbank_questionhub {{/str}}</option>
                             </select></div>
-                        <div class="form-group"><label>Tags</label>
+                        <div class="form-group"><label>{{#str}} tags_label, qbank_questionhub {{/str}}</label>
                             <input type="text" name="tags" class="form-control" value="{{tags}}"></div>
                         {{> qbank_questionhub/github_settings_field }}
                         <div class="form-check mb-3">
@@ -416,7 +435,7 @@
                         <strong>{{title}}</strong>
                         {{#shared_role}}<span class="badge badge-light border ml-1">{{shared_role}}</span>{{/shared_role}}
                         <div class="small text-muted">
-                            {{id}} · v{{latest_version}} · {{downloads}} Downloads ·
+                            {{id}} · v{{latest_version}} · {{#str}} downloads_count, qbank_questionhub, {{downloads}} {{/str}} ·
                             {{#preview_on}}{{#str}} preview_on, qbank_questionhub {{/str}}{{/preview_on}}{{^preview_on}}{{#str}} preview_off, qbank_questionhub {{/str}}{{/preview_on}}
                         </div>
                     </div>
@@ -433,7 +452,7 @@
                         <button class="btn btn-sm btn-outline-secondary mr-1" type="button" data-toggle="collapse" data-bs-toggle="collapse"
                                 data-target="#edit-{{domid}}" data-bs-target="#edit-{{domid}}">{{#str}} edit_settings, qbank_questionhub {{/str}}</button>
                         <form method="post" action="{{action_url}}" class="d-inline"
-                              onsubmit="return confirm('{{#str}} withdraw_package_confirm, qbank_questionhub {{/str}}');">
+                              data-qh-confirm="{{#str}} withdraw_package_confirm, qbank_questionhub {{/str}}">
                             <input type="hidden" name="sesskey" value="{{sesskey}}">
                             <input type="hidden" name="action" value="withdraw_package">
                             <input type="hidden" name="packageid" value="{{id}}">
@@ -454,9 +473,9 @@
                             <textarea name="summary" class="form-control" rows="3" required>{{summary}}</textarea></div>
                         <div class="form-group"><label>{{#str}} package_license_label, qbank_questionhub {{/str}}</label>
                             <select name="license" class="custom-select form-control">
-                                <option value="CC-BY-4.0" {{#lic_by}}selected{{/lic_by}}>CC-BY-4.0</option>
-                                <option value="CC-BY-SA-4.0" {{#lic_bysa}}selected{{/lic_bysa}}>CC-BY-SA-4.0</option>
-                                <option value="CC0-1.0" {{#lic_cc0}}selected{{/lic_cc0}}>CC0-1.0</option>
+                                <option value="CC-BY-4.0" {{#lic_by}}selected{{/lic_by}}>{{#str}} license_cc_by, qbank_questionhub {{/str}}</option>
+                                <option value="CC-BY-SA-4.0" {{#lic_bysa}}selected{{/lic_bysa}}>{{#str}} license_cc_by_sa, qbank_questionhub {{/str}}</option>
+                                <option value="CC0-1.0" {{#lic_cc0}}selected{{/lic_cc0}}>{{#str}} license_cc0, qbank_questionhub {{/str}}</option>
                             </select>
                             <small class="form-text text-muted">{{#str}} open_content_notice, qbank_questionhub {{/str}}</small></div>
                         <div class="form-group"><label>{{#str}} package_visibility_label, qbank_questionhub {{/str}}</label>
@@ -468,19 +487,19 @@
                         </div>
                         <div class="form-group"><label>{{#str}} package_level_label, qbank_questionhub {{/str}}</label>
                             <select name="subject_category" class="custom-select form-control" required>
-                                <option value="GF" {{#level_gf}}selected{{/level_gf}}>GF (Grundlagenfach)</option>
-                                <option value="SF" {{#level_sf}}selected{{/level_sf}}>SF (Schwerpunktfach)</option>
-                                <option value="EF" {{#level_ef}}selected{{/level_ef}}>EF (Ergänzungsfach)</option>
-                                <option value="FF" {{#level_ff}}selected{{/level_ff}}>FF (Freifach)</option>
+                                <option value="GF" {{#level_gf}}selected{{/level_gf}}>{{#str}} level_gf, qbank_questionhub {{/str}}</option>
+                                <option value="SF" {{#level_sf}}selected{{/level_sf}}>{{#str}} level_sf, qbank_questionhub {{/str}}</option>
+                                <option value="EF" {{#level_ef}}selected{{/level_ef}}>{{#str}} level_ef, qbank_questionhub {{/str}}</option>
+                                <option value="FF" {{#level_ff}}selected{{/level_ff}}>{{#str}} level_ff, qbank_questionhub {{/str}}</option>
                             </select></div>
                         <div class="form-group"><label>{{#str}} package_grades_label, qbank_questionhub {{/str}}</label>
                             <select name="grades[]" class="custom-select form-control" multiple size="4">
-                                <option value="GYM1" {{#g1}}selected{{/g1}}>GYM1</option>
-                                <option value="GYM2" {{#g2}}selected{{/g2}}>GYM2</option>
-                                <option value="GYM3" {{#g3}}selected{{/g3}}>GYM3</option>
-                                <option value="GYM4" {{#g4}}selected{{/g4}}>GYM4</option>
+                                <option value="GYM1" {{#g1}}selected{{/g1}}>{{#str}} grade_gym1, qbank_questionhub {{/str}}</option>
+                                <option value="GYM2" {{#g2}}selected{{/g2}}>{{#str}} grade_gym2, qbank_questionhub {{/str}}</option>
+                                <option value="GYM3" {{#g3}}selected{{/g3}}>{{#str}} grade_gym3, qbank_questionhub {{/str}}</option>
+                                <option value="GYM4" {{#g4}}selected{{/g4}}>{{#str}} grade_gym4, qbank_questionhub {{/str}}</option>
                             </select></div>
-                        <div class="form-group"><label>Tags</label>
+                        <div class="form-group"><label>{{#str}} tags_label, qbank_questionhub {{/str}}</label>
                             <input type="text" name="tags" class="form-control" value="{{tags}}"></div>
                         {{> qbank_questionhub/github_settings_field }}
                         <div class="form-check mb-3">
@@ -496,7 +515,7 @@
                         <div class="font-weight-bold small mb-2">{{#str}} withdraw_versions_heading, qbank_questionhub {{/str}}</div>
                         {{#versions}}
                         <form method="post" action="{{action_url}}" class="d-flex align-items-center justify-content-between border-top py-1"
-                              onsubmit="return confirm('{{#str}} withdraw_version_confirm, qbank_questionhub {{/str}}');">
+                              data-qh-confirm="{{#str}} withdraw_version_confirm, qbank_questionhub {{/str}}">
                             <input type="hidden" name="sesskey" value="{{sesskey}}">
                             <input type="hidden" name="action" value="withdraw_release">
                             <input type="hidden" name="packageid" value="{{id}}">
@@ -588,20 +607,20 @@
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="previewModalLabel">Fragensammlung-Vorschau</h5>
-                <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Schliessen">
+                <h5 class="modal-title" id="previewModalLabel">{{#str}} preview_modal_title, qbank_questionhub {{/str}}</h5>
+                <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="{{#str}} closebuttontitle {{/str}}">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body" id="previewModalBody">
                 <div class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="sr-only">Laden...</span>
+                        <span class="sr-only">{{#str}} preview_loading, qbank_questionhub {{/str}}</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Schliessen</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">{{#str}} closebuttontitle {{/str}}</button>
             </div>
         </div>
     </div>
@@ -623,12 +642,12 @@
 
                 <div class="modal-header">
                     <h5 class="modal-title" id="importModalLabel">{{#str}} import_confirm_title, qbank_questionhub {{/str}}</h5>
-                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Schliessen">
+                    <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="{{#str}} closebuttontitle {{/str}}">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <p>Möchten Sie das Paket <strong id="importModalTitleText"></strong> in diesen Kurs importieren?</p>
+                    <p>{{#str}} import_modal_question, qbank_questionhub, <strong id="importModalTitleText"></strong> {{/str}}</p>
 
                     <div class="form-group mb-3 d-none" id="importVariantGroup">
                         <label for="importVariant">{{#str}} import_variant_label, qbank_questionhub {{/str}}</label>
@@ -678,7 +697,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">{{#str}} cancel {{/str}}</button>
                     <button type="submit" name="dryrun" value="1" class="btn btn-outline-primary">{{#str}} import_preview_button, qbank_questionhub {{/str}}</button>
                     <button type="submit" class="btn btn-primary" id="importSubmitBtn">
                         <i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} import_button, qbank_questionhub {{/str}}
@@ -692,177 +711,3 @@
 <template id="qh-category-naming-note">
     <div class="alert alert-warning qh-category-naming-note" role="note">{{{category_naming_note}}}</div>
 </template>
-
-<script>
-// Edit a category in core's own category form (same form as Question bank > Categories), with a
-// naming note for Question Hub links. RequireJS is available once the user clicks.
-document.addEventListener('click', function(e) {
-    var btn = e.target.closest('.qh-edit-category');
-    if (!btn) {
-        return;
-    }
-    require(['core_form/modalform'], function(ModalForm) {
-        var args = {
-            contextid: '{{bankcontextid}}',
-            categoryid: btn.dataset.categoryid,
-            sortorder: btn.dataset.sortorder,
-            questioncount: btn.dataset.questioncount,
-            parent: btn.dataset.parent + ',{{bankcontextid}}'
-        };
-        // Moodle 5.0 banks live in a mod_qbank module, 4.5 banks in the course context.
-        if ('{{cmid}}') {
-            args.cmid = '{{cmid}}';
-        } else {
-            args.courseid = '{{courseid}}';
-        }
-        var modalForm = new ModalForm({
-            formClass: 'qbank_managecategories\\form\\question_category_edit_form',
-            args: args,
-            modalConfig: {title: btn.getAttribute('title'), large: true},
-            saveButtonText: {{#quote}}{{#str}} savechanges {{/str}}{{/quote}},
-            returnFocus: btn
-        });
-        modalForm.addEventListener(modalForm.events.LOADED, function() {
-            // LOADED fires again after a server-side validation error re-renders the form.
-            var form = modalForm.getFormNode();
-            if (form && !form.parentNode.querySelector('.qh-category-naming-note')) {
-                var note = document.getElementById('qh-category-naming-note').content.cloneNode(true);
-                form.parentNode.insertBefore(note, form);
-            }
-        });
-        modalForm.addEventListener(modalForm.events.FORM_SUBMITTED, function() {
-            window.location.reload();
-        });
-        modalForm.show();
-    });
-});
-
-// Works on Moodle 4.5 (Bootstrap 4) and 5.0 (Bootstrap 5): the buttons open the modals through
-// data attributes; this script only fills in the modal content.
-document.addEventListener('DOMContentLoaded', function() {
-    var hubUrl = '{{hub_url}}';
-
-    function plainText(html) {
-        var doc = new DOMParser().parseFromString(html || '', 'text/html');
-        return (doc.body.textContent || '').trim();
-    }
-
-    document.querySelectorAll('.qh-preview-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var pkgId = this.getAttribute('data-packageid');
-            var version = this.getAttribute('data-version');
-            var title = this.getAttribute('data-title');
-            var modalTitle = document.getElementById('previewModalLabel');
-            var modalBody = document.getElementById('previewModalBody');
-            modalTitle.textContent = 'Vorschau: ' + title;
-            modalBody.textContent = 'Lade Vorschau vom Hub ...';
-
-            fetch(hubUrl + '/api/v1/packages/' + encodeURIComponent(pkgId) + '/preview?version=' + encodeURIComponent(version))
-                .then(function(res) {
-                    return res.json().then(function(data) {
-                        if (!res.ok) { throw new Error(data.message || ('HTTP ' + res.status)); }
-                        return data;
-                    });
-                })
-                .then(function(data) {
-                    modalBody.textContent = '';
-                    if (!data.questions || data.questions.length === 0) {
-                        modalBody.textContent = 'Keine Fragen zur Vorschau verfügbar.';
-                        return;
-                    }
-                    var list = document.createElement('div');
-                    list.className = 'list-group';
-                    data.questions.forEach(function(q, i) {
-                        var item = document.createElement('div');
-                        item.className = 'list-group-item';
-                        var head = document.createElement('div');
-                        head.className = 'd-flex w-100 justify-content-between';
-                        var h = document.createElement('h6');
-                        h.className = 'mb-1';
-                        h.textContent = (i + 1) + '. ' + (q.name || 'Unbenannt');
-                        var badge = document.createElement('span');
-                        badge.className = 'badge badge-secondary bg-secondary';
-                        badge.textContent = q.type || '';
-                        head.appendChild(h);
-                        head.appendChild(badge);
-                        var text = document.createElement('div');
-                        text.className = 'text-muted mt-2 small';
-                        text.textContent = plainText(q.questiontextHtml || q.questiontext);
-                        item.appendChild(head);
-                        item.appendChild(text);
-                        list.appendChild(item);
-                    });
-                    modalBody.appendChild(list);
-                })
-                .catch(function(err) {
-                    modalBody.textContent = 'Vorschau nicht verfügbar: ' + err.message;
-                });
-        });
-    });
-
-    var targetCategorySelect = document.getElementById('importTargetCat');
-    var renameCategoryOption = document.getElementById('renameCategoryOption');
-    var renameCategoryRadio = document.getElementById('categoryModeRename');
-    var keepCategoryRadio = document.getElementById('categoryModeKeep');
-    var packageRootName = '';
-
-    function updateCategoryPlacementOptions() {
-        var selected = targetCategorySelect.options[targetCategorySelect.selectedIndex];
-        var isRoot = selected.getAttribute('data-is-root') === 'true' || selected.getAttribute('data-is-root') === '1';
-        var canRename = packageRootName !== '' && !isRoot &&
-            (selected.getAttribute('data-can-rename') === 'true' || selected.getAttribute('data-can-rename') === '1');
-        renameCategoryOption.classList.toggle('d-none', !canRename);
-        if (!canRename && renameCategoryRadio.checked) {
-            keepCategoryRadio.checked = true;
-        }
-    }
-
-    targetCategorySelect.addEventListener('change', updateCategoryPlacementOptions);
-
-    // The settings form lives in the category list; bring it into view when opened from a Browse card.
-    document.querySelectorAll('.qh-settings-toggle').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var target = document.querySelector(this.getAttribute('data-target'));
-            if (target && !this.closest('.list-group-item')) {
-                setTimeout(function() { target.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 350);
-            }
-        });
-    });
-
-    document.querySelectorAll('.qh-import-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var title = this.getAttribute('data-title');
-            var version = this.getAttribute('data-version');
-            packageRootName = this.getAttribute('data-packageroot') || '';
-            // The original first, then the variants the account may see; the choice sets what is imported.
-            var options = [{id: this.getAttribute('data-packageid'), version: version, title: title,
-                label: {{#quote}}{{#str}} import_variant_original, qbank_questionhub {{/str}}{{/quote}} + ' ' + version}];
-            try {
-                options = options.concat(JSON.parse(this.getAttribute('data-variants') || '[]'));
-            } catch (e) {
-                // No variants.
-            }
-            var select = document.getElementById('importVariant');
-            select.innerHTML = '';
-            options.forEach(function(option, index) {
-                var element = document.createElement('option');
-                element.value = String(index);
-                element.textContent = option.label;
-                select.appendChild(element);
-            });
-            var apply = function() {
-                var chosen = options[Number(select.value) || 0];
-                document.getElementById('importModalPackageId').value = chosen.id;
-                document.getElementById('importModalVersion').value = chosen.version;
-                document.getElementById('importModalTitle').value = chosen.title;
-                document.getElementById('importModalTitleText').textContent = chosen.title + ' (' + chosen.version + ')';
-            };
-            select.onchange = apply;
-            document.getElementById('importVariantGroup').classList.toggle('d-none', options.length < 2);
-            apply();
-            document.getElementById('packageRootName').textContent = packageRootName;
-            updateCategoryPlacementOptions();
-        });
-    });
-});
-</script>

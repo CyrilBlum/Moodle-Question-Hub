@@ -288,8 +288,9 @@ class duplicate_manager {
         $newid = package_importer::import_question_xml($xml, $category, $context, $course);
         package_importer::attach_as_version($newid, $target['entryid'], $context);
         // The next pull compares with this version: it holds the Hub content.
-        $DB->execute('UPDATE {qbank_questionhub_items} SET questionbankentryid = ?, questionid = ?
-                       WHERE questionbankentryid = ?', [$target['entryid'], $newid, $source['entryid']]);
+        $tracked = ['questionbankentryid' => $source['entryid']];
+        $DB->set_field('qbank_questionhub_items', 'questionid', $newid, $tracked);
+        $DB->set_field('qbank_questionhub_items', 'questionbankentryid', $target['entryid'], $tracked);
         foreach ($DB->get_records('qbank_questionhub_published', ['questionbankentryid' => $source['entryid']]) as $row) {
             $existing = $DB->get_record(
                 'qbank_questionhub_published',

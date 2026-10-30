@@ -1,4 +1,23 @@
 {{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @copyright  2026 Cyril Blum
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+{{!
     @template qbank_questionhub/diff_files
 
     Line diffs of changed questions, similar to a GitHub pull request: one collapsible card per question with a
@@ -63,7 +82,7 @@
             {{#is_moved}}<p class="text-muted small p-3 mb-0">{{#str}} diff_moved_only, qbank_questionhub {{/str}}</p>{{/is_moved}}
             {{^too_large}}{{#hunks.0}}
             <table class="qh-diff">
-                <colgroup><col style="width:3.25rem"><col style="width:3.25rem"><col style="width:1.25rem"><col></colgroup>
+                <colgroup><col class="qh-col-line"><col class="qh-col-line"><col class="qh-col-sign"><col></colgroup>
                 {{#hunks}}
                 {{#has_gap}}
                 <tr class="qh-gap"><td colspan="4"><button type="button" class="qh-gap-toggle" data-qh-gap="{{gapid}}">
@@ -92,28 +111,3 @@
     </details>
     {{/files}}
 </div>
-{{#js}}
-document.querySelectorAll('[data-qh-diffs]').forEach(function(list) {
-    if (list.dataset.qhReady) {
-        return;
-    }
-    list.dataset.qhReady = '1';
-    list.addEventListener('click', function(e) {
-        var all = e.target.closest('[data-qh-diff-all]');
-        if (all) {
-            var open = all.getAttribute('data-qh-diff-all') === 'open';
-            list.querySelectorAll('details.qh-file').forEach(function(d) {
-                d.open = open;
-            });
-            return;
-        }
-        var gap = e.target.closest('[data-qh-gap]');
-        if (gap) {
-            list.querySelectorAll('[data-qh-gap-row="' + gap.getAttribute('data-qh-gap') + '"]').forEach(function(row) {
-                row.classList.remove('qh-hidden');
-            });
-            gap.closest('tr').remove();
-        }
-    });
-});
-{{/js}}

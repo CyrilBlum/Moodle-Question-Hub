@@ -32,6 +32,10 @@ qbank_questionhub/
 ├── publish.php                  # Category & question export/publishing UI
 ├── oauth_callback.php           # OAuth 2.0 PKCE redirect callback
 ├── disconnect.php               # Account unlink handler
+├── amd/
+│   ├── src/                     # AMD JavaScript sources
+│   └── build/                   # Minified modules (built by Grunt)
+├── backup/moodle2/              # Backup and restore of links and question tracking
 ├── db/
 │   ├── access.php               # Capabilities
 │   ├── install.xml              # Database tables (tokens, history)
@@ -42,6 +46,7 @@ qbank_questionhub/
 │   ├── question_action.php      # Row action item
 │   ├── bulk_publish_action.php  # Bulk action handler
 │   ├── api_client.php           # REST API client
+│   ├── hub_input.php            # Formats of Hub IDs in request parameters
 │   ├── auth_manager.php         # OAuth PKCE & token management
 │   ├── preflight_validator.php   # Zero-trust XML preflight validator
 │   ├── diagnostic_report.php    # Diagnostic report model
@@ -74,7 +79,7 @@ qbank_questionhub/
 
 1. Copy or clone this repository to `<moodle_root>/question/bank/questionhub`:
    ```bash
-   git clone git@github.com:CyrilBlum/Moodle-Question-Hub.git question/bank/questionhub
+   git clone git@github.com:CyrilBlum/moodle-qbank_questionhub.git question/bank/questionhub
    ```
 2. Run database upgrade via Moodle CLI:
    ```bash

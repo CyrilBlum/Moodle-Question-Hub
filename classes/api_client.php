@@ -322,6 +322,25 @@ class api_client {
     }
 
     /**
+     * Subjects and cantons for the filters and the publish form when the Hub cannot be reached.
+     *
+     * @return array Same structure as the Hub's taxonomy.
+     */
+    public static function fallback_taxonomy(): array {
+        $subjects = ['informatik', 'mathematik', 'physik', 'biologie', 'chemie', 'deutsch', 'franzoesisch', 'englisch',
+            'geschichte', 'geografie'];
+        return [
+            'subjects' => array_map(static fn(string $id): array => [
+                'id' => $id, 'name_de' => get_string('subject_' . $id, 'qbank_questionhub'),
+            ], $subjects),
+            'cantons' => array_map(
+                static fn(string $code): array => ['code' => $code],
+                ['AG', 'BE', 'BS', 'BL', 'LU', 'SG', 'SO', 'TG', 'ZH']
+            ),
+        ];
+    }
+
+    /**
      * Shows the outcome of the Hub's GitHub commit (publish response `github`, settings response `github_sync`).
      * Nothing is shown when the package has no linked repository (null).
      *

@@ -121,7 +121,7 @@ class package_importer {
                 'error_import_failed',
                 'qbank_questionhub',
                 '',
-                'The selected category is not inside this question bank.'
+                get_string('import_reason_outside_bank', 'qbank_questionhub')
             );
         }
         return '$course$/' . implode('/', $names);
@@ -137,14 +137,14 @@ class package_importer {
         global $DB;
 
         if (!in_array($mode, ['keep', 'rename'], true)) {
-            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid category placement option.');
+            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_placement', 'qbank_questionhub'));
         }
         if ((int)$this->targetcategory->contextid !== (int)$this->context->id) {
             throw new \moodle_exception(
                 'error_import_failed',
                 'qbank_questionhub',
                 '',
-                'The selected category is not in this course question bank.'
+                get_string('import_reason_other_bank', 'qbank_questionhub')
             );
         }
 
@@ -166,7 +166,7 @@ class package_importer {
                     'error_import_failed',
                     'qbank_questionhub',
                     '',
-                    'This package has no single top-level category to use as the new name.'
+                    get_string('import_reason_no_root', 'qbank_questionhub')
                 );
             }
             if ((int)$this->targetcategory->parent === 0 && $this->targetcategory->name === 'top') {
@@ -174,7 +174,7 @@ class package_importer {
                     'error_import_failed',
                     'qbank_questionhub',
                     '',
-                    'The question bank root cannot be renamed.'
+                    get_string('import_reason_root_rename', 'qbank_questionhub')
                 );
             }
             if (
@@ -185,7 +185,7 @@ class package_importer {
                     'error_import_failed',
                     'qbank_questionhub',
                     '',
-                    'Choose an empty category before replacing its name.'
+                    get_string('import_reason_not_empty', 'qbank_questionhub')
                 );
             }
             $context = \context::instance_by_id($this->targetcategory->contextid);
@@ -200,7 +200,7 @@ class package_importer {
                     'error_import_failed',
                     'qbank_questionhub',
                     '',
-                    'A category with the package name already exists beside the selected category.'
+                    get_string('import_reason_sibling_exists', 'qbank_questionhub')
                 );
             }
             if ($this->targetcategory->name !== $packageroot) {
@@ -246,12 +246,12 @@ class package_importer {
             !in_array($categorymode, ['keep', 'rename'], true) ||
                 (int)$this->targetcategory->contextid !== (int)$this->context->id
         ) {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid target category or placement.');
+            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_target', 'qbank_questionhub'));
         }
 
         $xml = simplexml_load_string($xmlcontent, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOBLANKS);
         if ($xml === false) {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid package XML.');
+            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_xml', 'qbank_questionhub'));
         }
         $roots = [];
         foreach ($xml->question as $node) {
@@ -274,7 +274,7 @@ class package_importer {
                     'error_import_failed',
                     'qbank_questionhub',
                     '',
-                    'Choose an empty category for renaming.'
+                    get_string('import_reason_not_empty', 'qbank_questionhub')
                 );
             }
             require_capability('moodle/question:managecategory', $this->context);
@@ -287,14 +287,14 @@ class package_importer {
                     'error_import_failed',
                     'qbank_questionhub',
                     '',
-                    'A category with this name already exists.'
+                    get_string('import_reason_sibling_exists', 'qbank_questionhub')
                 );
             }
         }
 
         $packageid = (string)($packagemetadata['id'] ?? '');
         if ($packageid === '') {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Package ID is required.');
+            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_no_package_id', 'qbank_questionhub'));
         }
         $packagehash = hash('sha256', $packageid);
         // The last sync of this category with the package: an import, or a publish when the category is the
@@ -469,7 +469,7 @@ class package_importer {
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
         if (!$loaded) {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid package XML.');
+            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_xml', 'qbank_questionhub'));
         }
         $xpath = new \DOMXPath($doc);
         foreach ($xpath->query('//*[@format="html"]/text') as $node) {
@@ -833,7 +833,7 @@ class package_importer {
     private function release_fingerprints(string $xmlcontent): array {
         $xml = simplexml_load_string($xmlcontent, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOBLANKS);
         if ($xml === false) {
-            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', 'Invalid previous release XML.');
+            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_previous', 'qbank_questionhub'));
         }
         $roots = [];
         foreach ($xml->question as $node) {
@@ -1120,7 +1120,7 @@ class package_importer {
             $history->action = 'import';
             $history->package_id = $packagemetadata['id'] ?? '';
             $history->package_version = $packagemetadata['version'] ?? '';
-            $history->package_title = $packagemetadata['title'] ?? 'Imported Package';
+            $history->package_title = $packagemetadata['title'] ?? get_string('imported_package_default', 'qbank_questionhub');
             $history->courseid = (int)$this->course->id;
             $history->categoryid = (int)$this->targetcategory->id;
             $history->question_count = $addedcount + $updatedcount;

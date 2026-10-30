@@ -83,7 +83,7 @@ class preflight_validator {
         // 1. Empty payload check.
         $trimmed = trim($xmlcontent);
         if ($trimmed === '') {
-            $report->add_error('ERR_EMPTY_PAYLOAD', 'The uploaded XML package is completely empty.');
+            $report->add_error('ERR_EMPTY_PAYLOAD', self::message('empty_payload'));
             return $report;
         }
 
@@ -92,7 +92,7 @@ class preflight_validator {
         if ($bytes > self::MAX_PACKAGE_BYTES) {
             $report->add_error(
                 'ERR_PACKAGE_SIZE_EXCEEDED',
-                "Package size ({$bytes} bytes) exceeds the maximum limit of " . self::MAX_PACKAGE_BYTES . ' bytes.'
+                self::message('package_too_large', (object)['bytes' => $bytes, 'limit' => self::MAX_PACKAGE_BYTES])
             );
             return $report;
         }
@@ -101,7 +101,7 @@ class preflight_validator {
         if (preg_match('/<!DOCTYPE\b/i', $xmlcontent)) {
             $report->add_error(
                 'ERR_XXE_DOCTYPE_FORBIDDEN',
-                'Security Violation: DOCTYPE declarations are prohibited to prevent XML External Entity (XXE) attacks.'
+                self::message('doctype_forbidden')
             );
             return $report;
         }
@@ -109,7 +109,7 @@ class preflight_validator {
         if (preg_match('/<!ENTITY\b/i', $xmlcontent)) {
             $report->add_error(
                 'ERR_XXE_ENTITY_FORBIDDEN',
-                'Security Violation: ENTITY declarations are prohibited to prevent entity expansion attacks.'
+                self::message('entity_forbidden')
             );
             return $report;
         }
@@ -117,7 +117,7 @@ class preflight_validator {
         if (preg_match('/<\s*(?:xi:include|include)\b/i', $xmlcontent)) {
             $report->add_error(
                 'ERR_XXE_XINCLUDE_FORBIDDEN',
-                'Security Violation: XInclude declarations are prohibited.'
+                self::message('xinclude_forbidden')
             );
             return $report;
         }
@@ -135,7 +135,7 @@ class preflight_validator {
         if ($doc !== false && dom_import_simplexml($doc)->ownerDocument->doctype !== null) {
             $report->add_error(
                 'ERR_XXE_DOCTYPE_FORBIDDEN',
-                'Security Violation: DOCTYPE declarations are prohibited to prevent XML External Entity (XXE) attacks.'
+                self::message('doctype_forbidden')
             );
             return $report;
         }
@@ -143,11 +143,11 @@ class preflight_validator {
         if ($doc === false || !empty($errors)) {
             $errormsgs = [];
             foreach ($errors as $e) {
-                $errormsgs[] = "Line {$e->line}: " . trim($e->message);
+                $errormsgs[] = self::message('xml_line', (object)['line' => $e->line, 'message' => trim($e->message)]);
             }
             $report->add_error(
                 'ERR_XML_INVALID_SYNTAX',
-                'Malformed XML: ' . (!empty($errormsgs) ? implode('; ', $errormsgs) : 'Syntax error in document.')
+                self::message('malformed_xml', !empty($errormsgs) ? implode('; ', $errormsgs) : self::message('syntax_error'))
             );
             return $report;
         }
@@ -156,7 +156,7 @@ class preflight_validator {
         if (strtolower($doc->getName()) !== 'quiz') {
             $report->add_error(
                 'ERR_MISSING_QUIZ_ROOT',
-                "Expected root element <quiz>, but found <{$doc->getName()}>."
+                self::message('missing_quiz_root', $doc->getName())
             );
             return $report;
         }
@@ -164,7 +164,7 @@ class preflight_validator {
         // 6. Inspect Question Elements.
         $questions = $doc->xpath('/quiz/question');
         if (empty($questions)) {
-            $report->add_error('ERR_NO_QUESTIONS_FOUND', 'Package contains no <question> elements.');
+            $report->add_error('ERR_NO_QUESTIONS_FOUND', self::message('no_questions'));
             return $report;
         }
 
@@ -179,13 +179,13 @@ class preflight_validator {
             if ($qtype === '') {
                 $report->add_error(
                     'ERR_QUESTION_MISSING_TYPE',
-                    "Question #{$qindex} is missing the required type attribute.",
+                    self::message('missing_type', $qindex),
                     $qindex
                 );
                 continue;
             }
 
-            $qname = isset($q->name->text) ? (string)$q->name->text : "Question #{$qindex}";
+            $qname = isset($q->name->text) ? (string)$q->name->text : self::message('question_number', $qindex);
 
             // Category pseudo-question handling.
             if ($qtype === 'category') {
@@ -195,8 +195,7 @@ class preflight_validator {
                     if (!preg_match('/^\$[a-z]*\d*\$/i', $cattext)) {
                         $report->add_warning(
                             'WARN_CATEGORY_MISSING_CONTEXT',
-                            "Category path '{$cattext}' lacks a standard context token (\$course\$); "
-                                . "will be imported into target category.",
+                            self::message('category_missing_context', $cattext),
                             $qindex,
                             $qname
                         );
@@ -204,7 +203,7 @@ class preflight_validator {
                     if (!str_contains($cattext, '/top/')) {
                         $report->add_warning(
                             'WARN_CATEGORY_MISSING_TOP',
-                            "Category path '{$cattext}' is missing '/top/'; will be normalized.",
+                            self::message('category_missing_top', $cattext),
                             $qindex,
                             $qname
                         );
@@ -220,7 +219,7 @@ class preflight_validator {
             // Check question text.
             $qtext = isset($q->questiontext->text) ? (string)$q->questiontext->text : '';
             if (trim(strip_tags($qtext)) === '' && empty($q->xpath('.//file'))) {
-                $report->add_error('ERR_EMPTY_QUESTION_TEXT', "Question '{$qname}' has an empty question prompt.", $qindex, $qname);
+                $report->add_error('ERR_EMPTY_QUESTION_TEXT', self::message('empty_question_text', $qname), $qindex, $qname);
             }
 
             // Check if question type is standard or supported.
@@ -229,7 +228,7 @@ class preflight_validator {
                 if (!$installed) {
                     $report->add_warning(
                         'WARN_UNSUPPORTED_QUESTION_TYPE',
-                        "Non-standard question type '{$qtype}' may require third-party plugins.",
+                        self::message('unsupported_type', $qtype),
                         $qindex,
                         $qname
                     );
@@ -246,7 +245,7 @@ class preflight_validator {
             if (self::has_active_content($q)) {
                 $report->add_warning(
                     'WARN_ACTIVE_CONTENT',
-                    "Question '{$qname}' contains active HTML content (script, event handler, embedded frame or javascript: link).",
+                    self::message('active_content', $qname),
                     $qindex,
                     $qname
                 );
@@ -256,11 +255,22 @@ class preflight_validator {
         if ($realquestioncount === 0) {
             $report->add_error(
                 'ERR_NO_QUESTIONS_FOUND',
-                'Package contains category definitions but zero actionable assessment questions.'
+                self::message('only_categories')
             );
         }
 
         return $report;
+    }
+
+    /**
+     * Language string of a validation message.
+     *
+     * @param string $key Part of the string identifier after "preflight_".
+     * @param mixed $a Values for the string.
+     * @return string
+     */
+    private static function message(string $key, $a = null): string {
+        return get_string('preflight_' . $key, 'qbank_questionhub', $a);
     }
 
     /**
@@ -303,7 +313,7 @@ class preflight_validator {
                 if (count($answers) < 2) {
                     $report->add_error(
                         'ERR_NOT_ENOUGH_ANSWERS',
-                        "Multiple Choice question '{$qname}' requires at least 2 answer choices.",
+                        self::message('not_enough_answers', $qname),
                         $qindex,
                         $qname
                     );
@@ -321,14 +331,14 @@ class preflight_validator {
                     if ($hundredcount === 0) {
                         $report->add_error(
                             'ERR_SINGLE_CHOICE_NO_100',
-                            "Single-choice question '{$qname}' has no answer with 100% score.",
+                            self::message('single_no_100', $qname),
                             $qindex,
                             $qname
                         );
                     } else if ($hundredcount > 1) {
                         $report->add_error(
                             'ERR_SINGLE_CHOICE_MULTIPLE_100',
-                            "Single-choice question '{$qname}' has multiple answers ({$hundredcount}) with 100% score.",
+                            self::message('single_multiple_100', (object)['name' => $qname, 'count' => $hundredcount]),
                             $qindex,
                             $qname
                         );
@@ -344,7 +354,7 @@ class preflight_validator {
                     if (abs($positivesum - 100.0) > 0.5) {
                         $report->add_warning(
                             'WARN_MULTIPLE_CHOICE_SUM',
-                            "Multiple-response question '{$qname}' positive fractions sum to {$positivesum}% (expected 100%).",
+                            self::message('multiple_sum', (object)['name' => $qname, 'sum' => $positivesum]),
                             $qindex,
                             $qname
                         );
@@ -357,7 +367,7 @@ class preflight_validator {
                 if (count($answers) < 2) {
                     $report->add_error(
                         'ERR_TRUEFALSE_INVALID_CHOICES',
-                        "True/False question '{$qname}' must contain exactly two answer alternatives.",
+                        self::message('truefalse_choices', $qname),
                         $qindex,
                         $qname
                     );
@@ -377,7 +387,7 @@ class preflight_validator {
                 if (!$has100 || !$has0) {
                     $report->add_error(
                         'ERR_TRUEFALSE_INVALID_FRACTIONS',
-                        "True/False question '{$qname}' must have one 100% and one 0% fraction.",
+                        self::message('truefalse_fractions', $qname),
                         $qindex,
                         $qname
                     );
@@ -397,7 +407,7 @@ class preflight_validator {
                 if (!$has100) {
                     $report->add_error(
                         'ERR_SHORTANSWER_NO_100',
-                        "Short answer question '{$qname}' has no acceptable answer with 100% score.",
+                        self::message('shortanswer_no_100', $qname),
                         $qindex,
                         $qname
                     );
@@ -417,7 +427,7 @@ class preflight_validator {
                 if (!$has100) {
                     $report->add_error(
                         'ERR_NUMERICAL_NO_100',
-                        "Numerical question '{$qname}' has no answer with 100% score.",
+                        self::message('numerical_no_100', $qname),
                         $qindex,
                         $qname
                     );
@@ -429,7 +439,7 @@ class preflight_validator {
                 if (count($subqs) < 2) {
                     $report->add_error(
                         'ERR_MATCHING_INSUFFICIENT_SUBQS',
-                        "Matching question '{$qname}' requires at least 2 subquestions.",
+                        self::message('matching_subquestions', $qname),
                         $qindex,
                         $qname
                     );
@@ -457,7 +467,7 @@ class preflight_validator {
         if ($problem !== null) {
             $report->add_error(
                 'ERR_CLOZE_SYNTAX_INVALID',
-                "Cloze question '{$qname}': {$problem}",
+                self::message('cloze_invalid', (object)['name' => $qname, 'problem' => $problem]),
                 $qindex,
                 $qname
             );
@@ -502,18 +512,18 @@ class preflight_validator {
                     }
                 }
                 if (!$closed) {
-                    return "cloze element '" . substr($rest, 0, 30) . "' is not closed with }.";
+                    return self::message('cloze_not_closed', substr($rest, 0, 30));
                 }
                 $i = $j;
             } else if (preg_match('/^\{\d+:/', $rest)) {
-                return "cloze element '" . substr($rest, 0, 30) . "' has no valid type (e.g. {1:SHORTANSWER:=answer}).";
+                return self::message('cloze_no_type', substr($rest, 0, 30));
             } else {
                 $remainder .= '{';
             }
         }
         // A "}" that closes something like 1:SA:=answer without an opening "{".
         if (preg_match('/(?<![{\d])\d+:[A-Za-z_]+:[^{}]*\}/', $remainder, $orphan)) {
-            return "cloze element '" . substr($orphan[0], 0, 30) . "' is missing its opening {.";
+            return self::message('cloze_no_opening', substr($orphan[0], 0, 30));
         }
         return null;
     }
@@ -534,7 +544,7 @@ class preflight_validator {
     ): void {
         $files = $q->xpath('.//file');
         foreach ($files as $file) {
-            $filename = (string)($file['name'] ?? 'unnamed');
+            $filename = (string)($file['name'] ?? self::message('unnamed_file'));
             $encoding = (string)($file['encoding'] ?? 'base64');
             $rawcontent = (string)$file;
 
@@ -542,7 +552,7 @@ class preflight_validator {
             if ($filename === '' || preg_match('/(?:\.\.|\/|\\\\|\x00)/', $filename)) {
                 $report->add_error(
                     'ERR_FILE_PATH_TRAVERSAL',
-                    "Illegal path characters or directory traversal detected in file name '{$filename}' (question '{$qname}').",
+                    self::message('file_path', (object)['file' => $filename, 'name' => $qname]),
                     $qindex,
                     $qname
                 );
@@ -554,7 +564,7 @@ class preflight_validator {
             if (in_array($ext, self::DISALLOWED_EXTENSIONS, true)) {
                 $report->add_error(
                     'ERR_DISALLOWED_MEDIA_MIME',
-                    "Prohibited media extension '.{$ext}' in file '{$filename}' (question '{$qname}').",
+                    self::message('file_extension', (object)['ext' => $ext, 'file' => $filename, 'name' => $qname]),
                     $qindex,
                     $qname
                 );
@@ -566,7 +576,7 @@ class preflight_validator {
             if (!preg_match('/^[A-Za-z0-9+\/]+={0,2}$/', $cleaned)) {
                 $report->add_error(
                     'ERR_MALFORMED_MEDIA_BASE64',
-                    "Invalid Base64 payload in media file '{$filename}' (question '{$qname}').",
+                    self::message('file_base64', (object)['file' => $filename, 'name' => $qname]),
                     $qindex,
                     $qname
                 );
@@ -577,7 +587,7 @@ class preflight_validator {
             if ($decoded === false) {
                 $report->add_error(
                     'ERR_MALFORMED_MEDIA_BASE64',
-                    "Failed to decode Base64 in file '{$filename}' (question '{$qname}').",
+                    self::message('file_decode', (object)['file' => $filename, 'name' => $qname]),
                     $qindex,
                     $qname
                 );
@@ -588,7 +598,9 @@ class preflight_validator {
             if ($filesize > self::MAX_MEDIA_FILE_BYTES) {
                 $report->add_error(
                     'ERR_PACKAGE_SIZE_EXCEEDED',
-                    "Embedded media '{$filename}' ({$filesize} bytes) exceeds limit of " . self::MAX_MEDIA_FILE_BYTES . ' bytes.',
+                    self::message('file_too_large', (object)[
+                        'file' => $filename, 'bytes' => $filesize, 'limit' => self::MAX_MEDIA_FILE_BYTES,
+                    ]),
                     $qindex,
                     $qname
                 );
@@ -602,7 +614,7 @@ class preflight_validator {
                 if (preg_match('/<\s*script\b|on[a-z]+\s*=|xlink:href\s*=\s*["\']javascript:/i', $decoded)) {
                     $report->add_error(
                         'ERR_SVG_MALICIOUS_SCRIPT',
-                        "Active script or event handler detected in SVG file '{$filename}' (question '{$qname}').",
+                        self::message('svg_script', (object)['file' => $filename, 'name' => $qname]),
                         $qindex,
                         $qname
                     );

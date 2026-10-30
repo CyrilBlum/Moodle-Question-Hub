@@ -33,7 +33,7 @@ $cmid = optional_param('cmid', 0, PARAM_INT);
 $categoryid = optional_param('categoryid', 0, PARAM_INT);
 $bankcontextid = optional_param('bankcontextid', 0, PARAM_INT);
 $questionid = optional_param('questionid', 0, PARAM_INT);
-$updatepackageid = optional_param('updatepackageid', '', PARAM_RAW_TRIMMED);
+$updatepackageid = \qbank_questionhub\hub_input::package_id(optional_param('updatepackageid', '', PARAM_TEXT));
 
 // Resolve course and cmid bidirectionally across Moodle 4.5 and 5.0.
 if ($courseid <= 0 && $cmid > 0) {
@@ -193,14 +193,15 @@ if ($updatepackageid !== '') {
 $inputerror = null;
 $postedversion = null;
 $postednotes = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+$issubmitted = (bool)data_submitted();
+if ($issubmitted) {
     require_sesskey();
     $action = optional_param('action', 'publish_hub', PARAM_ALPHAEXT);
 
     if ($ownedpackage) {
         // An update only adds a release; the package settings stay as on the Hub (edited in the category list).
         $packageid = $updatepackageid;
-        $version = required_param('package_version', PARAM_RAW_TRIMMED);
+        $version = trim(required_param('package_version', PARAM_TEXT));
         $releasenotes = trim(required_param('release_notes', PARAM_TEXT));
         $title = html_entity_decode($ownedpackage['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $summary = (string)($ownedpackage['summary'] ?? '');
@@ -232,14 +233,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $postedversion = $version;
         $postednotes = $releasenotes;
     } else {
-        $packageid = required_param('package_id', PARAM_RAW_TRIMMED);
+        $packageid = trim(required_param('package_id', PARAM_TEXT));
         $title = required_param('package_title', PARAM_TEXT);
         $summary = required_param('package_summary', PARAM_TEXT);
         $subject = required_param('package_subject', PARAM_TEXT);
         $level = required_param('package_level', PARAM_ALPHA);
         $canton = required_param('package_canton', PARAM_ALPHA);
         $gradesraw = optional_param_array('package_grades', ['GYM2', 'GYM3'], PARAM_ALPHANUM);
-        $version = required_param('package_version', PARAM_RAW_TRIMMED);
+        $version = trim(required_param('package_version', PARAM_TEXT));
         $license = required_param('package_license', PARAM_TEXT);
         $visibility = optional_param('package_visibility', 'public', PARAM_ALPHA);
         if (!in_array($visibility, ['public', 'private'], true)) {
@@ -251,14 +252,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tags = [];
         // GitHub (optional): none, a new private repository created before publishing, or an existing one.
         $githubmode = optional_param('github_mode', 'none', PARAM_ALPHA);
-        $githubrepo = $githubmode === 'existing' ? optional_param('package_github_repo', '', PARAM_RAW_TRIMMED) : '';
-        $githubnewname = $githubmode === 'new' ? optional_param('package_github_new', '', PARAM_RAW_TRIMMED) : '';
+        $githubrepo = $githubmode === 'existing' ? trim(optional_param('package_github_repo', '', PARAM_TEXT)) : '';
+        $githubnewname = $githubmode === 'new' ? trim(optional_param('package_github_new', '', PARAM_TEXT)) : '';
     }
 
     try {
         if ($inputerror) {
             throw $inputerror;
         }
+        // Typed into the form, so a wrong format is an error message there and not a failed page.
+        \qbank_questionhub\hub_input::package_id($packageid);
+        \qbank_questionhub\hub_input::version($version);
+        \qbank_questionhub\hub_input::github_repo($githubrepo);
+        \qbank_questionhub\hub_input::repo_name($githubnewname);
         $exporter = new \qbank_questionhub\package_exporter((int)$course->id, (int)$context->id);
         $publishedquestions = $questionid > 0 ? [] : \qbank_questionhub\publication_tracker::current($categoryid);
 
@@ -381,24 +387,7 @@ $taxonomy = [];
 try {
     $taxonomy = $client->get_taxonomy();
 } catch (\Exception $e) {
-    $taxonomy = [
-        'subjects' => [
-            ['id' => 'informatik', 'name_de' => 'Informatik'],
-            ['id' => 'mathematik', 'name_de' => 'Mathematik'],
-            ['id' => 'physik', 'name_de' => 'Physik'],
-            ['id' => 'biologie', 'name_de' => 'Biologie'],
-            ['id' => 'chemie', 'name_de' => 'Chemie'],
-            ['id' => 'deutsch', 'name_de' => 'Deutsch'],
-            ['id' => 'franzoesisch', 'name_de' => 'Französisch'],
-            ['id' => 'englisch', 'name_de' => 'Englisch'],
-            ['id' => 'geschichte', 'name_de' => 'Geschichte'],
-            ['id' => 'geografie', 'name_de' => 'Geografie'],
-        ],
-        'cantons' => [
-            ['code' => 'AG'], ['code' => 'BE'], ['code' => 'BS'], ['code' => 'LU'],
-            ['code' => 'SG'], ['code' => 'ZH'],
-        ],
-    ];
+    $taxonomy = \qbank_questionhub\api_client::fallback_taxonomy();
 }
 
 $subjectsdata = [];
@@ -430,7 +419,7 @@ foreach ($allcategories as $cat) {
 $categoriesdata = [];
 $defaulttitle = $ownedpackage ? html_entity_decode($ownedpackage['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8') : 'Fragensammlung';
 $defaultslug = $ownedpackage ? $ownedpackage['id'] : ('ch.gym.inf.collection.' . time());
-$defaultsummary = $ownedpackage ? ($ownedpackage['summary'] ?? '') : 'Fragensammlung für Schweizer Gymnasien.';
+$defaultsummary = $ownedpackage ? ($ownedpackage['summary'] ?? '') : get_string('default_package_summary', 'qbank_questionhub');
 $defaultversion = $ownedpackage ? \qbank_questionhub\publication_tracker::next_version($ownedpackage['latest_version']) : '1.0.0';
 
 $walkcats = function (
@@ -499,10 +488,8 @@ $templatedata = [
     'level_ef' => ($ownedpackage['subject_category'] ?? 'GF') === 'EF',
     'level_ff' => ($ownedpackage['subject_category'] ?? 'GF') === 'FF',
     'preview_checked' => $ownedpackage ? !empty($ownedpackage['preview_enabled']) : true,
-    'default_github_repo' => $_SERVER['REQUEST_METHOD'] === 'POST'
-        ? optional_param('package_github_repo', '', PARAM_RAW_TRIMMED) : '',
-    'default_github_new' => $_SERVER['REQUEST_METHOD'] === 'POST'
-        ? optional_param('package_github_new', $defaultslug, PARAM_RAW_TRIMMED) : $defaultslug,
+    'default_github_repo' => $issubmitted ? trim(optional_param('package_github_repo', '', PARAM_TEXT)) : '',
+    'default_github_new' => $issubmitted ? trim(optional_param('package_github_new', $defaultslug, PARAM_TEXT)) : $defaultslug,
     'github_mode_new_checked' => optional_param('github_mode', 'none', PARAM_ALPHA) === 'new',
     'github_mode_existing_checked' => optional_param('github_mode', 'none', PARAM_ALPHA) === 'existing',
     'github_mode_none_checked' => !in_array(optional_param('github_mode', 'none', PARAM_ALPHA), ['new', 'existing'], true),
@@ -562,6 +549,7 @@ if ($ownedpackage) {
             'version_value' => $postedversion ?? $defaultversion,
             'release_notes' => $postednotes,
         ];
+        $PAGE->requires->js_call_amd('qbank_questionhub/diffs', 'init');
         echo $OUTPUT->render_from_template('qbank_questionhub/push_view', $templatedata);
 } else {
     echo $OUTPUT->render_from_template('qbank_questionhub/publish_view', $templatedata);

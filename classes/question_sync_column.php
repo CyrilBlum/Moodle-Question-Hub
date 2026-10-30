@@ -127,40 +127,28 @@ class question_sync_column extends column_base {
             return;
         }
 
+        global $OUTPUT;
         $snapshot = $this->snapshots[(int)$history->id] ?? null;
-        if ($snapshot === null) {
-            echo \html_writer::span(
-                get_string('badge_unknown', 'qbank_questionhub'),
-                'badge badge-light bg-light text-muted border',
-                ['title' => get_string('badge_unknown_help', 'qbank_questionhub')]
-            );
-            return;
-        }
-
         $entryid = (int)($question->questionbankentryid ?? 0);
-        $qid = (int)$question->id;
-
-        if (!isset($snapshot[$entryid])) {
+        $classes = 'badge-warning bg-warning text-dark';
+        if ($snapshot === null) {
+            $state = 'unknown';
+            $classes = 'badge-light bg-light text-muted border';
+        } else if (!isset($snapshot[$entryid])) {
             // New question added since last release: not yet pushed.
-            echo \html_writer::span(
-                get_string('badge_new', 'qbank_questionhub'),
-                'badge badge-warning bg-warning text-dark',
-                ['title' => get_string('badge_new_help', 'qbank_questionhub')]
-            );
-        } else if ($snapshot[$entryid] !== $qid) {
+            $state = 'new';
+        } else if ($snapshot[$entryid] !== (int)$question->id) {
             // Question modified since last release: not yet pushed.
-            echo \html_writer::span(
-                get_string('badge_changed', 'qbank_questionhub'),
-                'badge badge-warning bg-warning text-dark',
-                ['title' => get_string('badge_changed_help', 'qbank_questionhub')]
-            );
+            $state = 'changed';
         } else {
             // Up to date with release on server.
-            echo \html_writer::span(
-                get_string('badge_synced', 'qbank_questionhub'),
-                'badge badge-success bg-success text-white',
-                ['title' => get_string('badge_synced_help', 'qbank_questionhub')]
-            );
+            $state = 'synced';
+            $classes = 'badge-success bg-success text-white';
         }
+        echo $OUTPUT->render_from_template('qbank_questionhub/sync_badge', [
+            'label' => get_string('badge_' . $state, 'qbank_questionhub'),
+            'help' => get_string('badge_' . $state . '_help', 'qbank_questionhub'),
+            'classes' => $classes,
+        ]);
     }
 }

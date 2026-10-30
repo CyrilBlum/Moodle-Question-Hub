@@ -1,4 +1,23 @@
 {{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @copyright  2026 Cyril Blum
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+{{!
     @template qbank_questionhub/variants_view
 
     Questions with the same name and type but different content in one category (e.g. a local question and the
@@ -42,7 +61,7 @@
             <div class="table-responsive">
                 <table class="table table-sm mb-0 small">
                     <thead class="thead-light"><tr>
-                        <th style="width:7rem">{{#str}} variants_keep, qbank_questionhub {{/str}}</th>
+                        <th class="qh-keep-column">{{#str}} variants_keep, qbank_questionhub {{/str}}</th>
                         <th>{{#str}} duplicate_question, qbank_questionhub {{/str}}</th>
                         <th>{{#str}} variants_created, qbank_questionhub {{/str}}</th>
                         <th>{{#str}} variants_versions, qbank_questionhub {{/str}}</th>
@@ -74,7 +93,7 @@
                                 <i class="fa fa-search mr-1" aria-hidden="true"></i>{{#str}} duplicate_preview, qbank_questionhub {{/str}}</a>
                             <a href="{{edit_url}}" class="btn btn-sm btn-outline-secondary">
                                 <i class="fa fa-pencil mr-1" aria-hidden="true"></i>{{#str}} edit {{/str}}</a>
-                            <div class="text-muted">ID {{questionid}}{{#inuse}} · {{#str}} variants_inuse, qbank_questionhub {{/str}}{{/inuse}}</div>
+                            <div class="text-muted">{{#str}} question_id, qbank_questionhub, {{questionid}} {{/str}}{{#inuse}} · {{#str}} variants_inuse, qbank_questionhub {{/str}}{{/inuse}}</div>
                         </td>
                         <td>{{created}}<div class="text-muted">{{#str}} variants_modified, qbank_questionhub, {{modified}} {{/str}}</div></td>
                         <td>v{{version}} ({{versions}})</td>
@@ -109,56 +128,3 @@
     {{/has_groups}}
     {{^has_groups}}<a href="{{return_url}}" class="btn btn-outline-secondary">{{#str}} review_back, qbank_questionhub {{/str}}</a>{{/has_groups}}
 </div>
-{{#js}}
-(function() {
-    var form = document.getElementById('qh-variants-form');
-    if (!form) {
-        return;
-    }
-    // Marks what happens to each question of a group: kept, deleted, or kept because a quiz uses it.
-    var update = function(group) {
-        var chosen = group.querySelector('input[type="radio"]:checked');
-        var keepall = !chosen || chosen.value === '0';
-        var merge = !keepall && chosen.value.charAt(0) === 'm';
-        var target = keepall ? '' : chosen.value.replace('m', '');
-        group.querySelectorAll('tr[data-qh-entry]').forEach(function(row) {
-            var kept = keepall || row.getAttribute('data-qh-entry') === target;
-            var inuse = row.hasAttribute('data-qh-inuse');
-            var merged = merge && row.hasAttribute('data-qh-source');
-            row.classList.toggle('table-success', !keepall && kept);
-            row.classList.toggle('table-danger', !kept && (!inuse || merged));
-            row.querySelector('[data-qh-fate="merge"]').classList.toggle('d-none', !(merge && kept));
-            row.querySelector('[data-qh-fate="merged"]').classList.toggle('d-none', !merged);
-            row.querySelector('[data-qh-fate="delete"]').classList.toggle('d-none', kept || inuse || merged);
-            row.querySelector('[data-qh-fate="inuse"]').classList.toggle('d-none', kept || !inuse);
-        });
-    };
-    var groups = form.querySelectorAll('[data-qh-group]');
-    groups.forEach(function(group) {
-        group.addEventListener('change', function() {
-            update(group);
-        });
-        update(group);
-    });
-    form.querySelectorAll('[data-qh-variants]').forEach(function(button) {
-        button.addEventListener('click', function() {
-            var hub = button.getAttribute('data-qh-variants') === 'hub';
-            groups.forEach(function(group) {
-                // A used local question takes over the Hub question; otherwise the Hub question is kept.
-                var target = hub
-                    ? (group.querySelector('input[data-qh-merge]') || group.querySelector('input[data-qh-hub]'))
-                    : null;
-                (target || group.querySelector('input[value="0"]')).checked = true;
-                update(group);
-            });
-        });
-    });
-    form.addEventListener('submit', function(e) {
-        var count = form.querySelectorAll('tr.table-danger').length;
-        var message = form.querySelector('[data-confirm]').getAttribute('data-confirm').replace('{count}', count);
-        if (!count || !window.confirm(message)) { // eslint-disable-line no-alert
-            e.preventDefault();
-        }
-    });
-})();
-{{/js}}

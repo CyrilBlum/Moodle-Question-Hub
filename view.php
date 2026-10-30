@@ -32,28 +32,36 @@ require_login();
 // In Moodle 5.0, question_edit_setup() unconditionally requires cmid.
 // When navigating with courseid only (e.g. from tertiary menu or direct link),
 // resolve the default mod_qbank cmid for that course.
-if (!empty($_GET['cmid']) && !empty($_GET['courseid'])) {
-    $cmcheck = $DB->get_record('course_modules', ['id' => (int)$_GET['cmid']], 'id,course');
-    if ($cmcheck && (int)$cmcheck->course !== (int)$_GET['courseid']) {
-        unset($_GET['cmid']);
+// question_edit_setup() reads the IDs from the request, so a request without valid ones is redirected once.
+$requestcmid = optional_param('cmid', 0, PARAM_INT);
+$requestcourseid = optional_param('courseid', 0, PARAM_INT);
+$resolvedcmid = $requestcmid;
+$resolvedcourseid = $requestcourseid;
+if ($resolvedcmid > 0 && $resolvedcourseid > 0) {
+    $cmcheck = $DB->get_record('course_modules', ['id' => $resolvedcmid], 'id,course');
+    if ($cmcheck && (int)$cmcheck->course !== $resolvedcourseid) {
+        $resolvedcmid = 0;
     }
 }
-
-if (empty($_GET['cmid']) && empty($_POST['cmid'])) {
-    $courseid = optional_param('courseid', 0, PARAM_INT);
-    if ($courseid <= 0 && !empty($COURSE->id)) {
-        $courseid = (int)$COURSE->id;
-        $_GET['courseid'] = $courseid;
+if ($resolvedcmid <= 0) {
+    if ($resolvedcourseid <= 0 && !empty($COURSE->id)) {
+        $resolvedcourseid = (int)$COURSE->id;
     }
-    if ($courseid > 0 && class_exists('\core_question\local\bank\question_bank_helper')) {
-        $course = $DB->get_record('course', ['id' => $courseid]);
+    if ($resolvedcourseid > 0 && class_exists('\core_question\local\bank\question_bank_helper')) {
+        $course = $DB->get_record('course', ['id' => $resolvedcourseid]);
         if ($course) {
             $qbank = \core_question\local\bank\question_bank_helper::get_default_open_instance_system_type($course, true);
             if ($qbank) {
-                $_GET['cmid'] = (int)$qbank->id;
+                $resolvedcmid = (int)$qbank->id;
             }
         }
     }
+}
+if (!data_submitted() && ($resolvedcmid !== $requestcmid || $resolvedcourseid !== $requestcourseid)) {
+    $resolvedurl = new moodle_url(qualified_me());
+    $resolvedurl->remove_params(['cmid', 'courseid']);
+    $resolvedurl->params(array_filter(['cmid' => $resolvedcmid, 'courseid' => $resolvedcourseid]));
+    redirect($resolvedurl);
 }
 
 [$thispageurl, $contexts, $cmid, $cm, $module, $pagevars] =
@@ -85,9 +93,11 @@ $PAGE->set_heading($COURSE->fullname);
 $importpreview = null;
 $duplicatepreview = [];
 $duplicatecategoryid = 0;
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (data_submitted()) {
     require_sesskey();
     $action = optional_param('action', '', PARAM_ALPHAEXT);
+    // Set when switching a variant continues as a pull preview; the same values as the import form would send.
+    $switchedimport = null;
 
     if ($action === 'switch_variant') {
         // Switch a linked category to another variant of the same original, or back to the original: the question
@@ -96,9 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         require_capability('qbank/questionhub:import', $bankcontext);
         $categoryid = required_param('categoryid', PARAM_INT);
         $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $bankcontext->id], 'id', MUST_EXIST);
-        $targetid = required_param('targetpackageid', PARAM_RAW_TRIMMED);
         $link = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid);
         try {
+            $targetid = \qbank_questionhub\hub_input::package_id(required_param('targetpackageid', PARAM_TEXT));
             if (!$link || (int)$link->categoryid !== $categoryid || (string)$link->package_id === $targetid) {
                 throw new moodle_exception('error_switch_variant', 'qbank_questionhub');
             }
@@ -114,11 +124,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             \qbank_questionhub\publication_tracker::copy_tracking($categoryid, (string)$link->package_id, $targetid);
             $targettitle = html_entity_decode((string)($target['title'] ?? $targetid), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             // Continue as a pull preview of the chosen package into this category.
-            $_POST = array_merge($_POST, [
-                'action' => 'import_package', 'packageid' => $targetid, 'version' => (string)$target['latest_version'],
-                'title' => $targettitle, 'targetcategoryid' => $categoryid, 'categorymode' => 'keep',
-                'updatechanged' => 1, 'dryrun' => 1,
-            ]);
+            $switchedimport = [
+                'packageid' => $targetid, 'version' => (string)$target['latest_version'], 'title' => $targettitle,
+                'targetcategoryid' => $categoryid,
+            ];
             $action = 'import_package';
             \core\notification::info(get_string('switch_variant_preview', 'qbank_questionhub', s($targettitle)));
         } catch (\Exception $e) {
@@ -156,11 +165,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'visibility' => optional_param('visibility', 'public', PARAM_ALPHA),
             ];
             // Only a changed link is sent: the Hub checks it against the saving user's GitHub connection.
-            $githubrepo = optional_param('github_repo', '', PARAM_RAW_TRIMMED);
-            if ($githubrepo !== optional_param('github_repo_orig', '', PARAM_RAW_TRIMMED)) {
+            $githubrepo = \qbank_questionhub\hub_input::github_repo(optional_param('github_repo', '', PARAM_TEXT));
+            if ($githubrepo !== trim(optional_param('github_repo_orig', '', PARAM_TEXT))) {
                 $patch['github_repo'] = $githubrepo;
             }
-            $updated = $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), $patch);
+            $updated = $client->update_package(
+                \qbank_questionhub\hub_input::package_id(required_param('packageid', PARAM_TEXT)),
+                $patch
+            );
             \core\notification::success(get_string('settings_saved', 'qbank_questionhub'));
             \qbank_questionhub\api_client::notify_github_result($updated['github_sync'] ?? null);
         } catch (\Exception $e) {
@@ -171,11 +183,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Create a private repository in the connected GitHub account and link it; the Hub commits the current version.
         try {
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
-            $created = $client->create_github_repo(required_param('repo_name', PARAM_RAW_TRIMMED));
+            $created = $client->create_github_repo(
+                \qbank_questionhub\hub_input::repo_name(required_param('repo_name', PARAM_TEXT))
+            );
             \core\notification::success(
                 get_string('github_repo_created_named', 'qbank_questionhub', s($created['html_url'] ?? $created['repo']))
             );
-            $updated = $client->update_package(required_param('packageid', PARAM_RAW_TRIMMED), ['github_repo' => $created['repo']]);
+            $updated = $client->update_package(
+                \qbank_questionhub\hub_input::package_id(required_param('packageid', PARAM_TEXT)),
+                ['github_repo' => $created['repo']]
+            );
             \qbank_questionhub\api_client::notify_github_result($updated['github_sync'] ?? null);
         } catch (\Exception $e) {
             \core\notification::error($e->getMessage());
@@ -184,13 +201,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else if ($action === 'withdraw_package' || $action === 'withdraw_release') {
         try {
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
-            $wpackage = required_param('packageid', PARAM_RAW_TRIMMED);
+            $wpackage = \qbank_questionhub\hub_input::package_id(required_param('packageid', PARAM_TEXT));
             if ($action === 'withdraw_package') {
                 $client->withdraw_package($wpackage);
                 // The Hub deletes the package; local categories must stop showing it as published.
                 \qbank_questionhub\publication_tracker::unlink_package($wpackage, (int)$USER->id);
             } else {
-                $client->withdraw_release($wpackage, required_param('version', PARAM_RAW_TRIMMED));
+                $client->withdraw_release(
+                    $wpackage,
+                    \qbank_questionhub\hub_input::version(required_param('version', PARAM_TEXT))
+                );
             }
             \core\notification::success(get_string('withdraw_done', 'qbank_questionhub'));
         } catch (\Exception $e) {
@@ -247,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $categoryid = required_param('categoryid', PARAM_INT);
         $DB->get_record('question_categories', ['id' => $categoryid, 'contextid' => $bankcontext->id], 'id', MUST_EXIST);
         $link = \qbank_questionhub\publication_tracker::latest((int)$COURSE->id, $categoryid);
-        if (!$link || $link->package_id !== required_param('packageid', PARAM_RAW_TRIMMED)) {
+        if (!$link || $link->package_id !== trim(required_param('packageid', PARAM_TEXT))) {
             \core\notification::error(get_string('error_fork_link', 'qbank_questionhub'));
             redirect($thispageurl);
         }
@@ -257,7 +277,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'version' => (string)$link->package_version,
                 'visibility' => optional_param('visibility', 'public', PARAM_ALPHA) === 'private' ? 'private' : 'public',
             ];
-            $forkid = core_text::strtolower(optional_param('forkid', '', PARAM_RAW_TRIMMED));
+            $forkid = core_text::strtolower(
+                \qbank_questionhub\hub_input::package_id(optional_param('forkid', '', PARAM_TEXT))
+            );
             if ($forkid !== '') {
                 $request['id'] = $forkid;
             }
@@ -312,19 +334,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect($thispageurl);
     } else if ($action === 'import_package') {
         require_capability('qbank/questionhub:import', $bankcontext);
-        $packageid = required_param('packageid', PARAM_RAW_TRIMMED);
-        $version = required_param('version', PARAM_RAW_TRIMMED);
-        $title = optional_param('title', 'Imported Package', PARAM_TEXT);
-        $targetcatid = optional_param('targetcategoryid', 0, PARAM_INT);
-        $categorymode = optional_param('categorymode', 'keep', PARAM_ALPHA);
-        $updatechanged = (bool)optional_param('updatechanged', 0, PARAM_BOOL);
-        $dryrun = (bool)optional_param('dryrun', 0, PARAM_BOOL);
+        $targetcatid = (int)($switchedimport['targetcategoryid'] ?? optional_param('targetcategoryid', 0, PARAM_INT));
+        $categorymode = $switchedimport ? 'keep' : optional_param('categorymode', 'keep', PARAM_ALPHA);
+        $updatechanged = $switchedimport ? true : (bool)optional_param('updatechanged', 0, PARAM_BOOL);
+        $dryrun = $switchedimport ? true : (bool)optional_param('dryrun', 0, PARAM_BOOL);
         $resolutions = optional_param_array('resolution', [], PARAM_ALPHA);
         if (!in_array($categorymode, ['keep', 'rename'], true)) {
             $categorymode = 'keep';
         }
 
         try {
+            $packageid = $switchedimport['packageid'] ?? \qbank_questionhub\hub_input::package_id(required_param('packageid', PARAM_TEXT));
+            $version = $switchedimport['version'] ?? \qbank_questionhub\hub_input::version(required_param('version', PARAM_TEXT));
+            $title = $switchedimport['title'] ?? optional_param(
+                'title',
+                get_string('imported_package_default', 'qbank_questionhub'),
+                PARAM_TEXT
+            );
             $client = new \qbank_questionhub\api_client(null, null, 30, true);
             $xmlcontent = $client->download_release($packageid, $version);
 
@@ -529,25 +555,7 @@ try {
     }
 } catch (\Exception $e) {
     // Fallback default taxonomy if offline.
-    $taxonomy = [
-        'subjects' => [
-            ['id' => 'informatik', 'name_de' => 'Informatik'],
-            ['id' => 'mathematik', 'name_de' => 'Mathematik'],
-            ['id' => 'physik', 'name_de' => 'Physik'],
-            ['id' => 'biologie', 'name_de' => 'Biologie'],
-            ['id' => 'chemie', 'name_de' => 'Chemie'],
-            ['id' => 'deutsch', 'name_de' => 'Deutsch'],
-            ['id' => 'franzoesisch', 'name_de' => 'Französisch'],
-            ['id' => 'englisch', 'name_de' => 'Englisch'],
-            ['id' => 'geschichte', 'name_de' => 'Geschichte'],
-            ['id' => 'geografie', 'name_de' => 'Geografie'],
-        ],
-        'cantons' => [
-            ['code' => 'AG'], ['code' => 'BE'], ['code' => 'BS'], ['code' => 'BL'],
-            ['code' => 'LU'], ['code' => 'SG'], ['code' => 'SO'], ['code' => 'TG'],
-            ['code' => 'ZH'],
-        ],
-    ];
+    $taxonomy = \qbank_questionhub\api_client::fallback_taxonomy();
 }
 
 if ($showbrowse) {
@@ -625,7 +633,7 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
         'summary' => $pkg['summary'] ?? '',
         'latest_version' => $pkg['latest_version'] ?? '',
         'license' => $pkg['license'] ?? '',
-        'subject_badge' => $pkg['taxonomy']['subject'] ?? 'Allgemein',
+        'subject_badge' => $pkg['taxonomy']['subject'] ?? get_string('subject_general', 'qbank_questionhub'),
         'canton_badge' => $pkg['taxonomy']['canton'] ?? '',
         'level_badge' => $pkg['taxonomy']['subject_category'] ?? ($pkg['taxonomy']['level'] ?? ''),
         'stats' => $pkg['stats'] ?? ['question_count' => 0],
@@ -659,7 +667,7 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
 // Get user account linking status.
 $userrecord = \qbank_questionhub\auth_manager::get_user_token_record((int)$USER->id);
 $hasaccount = !empty($userrecord) && !empty($userrecord->access_token);
-$accountname = $hasaccount ? ($userrecord->hub_name ?: ($userrecord->hub_email ?: 'Verbunden')) : '';
+$accountname = $hasaccount ? ($userrecord->hub_name ?: ($userrecord->hub_email ?: get_string('account_connected', 'qbank_questionhub'))) : '';
 $huburl = rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/');
 
 // Course categories in this question bank context.
@@ -1403,6 +1411,15 @@ echo $OUTPUT->header();
 $renderer = $PAGE->get_renderer('core_question', 'bank');
 $qbankaction = new \core_question\output\qbank_action_menu($thispageurl);
 echo $renderer->render($qbankaction);
+
+$PAGE->requires->js_call_amd('qbank_questionhub/hub_browser', 'init', [[
+    'bankcontextid' => (int)$bankcontext->id,
+    'cmid' => (int)$cmid,
+    'courseid' => (int)$COURSE->id,
+    'huburl' => $huburl,
+]]);
+$PAGE->requires->js_call_amd('qbank_questionhub/confirm_submit', 'init');
+$PAGE->requires->js_call_amd('qbank_questionhub/diffs', 'init');
 
 echo $OUTPUT->render_from_template('qbank_questionhub/hub_browser', $templatedata);
 

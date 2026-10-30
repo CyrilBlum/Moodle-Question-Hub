@@ -1,4 +1,23 @@
 {{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @copyright  2026 Cyril Blum
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+{{!
     @template qbank_questionhub/publish_view
 
     Form to publish a question category as a new Hub package (metadata, licence, visibility).
@@ -26,7 +45,7 @@
                 <label for="categoryid" class="font-weight-bold">{{#str}} target_category, qbank_questionhub {{/str}}:</label>
                 <select name="categoryid" id="categoryid" class="custom-select form-control" {{#questionid}}disabled{{/questionid}}>
                     {{#categories}}
-                    <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}} ({{questioncount}} Fragen)</option>
+                    <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}} ({{#str}} questions_count, qbank_questionhub, {{questioncount}} {{/str}})</option>
                     {{/categories}}
                 </select>
             </div>
@@ -35,7 +54,7 @@
                 <div class="col-md-6 mb-3">
                     <label for="package_id" class="font-weight-bold">{{#str}} package_id, qbank_questionhub {{/str}}:</label>
                     <input type="text" id="package_id" name="package_id" class="form-control font-mono" value="{{default_package_id}}" required>
-                    <small class="form-text text-muted">Eindeutige ID im Format ch.gym.[fach].[thema] (z.B. ch.gym.inf.datenstrukturen)</small>
+                    <small class="form-text text-muted">{{#str}} package_id_help, qbank_questionhub {{/str}}</small>
                 </div>
 
                 <div class="col-md-6 mb-3">
@@ -70,10 +89,10 @@
                 <div class="col-md-3 mb-3">
                     <label for="package_level" class="font-weight-bold">{{#str}} package_level_label, qbank_questionhub {{/str}}:</label>
                     <select id="package_level" name="package_level" class="custom-select form-control">
-                        <option value="GF" {{#level_gf}}selected{{/level_gf}}>GF (Grundlagenfach)</option>
-                        <option value="SF" {{#level_sf}}selected{{/level_sf}}>SF (Schwerpunktfach)</option>
-                        <option value="EF" {{#level_ef}}selected{{/level_ef}}>EF (Ergänzungsfach)</option>
-                        <option value="FF" {{#level_ff}}selected{{/level_ff}}>FF (Freifach)</option>
+                        <option value="GF" {{#level_gf}}selected{{/level_gf}}>{{#str}} level_gf, qbank_questionhub {{/str}}</option>
+                        <option value="SF" {{#level_sf}}selected{{/level_sf}}>{{#str}} level_sf, qbank_questionhub {{/str}}</option>
+                        <option value="EF" {{#level_ef}}selected{{/level_ef}}>{{#str}} level_ef, qbank_questionhub {{/str}}</option>
+                        <option value="FF" {{#level_ff}}selected{{/level_ff}}>{{#str}} level_ff, qbank_questionhub {{/str}}</option>
                     </select>
                 </div>
 
@@ -89,10 +108,10 @@
                 <div class="col-md-3 mb-3">
                     <label for="package_grades" class="font-weight-bold">{{#str}} package_grades_label, qbank_questionhub {{/str}}:</label>
                     <select id="package_grades" name="package_grades[]" class="custom-select form-control" multiple size="4" required>
-                        <option value="GYM1">GYM1</option>
-                        <option value="GYM2" selected>GYM2</option>
-                        <option value="GYM3" selected>GYM3</option>
-                        <option value="GYM4">GYM4</option>
+                        <option value="GYM1">{{#str}} grade_gym1, qbank_questionhub {{/str}}</option>
+                        <option value="GYM2" selected>{{#str}} grade_gym2, qbank_questionhub {{/str}}</option>
+                        <option value="GYM3" selected>{{#str}} grade_gym3, qbank_questionhub {{/str}}</option>
+                        <option value="GYM4">{{#str}} grade_gym4, qbank_questionhub {{/str}}</option>
                     </select>
                 </div>
             </div>
@@ -106,9 +125,9 @@
                 <div class="col-md-6 mb-3">
                     <label for="package_license" class="font-weight-bold">{{#str}} package_license_label, qbank_questionhub {{/str}}:</label>
                     <select id="package_license" name="package_license" class="custom-select form-control">
-                        <option value="CC-BY-4.0" selected>CC-BY-4.0 (Namensnennung)</option>
-                        <option value="CC-BY-SA-4.0">CC-BY-SA-4.0 (Weitergabe unter gleichen Bedingungen)</option>
-                        <option value="CC0-1.0">CC0-1.0 (Gemeinfrei / Public Domain)</option>
+                        <option value="CC-BY-4.0" selected>{{#str}} license_cc_by, qbank_questionhub {{/str}}</option>
+                        <option value="CC-BY-SA-4.0">{{#str}} license_cc_by_sa, qbank_questionhub {{/str}}</option>
+                        <option value="CC0-1.0">{{#str}} license_cc0, qbank_questionhub {{/str}}</option>
                     </select>
                 </div>
             </div>
@@ -122,7 +141,7 @@
             </div>
 
             <fieldset class="form-group mb-3">
-                <legend class="font-weight-bold col-form-label pt-0" style="font-size: inherit;">{{#str}} github_repo_label, qbank_questionhub {{/str}}</legend>
+                <legend class="font-weight-bold col-form-label pt-0 qh-legend">{{#str}} github_repo_label, qbank_questionhub {{/str}}</legend>
                 {{^github_connected}}<div class="alert alert-info small mb-0">{{{github_connect_html}}}</div>{{/github_connected}}
                 {{#github_connected}}
                 <div class="form-check">
@@ -142,7 +161,7 @@
                     <input type="radio" class="form-check-input" name="github_mode" value="existing" id="gh_mode_existing" {{#github_mode_existing_checked}}checked{{/github_mode_existing_checked}}>
                     <label class="form-check-label" for="gh_mode_existing">{{#str}} github_mode_existing, qbank_questionhub {{/str}}</label>
                     <input type="text" name="package_github_repo" class="form-control form-control-sm text-monospace font-monospace mt-1"
-                           value="{{default_github_repo}}" placeholder="git@github.com:konto/repository.git" aria-label="{{#str}} github_repo_label, qbank_questionhub {{/str}}">
+                           value="{{default_github_repo}}" placeholder="{{#str}} github_repo_placeholder, qbank_questionhub {{/str}}" aria-label="{{#str}} github_repo_label, qbank_questionhub {{/str}}">
                 </div>
                 <small class="form-text text-muted">{{#str}} github_repo_help, qbank_questionhub {{/str}}</small>
                 {{/github_connected}}
@@ -152,7 +171,7 @@
 
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <a href="{{cancel_url}}" class="btn btn-outline-secondary mb-2 mb-md-0">
-                    Abbrechen
+                    {{#str}} cancel {{/str}}
                 </a>
                 <div>
                     <button type="submit" name="action" value="download_xml" class="btn btn-outline-primary mr-2 mb-2 mb-md-0">

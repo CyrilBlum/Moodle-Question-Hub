@@ -1,4 +1,23 @@
 {{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @copyright  2026 Cyril Blum
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+{{!
     @template qbank_questionhub/package_card
 
     Card of one Hub package in the search results: badges, summary, linked category with sync state and actions.
@@ -17,18 +36,18 @@
                 {{^is_private}}<span class="badge badge-secondary bg-secondary text-white">{{latest_version}}</span>{{/is_private}}
             </div>
             <h5 class="card-title text-truncate" title="{{title}}">{{title}}</h5>
-            <p class="card-text text-muted small flex-grow-1" style="max-height: 4.5rem; overflow: hidden;">
+            <p class="card-text text-muted small flex-grow-1 qh-package-summary">
                 {{#is_private}}{{#can_access}}{{summary}}{{/can_access}}{{^can_access}}{{#str}} private_package_summary, qbank_questionhub {{/str}}{{/can_access}}{{/is_private}}
                 {{^is_private}}{{summary}}{{/is_private}}
             </p>
             <div class="mb-2">
                 {{#canton_badge}}<span class="badge badge-info bg-info text-dark mr-1">{{canton_badge}}</span>{{/canton_badge}}
                 {{#level_badge}}<span class="badge badge-dark bg-dark text-white mr-1">{{level_badge}}</span>{{/level_badge}}
-                {{#is_private}}{{#can_access}}<span class="badge badge-light border text-muted mr-1">{{stats.question_count}} Fragen</span>
+                {{#is_private}}{{#can_access}}<span class="badge badge-light border text-muted mr-1">{{#str}} questions_count, qbank_questionhub, {{stats.question_count}} {{/str}}</span>
                 <span class="badge badge-light border text-muted mr-1">{{license}}</span>{{/can_access}}{{/is_private}}
-                {{^is_private}}<span class="badge badge-light border text-muted mr-1">{{stats.question_count}} Fragen</span>
+                {{^is_private}}<span class="badge badge-light border text-muted mr-1">{{#str}} questions_count, qbank_questionhub, {{stats.question_count}} {{/str}}</span>
                 <span class="badge badge-light border text-muted mr-1">{{license}}</span>{{/is_private}}
-                {{#preview_enabled}}<span class="badge badge-info bg-info text-dark">Vorschau</span>{{/preview_enabled}}
+                {{#preview_enabled}}<span class="badge badge-info bg-info text-dark">{{#str}} preview_button, qbank_questionhub {{/str}}</span>{{/preview_enabled}}
             </div>
             {{#author_info}}
             <div class="small text-muted mb-3">
@@ -50,7 +69,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap">
                     {{#preview_enabled}}
                     <button type="button" class="btn btn-sm btn-outline-secondary qh-preview-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#previewModal" data-bs-target="#previewModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}">
-                        <i class="fa fa-eye mr-1" aria-hidden="true"></i>Vorschau
+                        <i class="fa fa-eye mr-1" aria-hidden="true"></i>{{#str}} preview_button, qbank_questionhub {{/str}}
                     </button>
                     {{/preview_enabled}}
                     {{^preview_enabled}}<span></span>{{/preview_enabled}}
@@ -62,9 +81,9 @@
                     {{^sync}}
                     {{#is_private}}{{^can_access}}<a class="btn btn-sm btn-outline-primary" href="{{request_access_url}}" target="_blank" rel="noopener">{{#str}} request_access, qbank_questionhub {{/str}}</a>{{/can_access}}{{/is_private}}
                     {{^is_private}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}" data-variants="{{variants_json}}">
-                        <i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren
+                        <i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} import_short_button, qbank_questionhub {{/str}}
                     </button>{{/is_private}}
-                    {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}" data-variants="{{variants_json}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>Importieren</button>{{/can_access}}{{/is_private}}
+                    {{#is_private}}{{#can_access}}<button type="button" class="btn btn-sm btn-primary qh-import-btn" data-toggle="modal" data-bs-toggle="modal" data-target="#importModal" data-bs-target="#importModal" data-packageid="{{id}}" data-version="{{latest_version}}" data-title="{{title}}" data-packageroot="{{package_root}}" data-variants="{{variants_json}}"><i class="fa fa-download mr-1" aria-hidden="true"></i>{{#str}} import_short_button, qbank_questionhub {{/str}}</button>{{/can_access}}{{/is_private}}
                     {{/sync}}
                 </div>
             </div>

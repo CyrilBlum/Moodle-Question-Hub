@@ -27,8 +27,8 @@ require_once(__DIR__ . '/../../../config.php');
 require_login();
 $context = \context_system::instance();
 
-$code = optional_param('code', '', PARAM_RAW);
-$state = optional_param('state', '', PARAM_RAW);
+$code = optional_param('code', '', PARAM_ALPHANUMEXT);
+$state = optional_param('state', '', PARAM_ALPHANUMEXT);
 $huberror = optional_param('error', '', PARAM_TEXT);
 
 $oauthstate = $SESSION->qbank_questionhub_oauth ?? null;

@@ -62,7 +62,7 @@ $PAGE->set_context($context);
 $PAGE->set_title(get_string('variants_heading', 'qbank_questionhub'));
 $PAGE->set_heading($course->fullname);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (data_submitted()) {
     require_sesskey();
     // One choice per group: the entry ID to keep, "m" + entry ID to let a used local question take over the
     // Hub question, or 0 to keep all questions of the group.
@@ -155,5 +155,7 @@ $templatedata = [
 echo $OUTPUT->header();
 $renderer = $PAGE->get_renderer('core_question', 'bank');
 echo $renderer->render(new \core_question\output\qbank_action_menu($returnurl));
+$PAGE->requires->js_call_amd('qbank_questionhub/diffs', 'init');
+$PAGE->requires->js_call_amd('qbank_questionhub/variants', 'init');
 echo $OUTPUT->render_from_template('qbank_questionhub/variants_view', $templatedata);
 echo $OUTPUT->footer();

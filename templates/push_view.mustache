@@ -1,4 +1,23 @@
 {{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @copyright  2026 Cyril Blum
+    @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+{{!
     @template qbank_questionhub/push_view
 
     Push a new release of an own package, similar to a commit: changed questions with line diffs,
@@ -50,7 +69,7 @@
                 <textarea id="release_notes" name="release_notes" class="form-control" rows="3" required
                           placeholder="{{#str}} release_notes_placeholder, qbank_questionhub {{/str}}">{{release_notes}}</textarea>
             </div>
-            <div class="form-group mb-3" style="max-width: 16rem;">
+            <div class="form-group mb-3 qh-field-narrow">
                 <label for="package_version" class="font-weight-bold">{{#str}} package_version_label, qbank_questionhub {{/str}}</label>
                 <input type="text" id="package_version" name="package_version" class="form-control" value="{{version_value}}" pattern="^\d+\.\d+\.\d+$" required>
                 <small class="form-text text-muted">{{#str}} push_version_help, qbank_questionhub, {{owned_version}} {{/str}}</small>

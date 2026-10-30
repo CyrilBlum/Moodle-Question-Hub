@@ -33,15 +33,8 @@ cli_writeln("=== qbank_questionhub Verification Suite ===");
 $passed = 0;
 $failed = 0;
 
-/**
- * Print and count the result of one check.
- *
- * @param string $name
- * @param bool $condition
- * @param string $detail
- */
-function assert_test(string $name, bool $condition, string $detail = '') {
-    global $passed, $failed;
+// Prints and counts the result of one check.
+$asserttest = static function (string $name, bool $condition, string $detail = '') use (&$passed, &$failed): void {
     if ($condition) {
         $passed++;
         cli_writeln(" [PASS] {$name}");
@@ -49,24 +42,24 @@ function assert_test(string $name, bool $condition, string $detail = '') {
         $failed++;
         cli_writeln(" [FAIL] {$name} - {$detail}");
     }
-}
+};
 
 // 1. Test Marketplace Health Check via api_client
 try {
     $client = new \qbank_questionhub\api_client();
     $health = $client->health();
-    assert_test('API Client: Marketplace Health Check', ($health['status'] ?? '') === 'ok', json_encode($health));
+    $asserttest('API Client: Marketplace Health Check', ($health['status'] ?? '') === 'ok', json_encode($health));
 } catch (\Throwable $t) {
-    assert_test('API Client: Marketplace Health Check', false, $t->getMessage());
+    $asserttest('API Client: Marketplace Health Check', false, $t->getMessage());
 }
 
 // 2. Test Taxonomy Retrieval
 try {
     $taxonomy = $client->get_taxonomy();
     $subjectcount = count($taxonomy['subjects'] ?? []);
-    assert_test('API Client: Taxonomy Retrieval', $subjectcount >= 10, "Found {$subjectcount} subjects");
+    $asserttest('API Client: Taxonomy Retrieval', $subjectcount >= 10, "Found {$subjectcount} subjects");
 } catch (\Throwable $t) {
-    assert_test('API Client: Taxonomy Retrieval', false, $t->getMessage());
+    $asserttest('API Client: Taxonomy Retrieval', false, $t->getMessage());
 }
 
 // 2b. Test Capability String Format & Authorization Resolution
@@ -81,14 +74,14 @@ try {
         $canimport = has_capability('qbank/questionhub:import', $context);
         $badview = has_capability('qbank_questionhub:view', $context);
 
-        assert_test(
+        $asserttest(
             'Capabilities: Canonical Slash Format Registered & Resolvable',
             $canview && $canpublish && $canimport && !$badview,
             "view={$canview}, publish={$canpublish}, import={$canimport}, underscore_format={$badview}"
         );
     }
 } catch (\Throwable $t) {
-    assert_test('Capabilities: Canonical Slash Format Registered & Resolvable', false, $t->getMessage());
+    $asserttest('Capabilities: Canonical Slash Format Registered & Resolvable', false, $t->getMessage());
 }
 
 // 3. Test Pre-flight Validator: Valid Quiz XML
@@ -106,7 +99,7 @@ $validxml = '<?xml version="1.0" encoding="UTF-8"?>
   </question>
 </quiz>';
 $report = \qbank_questionhub\preflight_validator::validate($validxml);
-assert_test('Preflight Validator: Valid Quiz XML', $report->is_valid() && count($report->get_errors()) === 0);
+$asserttest('Preflight Validator: Valid Quiz XML', $report->is_valid() && count($report->get_errors()) === 0);
 
 // 4. Test Pre-flight Validator: XXE Injection Block
 $xxexml = '<?xml version="1.0" encoding="UTF-8"?>
@@ -120,13 +113,13 @@ $xxexml = '<?xml version="1.0" encoding="UTF-8"?>
   </question>
 </quiz>';
 $reportxxe = \qbank_questionhub\preflight_validator::validate($xxexml);
-assert_test('Preflight Validator: XXE Injection Defense', !$reportxxe->is_valid(), 'Expected blocking error');
+$asserttest('Preflight Validator: XXE Injection Defense', !$reportxxe->is_valid(), 'Expected blocking error');
 
 // 4b. Test Pre-flight Validator: Multi-byte UTF-16 DOCTYPE Defense
 $utf16lexxe = "\xFF\xFE" . mb_convert_encoding($xxexml, 'UTF-16LE', 'UTF-8');
 $reportutf16 = \qbank_questionhub\preflight_validator::validate($utf16lexxe);
 $utf16errors = array_column($reportutf16->get_errors(), 'code');
-assert_test(
+$asserttest(
     'Preflight Validator: Multi-byte UTF-16 DOCTYPE Defense',
     !$reportutf16->is_valid() && in_array('ERR_XXE_DOCTYPE_FORBIDDEN', $utf16errors, true),
     'Expected ERR_XXE_DOCTYPE_FORBIDDEN in ' . json_encode($utf16errors)
@@ -148,7 +141,7 @@ $traversalxml = '<?xml version="1.0" encoding="UTF-8"?>
 </quiz>';
 $reporttraversal = \qbank_questionhub\preflight_validator::validate($traversalxml);
 $traversalerrors = array_column($reporttraversal->get_errors(), 'code');
-assert_test(
+$asserttest(
     'Preflight Validator: Embedded Media Path Traversal Defense',
     !$reporttraversal->is_valid() && in_array('ERR_FILE_PATH_TRAVERSAL', $traversalerrors, true),
     'Expected ERR_FILE_PATH_TRAVERSAL in ' . json_encode($traversalerrors)
@@ -166,7 +159,7 @@ $badmcxml = '<?xml version="1.0" encoding="UTF-8"?>
   </question>
 </quiz>';
 $reportbadmc = \qbank_questionhub\preflight_validator::validate($badmcxml);
-assert_test('Preflight Validator: Single-Choice Fraction Violation Detected', !$reportbadmc->is_valid());
+$asserttest('Preflight Validator: Single-Choice Fraction Violation Detected', !$reportbadmc->is_valid());
 
 // 6. Test Exporter and Importer on Course DEMO101 (ID 2)
 $course = $DB->get_record('course', ['id' => 2]);
@@ -185,7 +178,7 @@ if ($course) {
         }
         if ($testcat) {
             $exportedxml = $exporter->export_category_xml($testcat->id);
-            assert_test(
+            $asserttest(
                 'Package Exporter: Category Export to XML',
                 str_contains($exportedxml, '<quiz>') && str_contains($exportedxml, '$course$')
             );
@@ -193,7 +186,7 @@ if ($course) {
             // Test importing into new category.
             $importer = new \qbank_questionhub\package_importer(2);
             $importresult = $importer->import_package($exportedxml, true, ['title' => 'Self-Verification']);
-            assert_test(
+            $asserttest(
                 'Package Importer: Import Package Roundtrip',
                 $importresult->success && $importresult->questioncount > 0,
                 "Imported {$importresult->questioncount} questions"
@@ -202,7 +195,7 @@ if ($course) {
             cli_writeln(" [SKIP] No existing questions in course 2 to test exporter; will test importing directly.");
             $importer = new \qbank_questionhub\package_importer(2);
             $importresult = $importer->import_package($validxml, true, ['title' => 'Sample Question']);
-            assert_test(
+            $asserttest(
                 'Package Importer: Import Valid Package',
                 $importresult->success && $importresult->questioncount > 0,
                 "Imported {$importresult->questioncount} questions"
@@ -218,7 +211,7 @@ if ($course) {
             $hascourse = str_contains($singlexml, '$course$');
             preg_match_all('/<question type="(?!category)[^"]+"/', $singlexml, $singlematches);
             $singlecount = count($singlematches[0]);
-            assert_test(
+            $asserttest(
                 'Package Exporter: Single-Question Export (No Leakage)',
                 $hasquiz && $hascourse && ($singlecount === 1),
                 "Exported {$singlecount} question(s), length: " . strlen($singlexml)
@@ -227,7 +220,7 @@ if ($course) {
             cli_writeln(" [SKIP] No questions found in database for single-question export test");
         }
     } catch (\Throwable $t) {
-        assert_test('Export/Import Roundtrip', false, $t->getMessage());
+        $asserttest('Export/Import Roundtrip', false, $t->getMessage());
     }
 } else {
     cli_writeln(" [SKIP] Course ID 2 not found");

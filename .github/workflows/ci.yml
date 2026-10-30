@@ -111,6 +111,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci mustache
 
+      - name: Grunt (AMD sources match the built files, ESLint)
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci grunt --max-lint-warnings 0
+
       - name: PHPUnit
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phpunit --fail-on-warning

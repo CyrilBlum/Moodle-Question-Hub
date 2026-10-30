@@ -1,0 +1,58 @@
+# Builds amd/build with Moodle's own Grunt toolchain. Run it after changing amd/src and commit the artifact:
+#   gh workflow run build-amd.yml && gh run download --name amd-build --dir amd/build
+name: Build AMD modules
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 3
+    steps:
+      - name: Check out plugin
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: pgsql, zip, gd, xmlrpc, soap, intl, mbstring, curl
+          ini-values: max_input_vars=5000
+          coverage: none
+
+      - name: Initialise moodle-plugin-ci
+        run: |
+          composer create-project -n --no-dev --prefer-dist moodlehq/moodle-plugin-ci ci ^4
+          echo $(cd ci/bin; pwd) >> $GITHUB_PATH
+          echo $(cd ci/vendor/bin; pwd) >> $GITHUB_PATH
+          sudo locale-gen en_AU.UTF-8
+          echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_ENV
+
+      - name: Install Moodle and plugin
+        run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
+        env:
+          DB: pgsql
+          MOODLE_BRANCH: MOODLE_405_STABLE
+
+      - name: Build
+        run: |
+          source "$NVM_DIR/nvm.sh"
+          nvm use
+          cd moodle/question/bank/questionhub
+          ../../../node_modules/.bin/grunt amd
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: amd-build
+          path: moodle/question/bank/questionhub/amd/build

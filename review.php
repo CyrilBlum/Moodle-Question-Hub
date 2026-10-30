@@ -74,7 +74,7 @@ if (!$history) {
 }
 $issource = \qbank_questionhub\local_changes::is_source($history);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (data_submitted()) {
     require_sesskey();
     $action = required_param('action', PARAM_ALPHAEXT);
     if ($action === 'reject_added_all' || $action === 'reject_all') {
@@ -177,5 +177,7 @@ if ($issource) {
 echo $OUTPUT->header();
 $renderer = $PAGE->get_renderer('core_question', 'bank');
 echo $renderer->render(new \core_question\output\qbank_action_menu($returnurl));
+$PAGE->requires->js_call_amd('qbank_questionhub/confirm_submit', 'init');
+$PAGE->requires->js_call_amd('qbank_questionhub/diffs', 'init');
 echo $OUTPUT->render_from_template('qbank_questionhub/review_view', $templatedata);
 echo $OUTPUT->footer();
