@@ -344,7 +344,8 @@ if (data_submitted()) {
         }
 
         try {
-            $packageid = $switchedimport['packageid'] ?? \qbank_questionhub\hub_input::package_id(required_param('packageid', PARAM_TEXT));
+            $packageid = $switchedimport['packageid']
+                ?? \qbank_questionhub\hub_input::package_id(required_param('packageid', PARAM_TEXT));
             $version = $switchedimport['version'] ?? \qbank_questionhub\hub_input::version(required_param('version', PARAM_TEXT));
             $title = $switchedimport['title'] ?? optional_param(
                 'title',
@@ -667,7 +668,8 @@ foreach ($packageresult['data'] ?? $packageresult['packages'] ?? [] as $pkg) {
 // Get user account linking status.
 $userrecord = \qbank_questionhub\auth_manager::get_user_token_record((int)$USER->id);
 $hasaccount = !empty($userrecord) && !empty($userrecord->access_token);
-$accountname = $hasaccount ? ($userrecord->hub_name ?: ($userrecord->hub_email ?: get_string('account_connected', 'qbank_questionhub'))) : '';
+$accountname = $hasaccount
+    ? ($userrecord->hub_name ?: ($userrecord->hub_email ?: get_string('account_connected', 'qbank_questionhub'))) : '';
 $huburl = rtrim(get_config('qbank_questionhub', 'huburl') ?: 'https://hub.cblum.ch', '/');
 
 // Course categories in this question bank context.

@@ -137,7 +137,12 @@ class package_importer {
         global $DB;
 
         if (!in_array($mode, ['keep', 'rename'], true)) {
-            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_placement', 'qbank_questionhub'));
+            throw new \moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                get_string('import_reason_invalid_placement', 'qbank_questionhub')
+            );
         }
         if ((int)$this->targetcategory->contextid !== (int)$this->context->id) {
             throw new \moodle_exception(
@@ -246,12 +251,22 @@ class package_importer {
             !in_array($categorymode, ['keep', 'rename'], true) ||
                 (int)$this->targetcategory->contextid !== (int)$this->context->id
         ) {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_target', 'qbank_questionhub'));
+            throw new moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                get_string('import_reason_invalid_target', 'qbank_questionhub')
+            );
         }
 
         $xml = simplexml_load_string($xmlcontent, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOBLANKS);
         if ($xml === false) {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_xml', 'qbank_questionhub'));
+            throw new moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                get_string('import_reason_invalid_xml', 'qbank_questionhub')
+            );
         }
         $roots = [];
         foreach ($xml->question as $node) {
@@ -294,7 +309,12 @@ class package_importer {
 
         $packageid = (string)($packagemetadata['id'] ?? '');
         if ($packageid === '') {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_no_package_id', 'qbank_questionhub'));
+            throw new moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                get_string('import_reason_no_package_id', 'qbank_questionhub')
+            );
         }
         $packagehash = hash('sha256', $packageid);
         // The last sync of this category with the package: an import, or a publish when the category is the
@@ -469,7 +489,12 @@ class package_importer {
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
         if (!$loaded) {
-            throw new moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_xml', 'qbank_questionhub'));
+            throw new moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                get_string('import_reason_invalid_xml', 'qbank_questionhub')
+            );
         }
         $xpath = new \DOMXPath($doc);
         foreach ($xpath->query('//*[@format="html"]/text') as $node) {
@@ -833,7 +858,12 @@ class package_importer {
     private function release_fingerprints(string $xmlcontent): array {
         $xml = simplexml_load_string($xmlcontent, 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOBLANKS);
         if ($xml === false) {
-            throw new \moodle_exception('error_import_failed', 'qbank_questionhub', '', get_string('import_reason_invalid_previous', 'qbank_questionhub'));
+            throw new \moodle_exception(
+                'error_import_failed',
+                'qbank_questionhub',
+                '',
+                get_string('import_reason_invalid_previous', 'qbank_questionhub')
+            );
         }
         $roots = [];
         foreach ($xml->question as $node) {

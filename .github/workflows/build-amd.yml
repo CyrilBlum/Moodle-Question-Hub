@@ -47,8 +47,9 @@ jobs:
       - name: Build
         run: |
           source "$NVM_DIR/nvm.sh"
+          cd moodle
           nvm use
-          cd moodle/question/bank/questionhub
+          cd question/bank/questionhub
           ../../../node_modules/.bin/grunt amd
 
       - name: Upload
