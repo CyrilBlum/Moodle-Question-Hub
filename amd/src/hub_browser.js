@@ -21,6 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import ModalEvents from 'core/modal_events';
 import ModalForm from 'core_form/modalform';
 import Notification from 'core/notification';
 import {getString} from 'core/str';
@@ -63,13 +64,17 @@ const editCategory = async(button, config) => {
         saveButtonText: await getString('savechanges', 'core'),
         returnFocus: button,
     });
-    modalForm.addEventListener(modalForm.events.LOADED, () => {
-        // LOADED fires again after a server-side validation error re-renders the form.
+    const addNote = () => {
         const form = modalForm.getFormNode();
         if (form && !form.parentNode.querySelector('.qh-category-naming-note')) {
             const note = document.getElementById('qh-category-naming-note').content.cloneNode(true);
             form.parentNode.insertBefore(note, form);
         }
+    };
+    // LOADED fires before the form is in the modal; the body renders after it and after each validation error.
+    modalForm.addEventListener(modalForm.events.LOADED, () => {
+        modalForm.modal.getRoot().on(ModalEvents.bodyRendered, addNote);
+        addNote();
     });
     modalForm.addEventListener(modalForm.events.FORM_SUBMITTED, () => window.location.reload());
     modalForm.show();
